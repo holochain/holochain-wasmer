@@ -1,0 +1,8 @@
+[package]
+name = "host"
+version = "0.0.1"
+authors = [ "thedavidmeister" "thedavidmeister@gmail.com" ]
+edition = "2018"
+
+[dependencies]
+wasmer_runtime = "=0.13.1"
