@@ -1,6 +1,5 @@
 // Import the Filesystem so we can read our .wasm file
 use common::bits_n_pieces::u64_merge_bits;
-use common::memory::PtrLen;
 use std::fs::File;
 use std::io::prelude::*;
 use wasmer_runtime::Ctx;
@@ -32,7 +31,7 @@ pub fn load_wasm() -> Vec<u8> {
 pub fn import_object() -> ImportObject {
     imports! {
         "env" => {
-            "host_process_string" => func!(host_process_string),
+            "__host_process_string" => func!(host_process_string),
         },
     }
 }
@@ -68,8 +67,10 @@ fn read_guest_string(ctx: &Ctx, ptr: i32, len: i32) -> String {
     unsafe { std::str::from_utf8_unchecked(&str_vec) }.into()
 }
 
-fn host_process_string(ctx: &mut Ctx, ptr: i32, cap: i32) -> PtrLen {
+fn host_process_string(ctx: &mut Ctx, ptr: i32, cap: i32) -> u64 {
+    println!("hiii {} {}", ptr, cap);
     let guest_string = read_guest_string(ctx, ptr, cap);
+    println!("guest_string {}", guest_string);
     let processed_string = format!("host: {}", guest_string);
     u64_merge_bits(processed_string.as_ptr() as _, processed_string.len() as _)
 }
