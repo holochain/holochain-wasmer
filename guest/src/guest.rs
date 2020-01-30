@@ -17,8 +17,8 @@ extern "C" {
 static ALLOC: wee_alloc::WeeAlloc = wee_alloc::WeeAlloc::INIT;
 
 pub fn host_string(ptr: u32, len: u32) -> String {
-    let slice: &[u8] = unsafe { slice::from_raw_parts(ptr as _, len as _) };
-    std::str::from_utf8(slice).unwrap().into()
+    let slice = unsafe { slice::from_raw_parts(ptr as _, len as _) };
+    String::from(std::str::from_utf8(slice).unwrap())
     // String::from_raw_parts(ptr, cap as _, cap as _)
 }
 
@@ -35,6 +35,13 @@ pub extern "C" fn pre_alloc_string(cap: u32) -> i32 {
     ptr
 }
 
+pub fn prepare_return(s: String) -> u64 {
+    let s_ptr = s.as_ptr();
+    let s_len = s.len();
+    mem::ManuallyDrop::new(s);
+    u64_merge_bits(s_ptr as _, s_len as _)
+}
+
 #[no_mangle]
 pub extern "C" fn process_string(ptr: u32, cap: u32) -> u64 {
     // get the string the host is trying to pass us out of memory
@@ -45,6 +52,5 @@ pub extern "C" fn process_string(ptr: u32, cap: u32) -> u64 {
     // let (processed_ptr, processed_len) = u64_split_bits(unsafe { host_process_string(s.as_ptr(), s.len()) });
     // let host_processed_string = host_string(processed_ptr as _, processed_len as _);
     let guest_processed = format!("guest: {}", s);
-    u64_merge_bits(guest_processed.as_ptr() as _, guest_processed.len() as _)
-    // u64_merge_bits(ptr, cap)
+    prepare_return(guest_processed)
 }
