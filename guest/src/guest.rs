@@ -3,10 +3,11 @@ extern crate wee_alloc;
 use std::mem;
 use std::slice;
 use common::bits_n_pieces::u64_merge_bits;
-use common::bits_n_pieces::u64_split_bits;
+// use common::bits_n_pieces::u64_split_bits;
 
 extern "C" {
     fn __host_process_string(ptr: u32, cap: u32) -> u64;
+    fn __host_copy(host_ptr: u64, guest_ptr: u32, len: u32) -> u64;
 }
 
 // Use `wee_alloc` as the global allocator.
@@ -44,8 +45,11 @@ pub fn prepare_return(s: String) -> u64 {
 }
 
 fn host_process_string(s: String) -> String {
-    let (processed_ptr, processed_len) = u64_split_bits(unsafe { __host_process_string(s.as_ptr() as _, s.len() as _) });
-    host_string(processed_ptr as _, processed_len as _)
+    let host_ptr = unsafe { __host_process_string(s.as_ptr() as _, s.len() as _) };
+    let len = 19;
+    let guest_ptr = pre_alloc_string(len);
+    unsafe { __host_copy(host_ptr, guest_ptr as _, len as _) };
+    host_string(guest_ptr as _, len as _)
 }
 
 #[no_mangle]

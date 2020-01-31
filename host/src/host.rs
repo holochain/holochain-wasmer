@@ -5,6 +5,8 @@ use std::io::prelude::*;
 use wasmer_runtime::Ctx;
 use wasmer_runtime::Value;
 use wasmer_runtime::Instance;
+use std::mem;
+use std::slice;
 
 // Import the wasmer runtime so we can use it
 use wasmer_runtime::{func, imports, ImportObject};
@@ -32,6 +34,7 @@ pub fn import_object() -> ImportObject {
     imports! {
         "env" => {
             "__host_process_string" => func!(host_process_string),
+            "__host_copy" => func!(host_copy),
         },
     }
 }
@@ -72,7 +75,33 @@ fn host_process_string(ctx: &mut Ctx, ptr: i32, cap: i32) -> u64 {
     let guest_string = read_guest_string(ctx, ptr, cap);
     println!("guest_string {}", guest_string);
     let processed_string = format!("host: {}", guest_string);
-    u64_merge_bits(processed_string.as_ptr() as _, processed_string.len() as _)
+    let processed_ptr = processed_string.as_ptr();
+    let processed_len = processed_string.len();
+    println!("processed {} {}", processed_ptr as usize, processed_len);
+    mem::ManuallyDrop::new(processed_string);
+    // u64_merge_bits(processed_ptr as _, processed_len as _)
+    processed_ptr as _
+}
+
+fn host_copy(ctx: &mut Ctx, host_ptr: u64, guest_ptr: u32, len: u32) -> u64 {
+    println!("copy {} {} {}", host_ptr, guest_ptr, len);
+    let slice = unsafe { slice::from_raw_parts(host_ptr as _, len as _) };
+    println!("slice {:?}", slice);
+    let s = String::from(std::str::from_utf8(slice).unwrap());
+    println!("string {}", s);
+
+    let memory = ctx.memory(0);
+
+    for (byte, cell) in s
+        .bytes()
+        .zip(
+            memory.view()
+            [guest_ptr as _..(guest_ptr + s.len() as u32) as _].iter())
+        {
+            cell.set(byte)
+    }
+
+    u64_merge_bits(guest_ptr as _, s.len() as _)
 }
 
 #[cfg(test)]
@@ -98,6 +127,6 @@ pub mod tests {
         println!("{} {}", result_ptr, result_len);
 
         let result_string = read_guest_string(&instance.context(), result_ptr.try_into().unwrap(), result_len.try_into().unwrap());
-        println!("{}", result_string);
+        println!("result {}", result_string);
     }
 }
