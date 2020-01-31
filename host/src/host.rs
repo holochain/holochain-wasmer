@@ -7,6 +7,7 @@ use wasmer_runtime::Value;
 use wasmer_runtime::Instance;
 use std::mem;
 use std::slice;
+use std::convert::TryInto;
 
 // Import the wasmer runtime so we can use it
 use wasmer_runtime::{func, imports, ImportObject};
@@ -34,14 +35,15 @@ pub fn import_object() -> ImportObject {
     imports! {
         "env" => {
             "__host_process_string" => func!(host_process_string),
-            "__host_copy" => func!(host_copy),
+            "__host_copy_position" => func!(host_copy_position),
+            "__host_copy_string" => func!(host_copy_string),
         },
     }
 }
 
 pub fn write_guest_string(instance: &mut Instance, s: String) -> (i32, i32) {
     let guest_ptr = match instance
-        .call("pre_alloc_string", &[Value::I32(s.len() as _)])
+        .call("pre_alloc_cap", &[Value::I32(s.len() as _)])
         .expect("run pre alloc")[0]
     {
         Value::I32(i) => i,
@@ -77,18 +79,53 @@ fn host_process_string(ctx: &mut Ctx, ptr: i32, cap: i32) -> u64 {
     let processed_string = format!("host: {}", guest_string);
     let processed_ptr = processed_string.as_ptr();
     let processed_len = processed_string.len();
-    println!("processed {} {}", processed_ptr as usize, processed_len);
+    println!("processed string {} {}", processed_ptr as usize, processed_len);
     mem::ManuallyDrop::new(processed_string);
+    // mem::forget(processed_string);
+
+    let processed_position = vec![processed_ptr as u64, processed_len as u64];
+    println!("processed position x {:?}", processed_position);
+    let processed_position_ptr = processed_position.as_ptr() as u64;
+
+    // let slice: [u64; 2] = unsafe { slice::from_raw_parts(processed_position_ptr as _, 2) }.try_into().unwrap();
+    // println!("original slice {:?}", slice);
+
+    mem::ManuallyDrop::new(processed_position);
+    // mem::forget(processed_position);
+
+    println!("position ptr {}", processed_position_ptr);
     // u64_merge_bits(processed_ptr as _, processed_len as _)
-    processed_ptr as _
+    processed_position_ptr
 }
 
-fn host_copy(ctx: &mut Ctx, host_ptr: u64, guest_ptr: u32, len: u32) -> u64 {
-    println!("copy {} {} {}", host_ptr, guest_ptr, len);
+fn host_copy_position(ctx: &mut Ctx, host_ptr: u64, guest_ptr: u32) -> u64 {
+    println!("copy position {} {}", host_ptr, guest_ptr);
+    // let processed_position: [u64; 2] = unsafe { slice::from_raw_parts(host_processed_position_ptr as _, 2 as _) }.try_into().expect("slice length");
+    // println!("processed position {:?}", processed_position);
+    let slice: [u8; 16] = unsafe { slice::from_raw_parts(host_ptr as _, 16) }.try_into().unwrap();
+    println!("later slice {:?}", slice);
+
+    let memory = ctx.memory(0);
+    for (byte, cell) in slice
+        .bytes()
+        .zip(
+            memory.view()
+            [guest_ptr as _..(guest_ptr + 16) as _].iter())
+    {
+            cell.set(byte.unwrap())
+    }
+
+    u64_merge_bits(guest_ptr as _, slice.len() as _)
+}
+
+fn host_copy_string(ctx: &mut Ctx, host_ptr: u64, guest_ptr: u32, len: u32) -> u64 {
+    // println!("copy {} {} {}", host_ptr, guest_ptr, len);
+    // let processed_position: [u64; 2] = unsafe { slice::from_raw_parts(host_processed_position_ptr as _, 2 as _) }.try_into().expect("slice length");
+    // println!("processed position {:?}", processed_position);
     let slice = unsafe { slice::from_raw_parts(host_ptr as _, len as _) };
-    println!("slice {:?}", slice);
+    // println!("slice {:?}", slice);
     let s = String::from(std::str::from_utf8(slice).unwrap());
-    println!("string {}", s);
+    // println!("string {}", s);
 
     let memory = ctx.memory(0);
 
@@ -101,7 +138,7 @@ fn host_copy(ctx: &mut Ctx, host_ptr: u64, guest_ptr: u32, len: u32) -> u64 {
             cell.set(byte)
     }
 
-    u64_merge_bits(guest_ptr as _, s.len() as _)
+    u64_merge_bits(guest_ptr as _, slice.len() as _)
 }
 
 #[cfg(test)]

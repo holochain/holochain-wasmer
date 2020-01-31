@@ -3,11 +3,13 @@ extern crate wee_alloc;
 use std::mem;
 use std::slice;
 use common::bits_n_pieces::u64_merge_bits;
+use std::convert::TryInto;
 // use common::bits_n_pieces::u64_split_bits;
 
 extern "C" {
     fn __host_process_string(ptr: u32, cap: u32) -> u64;
-    fn __host_copy(host_ptr: u64, guest_ptr: u32, len: u32) -> u64;
+    fn __host_copy_position(host_ptr: u64, guest_ptr: u32) -> u64;
+    fn __host_copy_string(host_ptr: u64, guest_ptr: u32, len: u32) -> u64;
 }
 
 // Use `wee_alloc` as the global allocator.
@@ -22,12 +24,13 @@ pub fn host_string(ptr: u32, len: u32) -> String {
 #[no_mangle]
 /// hack to allow the host to allocate a string capacity and receive the pointer to write into it
 /// from outside
-pub extern "C" fn pre_alloc_string(cap: u32) -> i32 {
+pub extern "C" fn pre_alloc_cap(cap: u32) -> u32 {
     // https://doc.rust-lang.org/std/string/struct.String.html#examples-8
     // Prevent automatically dropping the String's data
     let dummy:Vec<u8> = Vec::with_capacity(cap as _);
-    let ptr = dummy.as_slice().as_ptr() as i32;
-    mem::ManuallyDrop::new(dummy);
+    let ptr = dummy.as_slice().as_ptr() as u32;
+    // mem::ManuallyDrop::new(dummy);
+    mem::forget(dummy);
     ptr
 }
 
@@ -40,16 +43,20 @@ pub extern "C" fn dealloc_string(ptr: u32, len: u32) {
 pub fn prepare_return(s: String) -> u64 {
     let s_ptr = s.as_ptr();
     let s_len = s.len();
-    mem::ManuallyDrop::new(s);
+    // mem::ManuallyDrop::new(s);
+    mem::forget(s);
     u64_merge_bits(s_ptr as _, s_len as _)
 }
 
 fn host_process_string(s: String) -> String {
-    let host_ptr = unsafe { __host_process_string(s.as_ptr() as _, s.len() as _) };
-    let len = 19;
-    let guest_ptr = pre_alloc_string(len);
-    unsafe { __host_copy(host_ptr, guest_ptr as _, len as _) };
-    host_string(guest_ptr as _, len as _)
+    let host_processed_position_ptr = unsafe { __host_process_string(s.as_ptr() as _, s.len() as _) };
+    let guest_position_ptr = pre_alloc_cap(2);
+    let _ = unsafe { __host_copy_position(host_processed_position_ptr, guest_position_ptr); };
+    let host_position: [u64; 2] = unsafe { slice::from_raw_parts(guest_position_ptr as _, 2) }.try_into().unwrap();
+
+    let guest_string_ptr = pre_alloc_cap(host_position[1].try_into().unwrap());
+    unsafe { __host_copy_string(host_position[0] as _, guest_string_ptr as _, host_position[1] as _) };
+    host_string(guest_string_ptr as _, host_position[1] as _)
 }
 
 #[no_mangle]
