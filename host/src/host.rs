@@ -1,67 +1,36 @@
+pub mod import;
+pub mod load_wasm;
+mod allocate;
+
 // Import the Filesystem so we can read our .wasm file
-use common::bits_n_pieces::u64_merge_bits;
-use std::fs::File;
-use std::io::prelude::*;
 use wasmer_runtime::Ctx;
 use wasmer_runtime::Value;
 use wasmer_runtime::Instance;
-use std::mem;
+use common::memory::Ptr;
+use common::memory::Allocation;
 use std::slice;
+use crate::allocate::copy_string_to_guest;
 use std::convert::TryInto;
+use common::memory::Len;
+use common::memory::AllocationPtr;
+use common::allocate::string_allocation_ptr;
 
-// Import the wasmer runtime so we can use it
-use wasmer_runtime::{func, imports, ImportObject};
-
-// Create an absolute path to the Wasm file
-const WASM_FILE_PATH: &str = concat!(
-    env!("CARGO_MANIFEST_DIR"),
-    "/../target/wasm32-unknown-unknown/release/guest.wasm"
-);
-
-pub fn load_wasm() -> Vec<u8> {
-    // Let's read in our .wasm file as bytes
-
-    // Let's open the file.
-    let mut file = File::open(WASM_FILE_PATH).expect(&format!("wasm file at {}", WASM_FILE_PATH));
-
-    // Let's read the file into a Vec
-    let mut wasm_vec = Vec::new();
-    file.read_to_end(&mut wasm_vec)
-        .expect("Error reading the wasm file");
-    wasm_vec
-}
-
-pub fn import_object() -> ImportObject {
-    imports! {
-        "env" => {
-            "__host_process_string" => func!(host_process_string),
-            "__host_copy_position" => func!(host_copy_position),
-            "__host_copy_string" => func!(host_copy_string),
-        },
-    }
-}
-
-pub fn write_guest_string(instance: &mut Instance, s: String) -> (i32, i32) {
+pub fn write_guest_string(instance: &mut Instance, s: String) -> Allocation {
     let guest_ptr = match instance
-        .call("pre_alloc_cap", &[Value::I32(s.len() as _)])
+        .call("allocate", &[Value::I64(s.len() as _)])
         .expect("run pre alloc")[0]
     {
-        Value::I32(i) => i,
+        Value::I64(i) => i as Ptr,
         _ => unreachable!(),
     };
 
-    let memory = instance.context_mut().memory(0);
-
-    for (byte, cell) in s
-        .bytes()
-        .zip(memory.view()[guest_ptr as _..(guest_ptr + s.len() as i32) as _].iter()) {
-            cell.set(byte)
-    }
-
-    (guest_ptr, s.len() as i32)
+    let guest_allocation = [guest_ptr as Ptr, s.len() as Ptr];
+    copy_string_to_guest(instance.context_mut(), guest_allocation[0], s);
+    guest_allocation
 }
 
-fn read_guest_string(ctx: &Ctx, ptr: i32, len: i32) -> String {
+fn read_guest_string(ctx: &Ctx, ptr: Ptr, len: Ptr) -> String {
+    println!("rgs {} {}", ptr, len);
     let memory = ctx.memory(0);
     let str_vec: Vec<_> = memory.view()[ptr as usize..(ptr + len) as usize]
         .iter()
@@ -69,101 +38,64 @@ fn read_guest_string(ctx: &Ctx, ptr: i32, len: i32) -> String {
         .collect();
 
     // Convert the subslice to a `&str`.
-    unsafe { std::str::from_utf8_unchecked(&str_vec) }.into()
+    std::str::from_utf8(&str_vec).unwrap().into()
 }
 
-fn host_process_string(ctx: &mut Ctx, ptr: i32, cap: i32) -> u64 {
-    println!("hiii {} {}", ptr, cap);
-    let guest_string = read_guest_string(ctx, ptr, cap);
-    println!("guest_string {}", guest_string);
+pub fn read_guest_string_from_allocation_ptr(ctx: &Ctx, guest_allocation_ptr: AllocationPtr) -> String {
+    println!("foo {}", allocation_ptr);
+    let view = ctx.memory(0).view();
+    let slice: AllocationBytes = unsafe { slice::from_raw_parts(allocation_ptr as _, ALLOCATION_BYTES_ITEMS) }.try_into().unwrap();
+
+
+    let guest_string_ptr: Ptr = view[allocation_ptr as usize].get();
+    let guest_string_len: Len = view[(allocation_ptr + 1) as usize].get();
+    println!("ff {} {}", guest_string_ptr, guest_string_len);
+
+    read_guest_string(ctx, guest_string_ptr, guest_string_len)
+}
+
+fn host_process_string(ctx: &mut Ctx, ptr: i64, cap: i64) -> u64 {
+    let guest_string = read_guest_string(ctx, ptr.try_into().unwrap(), cap.try_into().unwrap());
     let processed_string = format!("host: {}", guest_string);
-    let processed_ptr = processed_string.as_ptr();
-    let processed_len = processed_string.len();
-    println!("processed string {} {}", processed_ptr as usize, processed_len);
-    mem::ManuallyDrop::new(processed_string);
-    // mem::forget(processed_string);
-
-    let processed_position = vec![processed_ptr as u64, processed_len as u64];
-    println!("processed position x {:?}", processed_position);
-    let processed_position_ptr = processed_position.as_ptr() as u64;
-
-    // let slice: [u64; 2] = unsafe { slice::from_raw_parts(processed_position_ptr as _, 2) }.try_into().unwrap();
-    // println!("original slice {:?}", slice);
-
-    mem::ManuallyDrop::new(processed_position);
-    // mem::forget(processed_position);
-
-    println!("position ptr {}", processed_position_ptr);
-    // u64_merge_bits(processed_ptr as _, processed_len as _)
-    processed_position_ptr
+    string_allocation_ptr(processed_string)
 }
 
-fn host_copy_position(ctx: &mut Ctx, host_ptr: u64, guest_ptr: u32) -> u64 {
-    println!("copy position {} {}", host_ptr, guest_ptr);
-    // let processed_position: [u64; 2] = unsafe { slice::from_raw_parts(host_processed_position_ptr as _, 2 as _) }.try_into().expect("slice length");
-    // println!("processed position {:?}", processed_position);
-    let slice: [u8; 16] = unsafe { slice::from_raw_parts(host_ptr as _, 16) }.try_into().unwrap();
-    println!("later slice {:?}", slice);
-
-    let memory = ctx.memory(0);
-    for (byte, cell) in slice
-        .bytes()
-        .zip(
-            memory.view()
-            [guest_ptr as _..(guest_ptr + 16) as _].iter())
-    {
-            cell.set(byte.unwrap())
-    }
-
-    u64_merge_bits(guest_ptr as _, slice.len() as _)
-}
-
-fn host_copy_string(ctx: &mut Ctx, host_ptr: u64, guest_ptr: u32, len: u32) -> u64 {
-    // println!("copy {} {} {}", host_ptr, guest_ptr, len);
-    // let processed_position: [u64; 2] = unsafe { slice::from_raw_parts(host_processed_position_ptr as _, 2 as _) }.try_into().expect("slice length");
-    // println!("processed position {:?}", processed_position);
+fn host_copy_string(ctx: &mut Ctx, host_ptr: Ptr, guest_ptr: Ptr, len: Len) {
     let slice = unsafe { slice::from_raw_parts(host_ptr as _, len as _) };
-    // println!("slice {:?}", slice);
     let s = String::from(std::str::from_utf8(slice).unwrap());
-    // println!("string {}", s);
-
-    let memory = ctx.memory(0);
-
-    for (byte, cell) in s
-        .bytes()
-        .zip(
-            memory.view()
-            [guest_ptr as _..(guest_ptr + s.len() as u32) as _].iter())
-        {
-            cell.set(byte)
-    }
-
-    u64_merge_bits(guest_ptr as _, slice.len() as _)
+    copy_string_to_guest(ctx, guest_ptr, s);
 }
 
 #[cfg(test)]
 pub mod tests {
 
-    use super::*;
+    use crate::load_wasm::load_wasm;
+    use crate::import::import_object;
+    use crate::write_guest_string;
+    // use crate::read_guest_string;
+    use wasmer_runtime::Value;
     use wasmer_runtime::instantiate;
-    use common::bits_n_pieces::u64_split_bits;
     use std::convert::TryInto;
+    use common::bits_n_pieces::U16_MAX;
+    use crate::read_guest_string_from_allocation_ptr;
 
     #[test]
     fn do_it() {
         let mut instance = instantiate(&load_wasm(), &import_object()).expect("build instance");
         let starter_string = String::from("foobar");
+        // let starter_string = "╰▐ ✖ 〜 ✖ ▐╯".repeat((U16_MAX * 1) as usize);
+        let _ = "foo".repeat(U16_MAX as _);
 
-        let (guest_ptr, guest_len) = write_guest_string(&mut instance, starter_string.clone());
+        let [guest_ptr, guest_len] = write_guest_string(&mut instance, starter_string.clone());
         println!("{} {}", guest_ptr, guest_len);
 
-        let (result_ptr, result_len) = u64_split_bits(match instance.call("process_string", &[Value::I32(guest_ptr), Value::I32(guest_len)]).expect("call error")[0] {
+        let guest_allocation_ptr = match instance.call("process_string", &[Value::I64(guest_ptr.try_into().unwrap()), Value::I64(guest_len.try_into().unwrap())]).expect("call error xx")[0] {
             Value::I64(i) => i as u64,
             _ => unreachable!(),
-        });
-        println!("{} {}", result_ptr, result_len);
+        };
+        println!("{}", guest_allocation_ptr);
 
-        let result_string = read_guest_string(&instance.context(), result_ptr.try_into().unwrap(), result_len.try_into().unwrap());
+        let result_string = read_guest_string_from_allocation_ptr(&instance.context(), guest_allocation_ptr);
         println!("result {}", result_string);
     }
 }
