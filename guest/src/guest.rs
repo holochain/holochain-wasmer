@@ -4,12 +4,12 @@ extern crate wee_alloc;
 use std::slice;
 use std::convert::TryInto;
 use common::memory::Ptr;
-use common::memory::Allocation;
 use crate::allocate::allocate;
 use common::memory::ALLOCATION_ITEMS;
 use common::memory::Len;
 use common::memory::AllocationPtr;
 use common::allocate::string_allocation_ptr;
+use common::allocate::allocation_from_allocation_ptr;
 
 extern "C" {
     fn __host_process_string(ptr: Ptr, cap: Len) -> Ptr;
@@ -29,10 +29,11 @@ pub fn host_string(ptr: Ptr, len: Len) -> String {
 pub fn host_string_from_allocation_ptr(allocation_ptr: Ptr) -> String {
     let guest_ptr = allocate(ALLOCATION_ITEMS as Len);
     let _ = unsafe { __copy_allocation_to_guest(guest_ptr, allocation_ptr); };
-    let host_allocation: Allocation = unsafe { slice::from_raw_parts(guest_ptr as _, ALLOCATION_ITEMS) }.try_into().unwrap();
-    let guest_string_ptr = allocate(host_allocation[1].try_into().unwrap());
-    unsafe { __host_copy_string(host_allocation[0] as _, guest_string_ptr as _, host_allocation[1] as _) };
-    host_string(guest_string_ptr as _, host_allocation[1] as _)
+    let allocation = allocation_from_allocation_ptr(guest_ptr);
+
+    let guest_string_ptr = allocate(allocation[1].try_into().unwrap());
+    unsafe { __host_copy_string(allocation[0] as _, guest_string_ptr as _, allocation[1] as _) };
+    host_string(guest_string_ptr as _, allocation[1] as _)
 }
 
 macro_rules! host_call {
