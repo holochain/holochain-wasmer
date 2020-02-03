@@ -42,14 +42,10 @@ fn read_guest_string(ctx: &Ctx, ptr: Ptr, len: Ptr) -> String {
 }
 
 pub fn read_guest_string_from_allocation_ptr(ctx: &Ctx, guest_allocation_ptr: AllocationPtr) -> String {
-    println!("foo {}", allocation_ptr);
     let view = ctx.memory(0).view();
-    let slice: AllocationBytes = unsafe { slice::from_raw_parts(allocation_ptr as _, ALLOCATION_BYTES_ITEMS) }.try_into().unwrap();
 
-
-    let guest_string_ptr: Ptr = view[allocation_ptr as usize].get();
-    let guest_string_len: Len = view[(allocation_ptr + 1) as usize].get();
-    println!("ff {} {}", guest_string_ptr, guest_string_len);
+    let guest_string_ptr: Ptr = view[guest_allocation_ptr as usize].get();
+    let guest_string_len: Len = view[(guest_allocation_ptr + 1) as usize].get();
 
     read_guest_string(ctx, guest_string_ptr, guest_string_len)
 }
