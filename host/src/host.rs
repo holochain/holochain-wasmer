@@ -72,7 +72,6 @@ pub mod tests {
     use wasmer_runtime::Value;
     use wasmer_runtime::instantiate;
     use std::convert::TryInto;
-    use common::bits_n_pieces::U16_MAX;
     use crate::read_guest_string_from_allocation_ptr;
 
     #[test]
@@ -80,7 +79,7 @@ pub mod tests {
         let mut instance = instantiate(&load_wasm(), &import_object()).expect("build instance");
         let starter_string = String::from("foobar");
         // let starter_string = "╰▐ ✖ 〜 ✖ ▐╯".repeat((U16_MAX * 1) as usize);
-        let _ = "foo".repeat(U16_MAX as _);
+        let _ = "foo".repeat(std::u16::MAX as _);
 
         let [guest_ptr, guest_len] = write_guest_string(&mut instance, starter_string.clone());
         println!("{} {}", guest_ptr, guest_len);
