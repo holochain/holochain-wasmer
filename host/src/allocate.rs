@@ -1,25 +1,41 @@
-use std::slice;
-use wasmer_runtime::Ctx;
-use common::memory::AllocationBytes;
-use common::memory::ALLOCATION_BYTES_ITEMS;
-use std::convert::TryInto;
-use std::io::Read;
+// use common::memory::AllocationBytes;
 use common::memory::AllocationPtr;
-use common::memory::ALLOCATION_ITEMS;
 use common::memory::Ptr;
+use common::memory::ALLOCATION_BYTES_ITEMS;
+// use common::memory::ALLOCATION_ITEMS;
+// use std::convert::TryInto;
+use common::allocate::allocation_from_allocation_ptr;
+use common::memory::Allocation;
+use std::io::Read;
+// use std::slice;
+use byte_slice_cast::*;
+use wasmer_runtime::Ctx;
 
-pub fn copy_allocation_to_guest(ctx: &mut Ctx, guest_ptr: Ptr, allocation_ptr: AllocationPtr) {
+pub fn copy_allocation_to_guest(
+    ctx: &mut Ctx,
+    guest_allocation_ptr: AllocationPtr,
+    host_allocation_ptr: AllocationPtr,
+) {
+    println!(
+        "copy allocation ptrs {} {}",
+        guest_allocation_ptr, host_allocation_ptr
+    );
+    let host_allocation: Allocation = allocation_from_allocation_ptr(host_allocation_ptr);
+
+    println!(
+        "copy allocation {} {}",
+        host_allocation[0], host_allocation[1]
+    );
+
     let memory = ctx.memory(0);
-    let slice: AllocationBytes = unsafe { slice::from_raw_parts(allocation_ptr as _, ALLOCATION_BYTES_ITEMS) }.try_into().unwrap();
 
-    for (byte, cell) in slice
-        .bytes()
-        .zip(
-            memory.view()
-            [guest_ptr as _..(guest_ptr + ALLOCATION_ITEMS as Ptr) as _].iter())
-    {
-            cell.set(byte.unwrap())
-    };
+    for (byte, cell) in host_allocation.as_byte_slice().bytes().zip(
+        memory.view()[guest_allocation_ptr as _
+            ..(guest_allocation_ptr + ALLOCATION_BYTES_ITEMS as Ptr) as _]
+            .iter(),
+    ) {
+        cell.set(byte.unwrap())
+    }
 }
 
 pub fn copy_string_to_guest(ctx: &mut Ctx, guest_ptr: Ptr, s: String) {
@@ -27,7 +43,8 @@ pub fn copy_string_to_guest(ctx: &mut Ctx, guest_ptr: Ptr, s: String) {
 
     for (byte, cell) in s
         .bytes()
-        .zip(memory.view()[guest_ptr as _..(guest_ptr + s.len() as Ptr) as _].iter()) {
-            cell.set(byte)
-    };
+        .zip(memory.view()[guest_ptr as _..(guest_ptr + s.len() as Ptr) as _].iter())
+    {
+        cell.set(byte)
+    }
 }

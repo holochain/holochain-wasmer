@@ -1,5 +1,5 @@
-use std::io::prelude::*;
 use std::fs::File;
+use std::io::prelude::*;
 
 // Create an absolute path to the Wasm file
 const WASM_FILE_PATH: &str = concat!(
