@@ -69,7 +69,7 @@ pub extern "C" fn process_string(host_allocation_ptr: AllocationPtr) -> Allocati
 
     // imported host function calls are always unsafe
     let s = format!("guest: {}", s);
-    // let host_processed = host_process_string(guest_processed);
+    let s = host_process_string(s);
     let ret = string_allocation_ptr(s);
     unsafe { __prn(ret) };
     ret
