@@ -55,9 +55,6 @@ pub fn read_guest_string_from_allocation_ptr(
         .collect();
     let guest_allocation: Allocation = bytes_vec.as_slice_of::<u64>().unwrap().try_into().expect("wrong number of array elements");
 
-    println!("xx {}", guest_allocation_ptr);
-    println!("yy {}", view.len());
-
     read_guest_string(ctx, guest_allocation[0], guest_allocation[1])
 }
 
@@ -86,9 +83,9 @@ pub mod tests {
     #[test]
     fn do_it() {
         let instance = instantiate(&load_wasm(), &import_object()).expect("build instance");
-        let starter_string = String::from("foobar");
-        // let starter_string = "╰▐ ✖ 〜 ✖ ▐╯".repeat((U16_MAX * 1) as usize);
-        let _ = "foo".repeat(std::u16::MAX as _);
+        // let starter_string = String::from("foobar");
+        let starter_string = "╰▐ ✖ 〜 ✖ ▐╯".repeat((std::u16::MAX * 1) as usize);
+        // let starter_string = "foo".repeat(std::u16::MAX as _);
 
         // let [guest_ptr, guest_len] = write_guest_string(&mut instance, starter_string.clone());
         // println!("{} {}", guest_ptr, guest_len);
