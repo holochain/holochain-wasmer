@@ -4,7 +4,7 @@ use std::io::prelude::*;
 // Create an absolute path to the Wasm file
 const WASM_FILE_PATH: &str = concat!(
     env!("CARGO_MANIFEST_DIR"),
-    "/../target/wasm32-unknown-unknown/release/guest.wasm"
+    "/../target/wasm32-unknown-unknown/release/test_wasm.wasm"
 );
 
 pub fn load_wasm() -> Vec<u8> {
