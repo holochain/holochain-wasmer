@@ -46,8 +46,8 @@ macro_rules! host_call {
         host_string_from_host_allocation_ptr(
             unsafe {
                 $func_name(
-                    $input.as_ptr() as u64,
-                    $input.len() as u64
+                    $input.as_ptr() as Ptr,
+                    $input.len() as Len,
                 )
             }
         )
