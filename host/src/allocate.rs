@@ -16,16 +16,7 @@ pub fn copy_allocation_to_guest(
     guest_allocation_ptr: AllocationPtr,
     host_allocation_ptr: AllocationPtr,
 ) {
-    println!(
-        "copy allocation ptrs {} {}",
-        guest_allocation_ptr, host_allocation_ptr
-    );
     let host_allocation: Allocation = allocation_from_allocation_ptr(host_allocation_ptr);
-
-    println!(
-        "copy allocation {} {}",
-        host_allocation[0], host_allocation[1]
-    );
 
     let memory = ctx.memory(0);
 

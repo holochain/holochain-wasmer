@@ -55,9 +55,6 @@ macro_rules! host_call {
 }
 
 pub fn host_process_string(s: String) -> String {
-    // let host_processed_position_ptr = unsafe { __host_process_string(s.as_ptr() as _, s.len() as _) };
-    //
-    // host_string_from_allocation_ptr
     host_call!(__host_process_string, s)
 }
 
@@ -70,7 +67,5 @@ pub extern "C" fn process_string(host_allocation_ptr: AllocationPtr) -> Allocati
     // imported host function calls are always unsafe
     let s = format!("guest: {}", s);
     let s = host_process_string(s);
-    let ret = string_allocation_ptr(s);
-    unsafe { __prn(ret) };
-    ret
+    string_allocation_ptr(s)
 }

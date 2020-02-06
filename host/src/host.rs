@@ -4,6 +4,7 @@ pub mod load_wasm;
 
 // Import the Filesystem so we can read our .wasm file
 use crate::allocate::copy_string_to_guest;
+use byte_slice_cast::AsSliceOf;
 use common::allocate::string_allocation_ptr;
 use common::allocate::string_from_allocation_ptr;
 use common::memory::Allocation;
@@ -15,7 +16,6 @@ use wasmer_runtime::memory::MemoryView;
 use wasmer_runtime::Ctx;
 use wasmer_runtime::Instance;
 use wasmer_runtime::Value;
-use byte_slice_cast::AsSliceOf;
 
 pub fn write_guest_string(instance: &mut Instance, s: String) -> Allocation {
     let guest_ptr = match instance
@@ -32,7 +32,6 @@ pub fn write_guest_string(instance: &mut Instance, s: String) -> Allocation {
 }
 
 fn read_guest_string(ctx: &Ctx, ptr: Ptr, len: Ptr) -> String {
-    println!("rgs {} {}", ptr, len);
     let memory = ctx.memory(0);
     let str_vec: Vec<_> = memory.view()[ptr as usize..(ptr + len) as usize]
         .iter()
@@ -53,7 +52,11 @@ pub fn read_guest_string_from_allocation_ptr(
         .iter()
         .map(|cell| cell.get())
         .collect();
-    let guest_allocation: Allocation = bytes_vec.as_slice_of::<u64>().unwrap().try_into().expect("wrong number of array elements");
+    let guest_allocation: Allocation = bytes_vec
+        .as_slice_of::<u64>()
+        .unwrap()
+        .try_into()
+        .expect("wrong number of array elements");
 
     read_guest_string(ctx, guest_allocation[0], guest_allocation[1])
 }
@@ -83,16 +86,11 @@ pub mod tests {
     #[test]
     fn do_it() {
         let instance = instantiate(&load_wasm(), &import_object()).expect("build instance");
-        // let starter_string = String::from("foobar");
-        let starter_string = "╰▐ ✖ 〜 ✖ ▐╯".repeat((std::u16::MAX * 1) as usize);
-        // let starter_string = "foo".repeat(std::u16::MAX as _);
+        // use a "crazy" string that is much longer than a single wasm page to show that pagination
+        // and utf-8 are both working OK
+        let starter_string = "╰▐ ✖ 〜 ✖ ▐╯".repeat((10_u32 * std::u16::MAX as u32) as _);
 
-        // let [guest_ptr, guest_len] = write_guest_string(&mut instance, starter_string.clone());
-        // println!("{} {}", guest_ptr, guest_len);
-
-        let starter_string_allocation_ptr = string_allocation_ptr(starter_string);
-
-        println!("ssap {}", &starter_string_allocation_ptr);
+        let starter_string_allocation_ptr = string_allocation_ptr(starter_string.clone());
 
         let guest_allocation_ptr = match instance
             .call(
@@ -101,15 +99,17 @@ pub mod tests {
                     starter_string_allocation_ptr.try_into().unwrap(),
                 )],
             )
-            .expect("call error xx")[0]
+            .expect("call error")[0]
         {
             Value::I64(i) => i as u64,
             _ => unreachable!(),
         };
-        println!("gap {}", guest_allocation_ptr);
 
         let result_string =
             read_guest_string_from_allocation_ptr(&instance.context(), guest_allocation_ptr);
-        println!("result {}", result_string);
+
+        let expected_string = format!("host: guest: {}", &starter_string);
+
+        assert_eq!(result_string, expected_string,);
     }
 }
