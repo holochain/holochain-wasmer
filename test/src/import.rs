@@ -6,8 +6,8 @@ use wasmer_runtime::ImportObject;
 pub fn import_object() -> ImportObject {
     imports! {
         "env" => {
-            "__copy_allocation_to_guest" => wasmer_runtime::func!(host::allocate::copy_allocation_to_guest),
-            "__host_copy_string" => wasmer_runtime::func!(host::host_copy_string),
+            "__import_allocation" => wasmer_runtime::func!(host::allocation::write_to_guest),
+            "__import_bytes" => wasmer_runtime::func!(host::bytes::write_to_guest_using_host_allocation_ptr),
             "__test_process_string" => func!(test_process_string),
         },
     }

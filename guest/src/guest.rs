@@ -2,43 +2,39 @@ pub mod allocate;
 
 extern crate wee_alloc;
 use crate::allocate::allocate;
-use common::allocate::allocate_allocation_ptr;
-use common::allocate::allocation_from_allocation_ptr;
-use common::allocate::string_from_allocation;
-use common::memory::AllocationPtr;
-use common::memory::Len;
-use common::memory::Ptr;
-use common::memory::ALLOCATION_BYTES_ITEMS;
+use common::allocation;
+use common::bytes;
+use common::error::Error;
+use common::AllocationPtr;
+use common::Len;
+use common::Ptr;
 
 extern "C" {
     // memory stuff
-    fn __copy_allocation_to_guest(
-        guest_allocation_ptr: AllocationPtr,
-        host_allocation_ptr: AllocationPtr,
-    );
-    fn __host_copy_string(host_allocation_ptr: AllocationPtr, guest_string_ptr: Ptr);
+    fn __import_allocation(guest_allocation_ptr: AllocationPtr, host_allocation_ptr: AllocationPtr);
+    fn __import_bytes(host_allocation_ptr: AllocationPtr, guest_bytes_ptr: Ptr);
 }
 
 /// given a pointer to an allocation on the host, copy the allocation into the guest and return the
 /// guest's pointer to it
 fn map_string(host_allocation_ptr: Ptr) -> AllocationPtr {
-    let tmp_allocation_ptr = allocate(ALLOCATION_BYTES_ITEMS as Len);
+    let tmp_allocation_ptr = allocate(allocation::ALLOCATION_BYTES_ITEMS as Len);
     unsafe {
-        __copy_allocation_to_guest(tmp_allocation_ptr, host_allocation_ptr);
+        __import_allocation(tmp_allocation_ptr, host_allocation_ptr);
     };
     // this allocation has the correct length but host string ptr
-    let [_, len] = allocation_from_allocation_ptr(tmp_allocation_ptr);
-    let guest_string_ptr = allocate(len);
+    let [_, len] = allocation::from_allocation_ptr(tmp_allocation_ptr);
+    let guest_bytes_ptr = allocate(len);
     unsafe {
-        __host_copy_string(host_allocation_ptr, guest_string_ptr);
+        __import_bytes(host_allocation_ptr, guest_bytes_ptr);
     };
-    allocate_allocation_ptr(guest_string_ptr, len)
+    allocation::to_allocation_ptr([guest_bytes_ptr, len])
 }
 
-pub fn host_string_from_host_allocation_ptr(host_allocation_ptr: Ptr) -> String {
-    string_from_allocation(allocation_from_allocation_ptr(map_string(
-        host_allocation_ptr,
-    )))
+pub fn host_string_from_host_allocation_ptr(host_allocation_ptr: Ptr) -> Result<String, Error> {
+    Ok(String::from(std::str::from_utf8(
+        &bytes::from_allocation_ptr(map_string(host_allocation_ptr)),
+    )?))
 }
 
 #[macro_export]

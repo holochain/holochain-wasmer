@@ -1,5 +1,5 @@
-use common::memory::Len;
-use common::memory::Ptr;
+use common::Len;
+use common::Ptr;
 use std::mem;
 use std::slice;
 

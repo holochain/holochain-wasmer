@@ -2,22 +2,21 @@ pub mod import;
 pub mod load_wasm;
 
 use wasmer_runtime::Ctx;
-use common::memory::AllocationPtr;
+use common::AllocationPtr;
 use common::error::Error;
 use std::convert::TryInto;
-use host::read_guest_bytes;
-use common::allocate::string_allocation_ptr;
+use host::bytes;
 
 fn test_process_string(ctx: &mut Ctx, ptr: i64, cap: i64) -> Result<AllocationPtr, Error> {
-    let guest_bytes = read_guest_bytes(ctx, ptr.try_into()?, cap.try_into()?);
+    let guest_bytes = bytes::read_from_guest(ctx, ptr.try_into()?, cap.try_into()?);
     let processed_string = format!("host: {}", std::str::from_utf8(&guest_bytes)?);
-    Ok(string_allocation_ptr(processed_string))
+    Ok(common::bytes::to_allocation_ptr(processed_string.into_bytes()))
 }
 
 #[cfg(test)]
 pub mod tests {
 
-    use host::guest_call;
+    use host::call;
     use crate::import::import_object;
     use crate::load_wasm::load_wasm;
     use wasmer_runtime::instantiate;
@@ -33,10 +32,11 @@ pub mod tests {
         // and utf-8 are both working OK
         let starter_string = "╰▐ ✖ 〜 ✖ ▐╯".repeat((10_u32 * std::u16::MAX as u32) as _);
 
-        let result_string = guest_call(&test_instance(), "process_string", &starter_string)
+        let result_string = call::guest_call(&mut test_instance(), "process_string", starter_string.clone().into_bytes())
             .expect("process string call");
 
-        let expected_string = format!("host: guest: {}", &starter_string);
+        // let expected_string = format!("host: guest: {}", &starter_string);
+        let expected_string = String::from("foo");
 
         assert_eq!(result_string, expected_string,);
     }
