@@ -8,8 +8,8 @@ jobs:
    - checkout
    - run: nix-shell --run ./test.sh
 
- workflows:
-  version: 2.1
-  tests:
-   jobs:
-    - build
+workflows:
+ version: 2.1
+ tests:
+  jobs:
+   - build
