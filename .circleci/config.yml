@@ -1,0 +1,15 @@
+version: 2.1
+
+jobs:
+ build:
+  docker:
+   - image: holochain/holonix:latest.develop
+  steps:
+   - checkout
+   - run: nix-shell --run ./test.sh
+
+ workflows:
+  version: 2.1
+  tests:
+   jobs:
+    - build
