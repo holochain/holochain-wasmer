@@ -15,7 +15,7 @@ jobs:
    - checkout
    - run:
       no_output_timeout: 20m
-      command: nix-shell --run "hn-release-hook-publish-crates-io 'holochain_wasmer_common holochain_wasmer_host holochain_wasmer_guest'"
+      command: nix-shell --run "hn-release-hook-publish-crates-io 'common host guest'"
 
 workflows:
  version: 2.1
