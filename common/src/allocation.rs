@@ -1,4 +1,6 @@
 use crate::AllocationPtr;
+use crate::Len;
+use crate::Ptr;
 use std::mem;
 use std::slice;
 
@@ -9,6 +11,25 @@ pub type Allocation = [u64; ALLOCATION_ITEMS];
 /// Need Allocation to be u8 to copy as bytes across host/guest
 pub const ALLOCATION_BYTES_ITEMS: usize = 16;
 pub type AllocationBytes = [u8; ALLOCATION_BYTES_ITEMS];
+
+#[no_mangle]
+/// allocate a length of bytes that won't be dropped by the allocator
+/// return the pointer to it so bytes can be written to the allocation
+pub extern "C" fn allocate(len: Len) -> Ptr {
+    // https://doc.rust-lang.org/std/string/struct.String.html#examples-8
+    // Prevent automatically dropping the String's data
+    let dummy: Vec<u8> = Vec::with_capacity(len as _);
+    let ptr = dummy.as_slice().as_ptr() as Ptr;
+    mem::ManuallyDrop::new(dummy);
+    ptr
+}
+
+/// restore an allocation so that it is dropped immediately
+/// this needs to be called on anything allocated above as the allocator
+/// will never free the memory otherwise
+pub extern "C" fn deallocate(ptr: Ptr, len: Len) {
+    let _: &[u8] = unsafe { slice::from_raw_parts(ptr as _, len as _) };
+}
 
 pub fn to_allocation_ptr(allocation: Allocation) -> AllocationPtr {
     // the allocation must exist as a vector or it will be dropped

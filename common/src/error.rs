@@ -36,3 +36,9 @@ impl From<byte_slice_cast::Error> for Error {
         Error::Memory
     }
 }
+
+impl From<std::array::TryFromSliceError> for Error {
+    fn from(_: std::array::TryFromSliceError) -> Self {
+        Error::Memory
+    }
+}
