@@ -51,18 +51,7 @@ hn-release-hook-preflight-manual
    # bump versions in the repo
    version = ''
 hn-release-hook-version-rust
-
-for dep in \
- holochain_wasmer_common
-do
- echo "bumping $dep dependency versions to ${config.release.version.current} in all Cargo.toml"
- find . \
-  -name "Cargo.toml" \
-  -not -path "**/target/**" \
-  -not -path "**/.git/**" \
-  -not -path "**/.cargo/**" | xargs -I {} \
-  sed -i 's/^'"''${dep}"' = { version = "=[0-9]\+.[0-9]\+.[0-9]\+\)\?"/'"''${dep}"' = { version = "=${config.release.version.current}"/g' {}
-done
+hw-release-hook-version
 '';
 
    # publish artifacts to the world
@@ -74,13 +63,13 @@ echo "All finished!!!"
   # the commit hash that the release process should target
   # this will always be behind what ends up being deployed
   # the release process needs to add some commits for changelog etc.
-  commit = "9d96dc2090e47e9228582543ba7d6fd8a9e7a946";
+  commit = "5d91d733788eccccacb29518ae03ed5d9f9d22a3";
 
   # the semver for prev and current releases
   # the previous version will be scanned/bumped by release scripts
   # the current version is what the release scripts bump *to*
   version = {
-   current = "0.0.7";
+   current = "0.0.9";
    previous = "_._._";
   };
 
