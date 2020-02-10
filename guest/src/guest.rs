@@ -19,6 +19,7 @@ pub fn map_bytes(host_allocation_ptr: Ptr) -> AllocationPtr {
     };
     // this allocation has the correct length but host bytes ptr
     let [_, len] = allocation::from_allocation_ptr(tmp_allocation_ptr);
+    allocation::deallocate(tmp_allocation_ptr, len);
     let guest_bytes_ptr = allocation::allocate(len);
     unsafe {
         __import_bytes(host_allocation_ptr, guest_bytes_ptr);
