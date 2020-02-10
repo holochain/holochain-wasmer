@@ -12,4 +12,4 @@ crate-type = [ "cdylib", "rlib" ]
 path = "src/guest.rs"
 
 [dependencies]
-holochain_wasmer_common = { path = "../common" }
+holochain_wasmer_common = { version = "=0.0.1", path = "../common" }

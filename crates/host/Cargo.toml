@@ -9,7 +9,7 @@ edition = "2018"
 [dependencies]
 wasmer-runtime = "=0.13.1"
 byte-slice-cast = "=0.3.5"
-holochain_wasmer_common = { path = "../common" }
+holochain_wasmer_common = { version = "=0.0.1", path = "../common" }
 
 [lib]
 name = "holochain_wasmer_host"

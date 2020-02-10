@@ -50,7 +50,19 @@ hn-release-hook-preflight-manual
 
    # bump versions in the repo
    version = ''
-hn-release-hook-version-readme
+hn-release-hook-version-rust
+
+for dep in \
+ holochain_wasmer_common
+do
+ echo "bumping $dep dependency versions to ${config.release.version.current} in all Cargo.toml"
+ find . \
+  -name "Cargo.toml" \
+  -not -path "**/target/**" \
+  -not -path "**/.git/**" \
+  -not -path "**/.cargo/**" | xargs -I {} \
+  sed -i 's/^'"''${dep}"' = { version = "=[0-9]\+.[0-9]\+.[0-9]\+\)\?"/'"''${dep}"' = { version = "=${config.release.version.current}"/g' {}
+done
 '';
 
    # publish artifacts to the world
