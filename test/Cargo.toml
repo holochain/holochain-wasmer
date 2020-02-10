@@ -7,8 +7,7 @@ edition = "2018"
 [dependencies]
 wasmer-runtime = "=0.13.1"
 byte-slice-cast = "=0.3.5"
-common = { path = "../crates/common" }
-host = { path = "../crates/host" }
+holochain_wasmer_host = { path = "../crates/host" }
 
 [lib]
 name = "test"

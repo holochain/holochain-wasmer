@@ -1,8 +1,7 @@
-extern crate wee_alloc;
-pub use common::allocation;
-pub use common::bytes;
-pub use common::error::Error;
-pub use common::*;
+pub use holochain_wasmer_common::allocation;
+pub use holochain_wasmer_common::bytes;
+pub use holochain_wasmer_common::error::Error;
+pub use holochain_wasmer_common::*;
 
 extern "C" {
     // memory stuff

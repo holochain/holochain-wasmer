@@ -1,14 +1,13 @@
 [package]
-name = "guest"
+name = "holochain_wasmer_guest"
 version = "0.0.1"
 authors = [ "thedavidmeister", "thedavidmeister@gmail.com" ]
 edition = "2018"
 
 [lib]
-name = "guest"
+name = "holochain_wasmer_guest"
 crate-type = [ "cdylib", "rlib" ]
 path = "src/guest.rs"
 
 [dependencies]
-wee_alloc = "=0.4.5"
-common = { path = "../common" }
+holochain_wasmer_common = { path = "../common" }

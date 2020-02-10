@@ -2,20 +2,19 @@ pub mod import;
 pub mod load_wasm;
 
 use wasmer_runtime::Ctx;
-use common::AllocationPtr;
-use common::error::Error;
-use host::guest;
+use holochain_wasmer_host::guest;
+use holochain_wasmer_host::*;
 
 fn test_process_string(ctx: &mut Ctx, allocation_ptr: AllocationPtr) -> Result<AllocationPtr, Error> {
     let guest_bytes = guest::read_from_allocation_ptr(ctx, allocation_ptr)?;
     let processed_string = format!("host: {}", std::str::from_utf8(&guest_bytes)?);
-    Ok(common::bytes::to_allocation_ptr(processed_string.into_bytes()))
+    Ok(holochain_wasmer_host::bytes::to_allocation_ptr(processed_string.into_bytes()))
 }
 
 #[cfg(test)]
 pub mod tests {
 
-    use host::guest;
+    use holochain_wasmer_host::guest;
     use crate::import::import_object;
     use crate::load_wasm::load_wasm;
     use wasmer_runtime::instantiate;

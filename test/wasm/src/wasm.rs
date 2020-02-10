@@ -1,10 +1,7 @@
 extern crate wee_alloc;
-use common::Ptr;
-use guest::host_call;
-use common::Len;
-use guest::AllocationPtr;
-use guest::bytes;
-use guest::*;
+use holochain_wasmer_guest::host_call;
+use holochain_wasmer_guest::bytes;
+use holochain_wasmer_guest::*;
 
 // Use `wee_alloc` as the global allocator.
 #[global_allocator]
@@ -21,7 +18,7 @@ extern "C" {
 
 pub fn host_string_from_host_allocation_ptr(host_allocation_ptr: Ptr) -> Result<String, Error> {
     Ok(String::from(std::str::from_utf8(
-        &bytes::from_allocation_ptr(guest::map_bytes(host_allocation_ptr)),
+        &bytes::from_allocation_ptr(holochain_wasmer_guest::map_bytes(host_allocation_ptr)),
     )?))
 }
 

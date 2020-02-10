@@ -6,8 +6,8 @@ use wasmer_runtime::ImportObject;
 pub fn import_object() -> ImportObject {
     imports! {
         "env" => {
-            "__import_allocation" => wasmer_runtime::func!(host::import::__import_allocation),
-            "__import_bytes" => wasmer_runtime::func!(host::import::__import_bytes),
+            "__import_allocation" => wasmer_runtime::func!(holochain_wasmer_host::import::__import_allocation),
+            "__import_bytes" => wasmer_runtime::func!(holochain_wasmer_host::import::__import_bytes),
             "__test_process_string" => func!(test_process_string),
         },
     }

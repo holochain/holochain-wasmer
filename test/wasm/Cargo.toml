@@ -11,5 +11,4 @@ path = "src/wasm.rs"
 
 [dependencies]
 wee_alloc = "=0.4.5"
-common = { path = "../../crates/common" }
-guest = { version = "=0.0.1", path = "../../crates/guest" }
+holochain_wasmer_guest = { version = "=0.0.1", path = "../../crates/guest" }
