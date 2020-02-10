@@ -1,5 +1,7 @@
 [package]
 name = "holochain_wasmer_host"
+description = "wasm host code"
+license = "GPL-3.0-only"
 version = "0.0.1"
 authors = [ "thedavidmeister", "thedavidmeister@gmail.com" ]
 edition = "2018"
