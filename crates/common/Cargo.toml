@@ -8,3 +8,5 @@ edition = "2018"
 
 [dependencies]
 byte-slice-cast = "=0.3.5"
+holochain_json_api = { git = "https://github.com/holochain/holochain-serialization", branch = "2020-01-22-wasmer" }
+holochain_json_derive = { git = "https://github.com/holochain/holochain-serialization", branch = "2020-01-22-wasmer" }

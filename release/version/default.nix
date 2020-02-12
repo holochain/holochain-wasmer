@@ -4,7 +4,8 @@ let
 
  script = pkgs.writeShellScriptBin name ''
 for dep in \
- holochain_wasmer_common
+ holochain_wasmer_common \
+ holochain_wasmer_guest
 do
  echo "bumping $dep dependency versions to ${config.release.version.current} in all Cargo.toml"
  find . \
