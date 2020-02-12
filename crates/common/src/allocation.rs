@@ -31,6 +31,20 @@ pub extern "C" fn deallocate(ptr: Ptr, len: Len) {
     let _: &[u8] = unsafe { slice::from_raw_parts(ptr as _, len as _) };
 }
 
+pub extern "C" fn deallocate_from_allocation_ptr(allocation_ptr: AllocationPtr) {
+    let allocation: Allocation = from_allocation_ptr(allocation_ptr);
+    deallocate(allocation[0], allocation[1]);
+    // @TODO - i don't know if this deallocates the allocation itself
+    // `allocation` hits the end of the fn so should be dropped but also it's just a
+    // slice not a vector so i don't know what that means for the underlying bytes.
+    // i know the bytes never get allocated for a slice, only a vector, not sure about
+    // the deallocation side of things, so it should be tested.
+    // realistically this will never be a problem on the guest side as wasm instances
+    // are too short lived for a few [u64; 2] allocations to have any impact on 4GB of
+    // memory, but in theory it could be problematic on the host side for very long
+    // running hosts with memory constraints
+}
+
 pub fn to_allocation_ptr(allocation: Allocation) -> AllocationPtr {
     // the allocation must exist as a vector or it will be dropped
     // slices drop even with ManuallyDrop
