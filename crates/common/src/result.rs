@@ -3,6 +3,8 @@ use holochain_json_derive::DefaultJson;
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 use std::str::FromStr;
 
+// @TODO replace all of these with strum if we can support default Zome properly
+// @see https://github.com/Peternator7/strum/issues/86
 const UNSPECIFIED: &str = "Unspecified";
 const ARGUMENT_DESERIALIZATION_FAILED: &str = "ArgumentDeserializationFailed";
 const OUT_OF_MEMORY: &str = "OutOfMemory";
@@ -120,37 +122,29 @@ impl<'de> Deserialize<'de> for WasmError {
 
 #[cfg(test)]
 pub mod tests {
-    // use super::*;
 
-    // #[test]
-    // fn ribosome_error_code_round_trip() {
-    //     let oom =
-    //         WasmError::from_code_int(((WasmError::OutOfMemory as u64) >> 32) as RibosomeCodeBits);
-    //     assert_eq!(WasmError::OutOfMemory, oom);
-    //     assert_eq!(WasmError::OutOfMemory.to_string(), oom.to_string());
-    // }
+    use super::*;
 
-    // #[test]
-    // fn error_conversion() {
-    //     // TODO could use strum crate to iteratively
-    //     // gather all known codes.
-    //     for code in 1..=13 {
-    //         let mut err = WasmError::from_code_int(code);
-    //
-    //         let err_str = err.as_str().to_owned();
-    //
-    //         err = err_str.parse().expect("unable to parse error");
-    //
-    //         let inner_code = RibosomeReturnValue::from_error(err);
-    //
-    //         let _one_int: u64 = inner_code.clone().into();
-    //         let _another_int: u64 = inner_code.clone().into();
-    //     }
-    // }
-
-    // #[test]
-    // #[should_panic]
-    // fn code_zero() {
-    //     WasmError::from_code_int(0);
-    // }
+    #[test]
+    fn string_round_trip() {
+        for code in vec![
+            WasmError::Unspecified,
+            WasmError::ArgumentDeserializationFailed,
+            WasmError::OutOfMemory,
+            WasmError::ReceivedWrongActionResult,
+            WasmError::CallbackFailed,
+            WasmError::RecursiveCallForbidden,
+            WasmError::ResponseSerializationFailed,
+            WasmError::NotAnAllocation,
+            WasmError::ZeroSizedAllocation,
+            WasmError::UnknownEntryType,
+            WasmError::MismatchWasmCallDataType,
+            WasmError::EntryNotFound,
+            WasmError::WorkflowFailed,
+            WasmError::Zome("foo".into()),
+        ] {
+            let s = code.to_string();
+            assert_eq!(WasmError::from_str(&s).unwrap(), code);
+        }
+    }
 }
