@@ -1,6 +1,8 @@
 pub mod import;
 pub mod load_wasm;
 
+extern crate holochain_json_api;
+
 use wasmer_runtime::Ctx;
 use holochain_wasmer_host::guest;
 use holochain_wasmer_host::*;
@@ -19,6 +21,10 @@ pub mod tests {
     use crate::load_wasm::load_wasm;
     use wasmer_runtime::instantiate;
     use wasmer_runtime::Instance;
+    use holochain_json_api::json::JsonString;
+    use test_common::SomeStruct;
+    use std::convert::TryInto;
+    use holochain_wasmer_host::WasmResult;
 
     fn test_instance() -> Instance {
         instantiate(&load_wasm(), &import_object()).expect("build test instance")
@@ -32,7 +38,27 @@ pub mod tests {
     }
 
     #[test]
-    fn do_it() {
+    fn native_test() {
+        let some_inner = "foo";
+        let some_struct = SomeStruct::new(some_inner.into());
+
+        let result_string = guest::call(&mut test_instance(), "native_type", JsonString::from(some_struct.clone()).to_bytes()).expect("native type handling");
+        let wasm_result: WasmResult = JsonString::from_json(&result_string).try_into().expect("could not deserialize");
+
+        match wasm_result {
+            WasmResult::Ok(json_string) => {
+                let result_struct: SomeStruct = json_string.try_into().unwrap();
+                assert_eq!(
+                    result_struct,
+                    some_struct,
+                );
+            },
+            _ => unreachable!(),
+        }
+    }
+
+    #[test]
+    fn process_string_test() {
         // use a "crazy" string that is much longer than a single wasm page to show that pagination
         // and utf-8 are both working OK
         let starter_string = "╰▐ ✖ 〜 ✖ ▐╯".repeat((10_u32 * std::u16::MAX as u32) as _);

@@ -1,7 +1,9 @@
 extern crate wee_alloc;
-use holochain_wasmer_guest::host_call;
+extern crate test_common;
+
 use holochain_wasmer_guest::bytes;
 use holochain_wasmer_guest::*;
+use test_common::SomeStruct;
 
 // Use `wee_alloc` as the global allocator.
 #[global_allocator]
@@ -32,4 +34,10 @@ pub extern "C" fn stacked_strings(_: AllocationPtr) -> AllocationPtr {
     let _second = "second";
 
     string::to_allocation_ptr(first.into())
+}
+
+#[no_mangle]
+pub extern "C" fn native_type(host_allocation_ptr: AllocationPtr) -> AllocationPtr {
+    let input = host_args!(host_allocation_ptr, SomeStruct);
+    ret!(WasmResult::Ok(input.into()));
 }

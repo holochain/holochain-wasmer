@@ -65,7 +65,10 @@ macro_rules! host_args {
                 Err(_) => {
                     $crate::allocation::deallocate_from_allocation_ptr($ptr);
                     return $crate::json::to_allocation_ptr(
-                        ZomeApiError::Internal("failed to parse function args".into()).into(),
+                        $crate::result::WasmResult::Err(
+                            $crate::result::WasmError::ArgumentDeserializationFailed,
+                        )
+                        .into(),
                     );
                 }
             };
@@ -90,5 +93,14 @@ macro_rules! host_call {
             ]))
         };
         host_string!(host_allocation_ptr)
+    }};
+}
+
+#[macro_export]
+macro_rules! ret {
+    ( $e: expr) => {{
+        // enforce that everything be a ribosome result
+        let r: $crate::result::WasmResult = $e;
+        return holochain_wasmer_guest::json::to_allocation_ptr(r.into());
     }};
 }

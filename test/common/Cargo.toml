@@ -1,15 +1,18 @@
 [package]
-name = "holochain_wasmer_common"
-description = "commons for both host and guest"
-license = "GPL-3.0-only"
+name = "test_common"
 version = "0.0.10"
 authors = [ "thedavidmeister", "thedavidmeister@gmail.com" ]
 edition = "2018"
 
+[lib]
+name = "test_common"
+crate-type = [ "cdylib", "rlib" ]
+path = "src/common.rs"
+
 [dependencies]
-byte-slice-cast = "=0.3.5"
-holochain_json_api = "=0.0.23"
-holochain_json_derive = "=0.0.23"
+holochain_wasmer_common = "=0.0.10"
 serde = "=1.0.104"
 serde_derive = "=1.0.104"
 serde_json = { version = "=1.0.47", features = ["preserve_order"] }
+holochain_json_api = "=0.0.23"
+holochain_json_derive = "=0.0.23"
