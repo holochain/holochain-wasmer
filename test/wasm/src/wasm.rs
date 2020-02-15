@@ -37,7 +37,30 @@ pub extern "C" fn stacked_strings(_: AllocationPtr) -> AllocationPtr {
 }
 
 #[no_mangle]
+pub extern "C" fn some_ret(_: AllocationPtr) -> AllocationPtr {
+    ret!(SomeStruct::new("foo".into()));
+}
+
+#[no_mangle]
+pub extern "C" fn some_ret_err(_: AllocationPtr) -> AllocationPtr {
+    ret_err!("oh no!");
+}
+
+#[no_mangle]
 pub extern "C" fn native_type(host_allocation_ptr: AllocationPtr) -> AllocationPtr {
     let input = host_args!(host_allocation_ptr, SomeStruct);
-    ret!(WasmResult::Ok(input.into()));
+    ret!(input);
+}
+
+#[no_mangle]
+pub extern "C" fn try_result_succeeds(_: AllocationPtr) -> AllocationPtr {
+    let ok: Result<SomeStruct, ()> = Ok(SomeStruct::new("foo".into()));
+    let result = try_result!(ok, "this can't fail");
+    ret!(result);
+}
+
+#[no_mangle]
+pub extern "C" fn try_result_fails_fast(_: AllocationPtr) -> AllocationPtr {
+    try_result!(Err(()), "it fails!");
+    string::to_allocation_ptr("this never happens".into())
 }

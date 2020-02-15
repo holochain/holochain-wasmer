@@ -99,7 +99,26 @@ macro_rules! host_call {
 macro_rules! ret {
     ( $e: expr) => {{
         // enforce that everything be a ribosome result
-        let r: $crate::result::WasmResult = $e;
-        return holochain_wasmer_guest::json::to_allocation_ptr(r.into());
+        let json_string: $crate::JsonString = ($e).into();
+        return $crate::json::to_allocation_ptr($crate::WasmResult::Ok(json_string).into());
+    }};
+}
+
+#[macro_export]
+macro_rules! ret_err {
+    ( $fail:literal ) => {{
+        return $crate::json::to_allocation_ptr(
+            $crate::WasmResult::Err($crate::WasmError::Zome($fail.into())).into(),
+        );
+    }};
+}
+
+#[macro_export]
+macro_rules! try_result {
+    ( $e:expr, $fail:literal ) => {{
+        match $e {
+            Ok(v) => v,
+            Err(_) => ret_err!($fail),
+        }
     }};
 }

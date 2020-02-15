@@ -3,25 +3,31 @@ pub mod load_wasm;
 
 extern crate holochain_json_api;
 
-use wasmer_runtime::Ctx;
 use holochain_wasmer_host::guest;
 use holochain_wasmer_host::*;
+use wasmer_runtime::Ctx;
 
-fn test_process_string(ctx: &mut Ctx, allocation_ptr: AllocationPtr) -> Result<AllocationPtr, WasmError> {
+fn test_process_string(
+    ctx: &mut Ctx,
+    allocation_ptr: AllocationPtr,
+) -> Result<AllocationPtr, WasmError> {
     let guest_bytes = guest::read_from_allocation_ptr(ctx, allocation_ptr)?;
     let processed_string = format!("host: {}", std::str::from_utf8(&guest_bytes)?);
-    Ok(holochain_wasmer_host::bytes::to_allocation_ptr(processed_string.into_bytes()))
+    Ok(holochain_wasmer_host::bytes::to_allocation_ptr(
+        processed_string.into_bytes(),
+    ))
 }
 
 #[cfg(test)]
 pub mod tests {
 
-    use holochain_wasmer_host::guest;
     use crate::import::import_object;
     use crate::load_wasm::load_wasm;
+    use holochain_wasmer_host::guest;
+    use holochain_wasmer_host::*;
+    use test_common::SomeStruct;
     use wasmer_runtime::instantiate;
     use wasmer_runtime::Instance;
-    use test_common::SomeStruct;
 
     fn test_instance() -> Instance {
         instantiate(&load_wasm(), &import_object()).expect("build test instance")
@@ -29,7 +35,8 @@ pub mod tests {
 
     #[test]
     fn stacked_test() {
-        let result_bytes = guest::call_bytes(&mut test_instance(), "stacked_strings", vec![]).expect("stacked strings call");
+        let result_bytes = guest::call_bytes(&mut test_instance(), "stacked_strings", vec![])
+            .expect("stacked strings call");
         let result_str = std::str::from_utf8(&result_bytes).unwrap();
 
         assert_eq!("first", result_str);
@@ -40,12 +47,57 @@ pub mod tests {
         let some_inner = "foo";
         let some_struct = SomeStruct::new(some_inner.into());
 
-        let result: SomeStruct = guest::call(&mut test_instance(), "native_type", some_struct.clone()).expect("native type handling");
+        let result: SomeStruct =
+            guest::call(&mut test_instance(), "native_type", some_struct.clone())
+                .expect("native type handling");
 
-        assert_eq!(
-            some_struct,
-            result,
+        assert_eq!(some_struct, result,);
+    }
+
+    #[test]
+    fn ret_test() {
+        let result: Result<SomeStruct, WasmError> =
+            guest::call(&mut test_instance(), "some_ret", JsonString::null());
+        match result {
+            Ok(some_struct) => {
+                assert_eq!(SomeStruct::new("foo".into()), some_struct,);
+            }
+            Err(_) => unreachable!(),
+        };
+
+        let err: Result<SomeStruct, WasmError> =
+            guest::call(&mut test_instance(), "some_ret_err", JsonString::null());
+        match err {
+            Err(wasm_error) => assert_eq!(WasmError::Zome("oh no!".into()), wasm_error,),
+            Ok(_) => unreachable!(),
+        };
+    }
+
+    #[test]
+    fn try_result_test() {
+        let success_result: Result<SomeStruct, WasmError> = guest::call(
+            &mut test_instance(),
+            "try_result_succeeds",
+            JsonString::null(),
         );
+        match success_result {
+            Ok(some_struct) => {
+                assert_eq!(SomeStruct::new("foo".into()), some_struct,);
+            }
+            Err(_) => unreachable!(),
+        };
+
+        let fail_result: Result<(), WasmError> = guest::call(
+            &mut test_instance(),
+            "try_result_fails_fast",
+            JsonString::null(),
+        );
+        match fail_result {
+            Err(wasm_error) => {
+                assert_eq!(WasmError::Zome("it fails!".into()), wasm_error,);
+            }
+            Ok(_) => unreachable!(),
+        };
     }
 
     #[test]
@@ -54,8 +106,12 @@ pub mod tests {
         // and utf-8 are both working OK
         let starter_string = "╰▐ ✖ 〜 ✖ ▐╯".repeat((10_u32 * std::u16::MAX as u32) as _);
 
-        let result_bytes = guest::call_bytes(&mut test_instance(), "process_string", starter_string.clone().into_bytes())
-            .expect("process string call");
+        let result_bytes = guest::call_bytes(
+            &mut test_instance(),
+            "process_string",
+            starter_string.clone().into_bytes(),
+        )
+        .expect("process string call");
         let result_str = std::str::from_utf8(&result_bytes).unwrap();
 
         let expected_string = format!("host: guest: {}", &starter_string);
