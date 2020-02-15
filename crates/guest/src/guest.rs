@@ -1,6 +1,5 @@
 pub use holochain_wasmer_common::allocation;
 pub use holochain_wasmer_common::bytes;
-pub use holochain_wasmer_common::error::Error;
 pub use holochain_wasmer_common::json;
 pub use holochain_wasmer_common::string;
 pub use holochain_wasmer_common::*;
