@@ -25,6 +25,13 @@ pub mod tests {
     }
 
     #[test]
+    fn stacked_test() {
+        let result = guest::call(&mut test_instance(), "stacked_strings", vec![]).expect("stacked strings call");
+
+        assert_eq!("first", result);
+    }
+
+    #[test]
     fn do_it() {
         // use a "crazy" string that is much longer than a single wasm page to show that pagination
         // and utf-8 are both working OK

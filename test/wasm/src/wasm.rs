@@ -7,28 +7,29 @@ use holochain_wasmer_guest::*;
 #[global_allocator]
 static ALLOC: wee_alloc::WeeAlloc = wee_alloc::WeeAlloc::INIT;
 
-extern "C" {
-    // memory stuff
-    fn __import_allocation(guest_allocation_ptr: AllocationPtr, host_allocation_ptr: AllocationPtr);
-    fn __import_bytes(host_allocation_ptr: AllocationPtr, guest_bytes_ptr: Ptr);
+// define the host functions we require in order to pull/push data across the host/guest boundary
+memory_externs!();
 
-    // api
-    fn __test_process_string(guest_allocation_ptr: AllocationPtr) -> AllocationPtr;
-}
-
-pub fn host_string_from_host_allocation_ptr(host_allocation_ptr: Ptr) -> Result<String, Error> {
-    Ok(String::from(std::str::from_utf8(
-        &bytes::from_allocation_ptr(holochain_wasmer_guest::map_bytes(host_allocation_ptr)),
-    )?))
-}
+// define a few functions we expect the host to provide for us
+host_externs!(__noop, __test_process_string);
 
 #[no_mangle]
 pub extern "C" fn process_string(host_allocation_ptr: AllocationPtr) -> AllocationPtr {
     // get the string the host is trying to pass us out of memory
     // the ptr and cap line up with what was previously allocated with pre_alloc_string
-    let s = host_string_from_host_allocation_ptr(host_allocation_ptr).expect("failed to get host string");
+    let s = host_string!(host_allocation_ptr);
 
     let s = format!("guest: {}", s);
-    let s = host_call!(__test_process_string, s).expect("host call");
+    let s = host_call!(__test_process_string, s);
     bytes::to_allocation_ptr(s.into_bytes())
+}
+
+#[no_mangle]
+pub extern "C" fn stacked_strings(_: AllocationPtr) -> AllocationPtr {
+    // get the first string allocated to be returned
+    let first = "first";
+    // the second string allocation should do nothing to the first
+    let _second = "second";
+
+    string::to_allocation_ptr(first.into())
 }
