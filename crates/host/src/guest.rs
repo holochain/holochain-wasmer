@@ -2,6 +2,9 @@ use crate::allocation;
 use crate::bytes;
 use crate::*;
 use byte_slice_cast::AsSliceOf;
+use holochain_wasmer_common::JsonError;
+use holochain_wasmer_common::JsonString;
+use std::convert::TryFrom;
 use std::convert::TryInto;
 use wasmer_runtime::memory::MemoryView;
 use wasmer_runtime::Ctx;
@@ -22,7 +25,7 @@ pub fn write_bytes(ctx: &mut Ctx, guest_ptr: Ptr, bytes: Vec<u8>) {
 pub fn read_from_allocation_ptr(
     ctx: &mut Ctx,
     guest_allocation_ptr: AllocationPtr,
-) -> Result<Vec<u8>, Error> {
+) -> Result<Vec<u8>, WasmError> {
     let view: MemoryView<u8> = ctx.memory(0).view();
     let bytes_vec: Vec<u8> = view[guest_allocation_ptr as _
         ..(guest_allocation_ptr + allocation::ALLOCATION_BYTES_ITEMS as Ptr) as _]
@@ -39,7 +42,14 @@ pub fn read_from_allocation_ptr(
     )
 }
 
-pub fn call(instance: &mut Instance, call: &str, payload: Vec<u8>) -> Result<String, Error> {
+/// host calling guest for the function named `call` with the given `payload` in a vector of bytes
+/// result is either a vector of bytes from the guest found at the location of the returned guest
+/// allocation pointer or a wasm error
+pub fn call_bytes(
+    instance: &mut Instance,
+    call: &str,
+    payload: Vec<u8>,
+) -> Result<Vec<u8>, WasmError> {
     let host_allocation_ptr = bytes::to_allocation_ptr(payload);
 
     // this requires that the guest exported function being called knows what to do with a
@@ -52,9 +62,33 @@ pub fn call(instance: &mut Instance, call: &str, payload: Vec<u8>) -> Result<Str
         _ => unreachable!(),
     };
 
-    Ok(std::str::from_utf8(&crate::guest::read_from_allocation_ptr(
+    Ok(crate::guest::read_from_allocation_ptr(
         instance.context_mut(),
         guest_allocation_ptr,
-    )?)?
-    .into())
+    )?)
+}
+
+/// convenience wrapper around call_bytes to handling input and output of any struct that:
+/// - is commonly defined in both the host and guest (e.g. shared in a common crate)
+/// - implements standard JsonString round-tripping (e.g. DefaultJson)
+pub fn call<I: Into<JsonString>, O: TryFrom<JsonString, Error = JsonError>>(
+    instance: &mut Instance,
+    call: &str,
+    jsonable: I,
+) -> Result<O, WasmError> {
+    let json: JsonString = jsonable.into();
+    let bytes = json.to_bytes();
+    let result_bytes = call_bytes(instance, call, bytes)?;
+    let result_json = JsonString::from_bytes(result_bytes);
+    let wasm_result: WasmResult = match result_json.try_into() {
+        Ok(v) => v,
+        Err(e) => return Err(WasmError::GuestResultHandling(e.into())),
+    };
+    match wasm_result {
+        WasmResult::Ok(json) => match json.try_into() {
+            Ok(v) => Ok(v),
+            Err(e) => Err(WasmError::GuestResultHandling(e.into())),
+        },
+        WasmResult::Err(wasm_error) => return Err(wasm_error),
+    }
 }

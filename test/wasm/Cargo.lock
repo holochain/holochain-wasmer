@@ -189,8 +189,8 @@ dependencies = [
 
 [[package]]
 name = "holochain_json_api"
-version = "0.0.22"
-source = "git+https://github.com/holochain/holochain-serialization?branch=2020-01-22-wasmer#700a972c8e7a459186152fd2277120215ac6904f"
+version = "0.0.23"
+source = "registry+https://github.com/rust-lang/crates.io-index"
 dependencies = [
  "arrayref 0.3.5 (registry+https://github.com/rust-lang/crates.io-index)",
  "base64 0.10.1 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -203,7 +203,7 @@ dependencies = [
  "futures-sink-preview 0.3.0-alpha.17 (registry+https://github.com/rust-lang/crates.io-index)",
  "futures-util-preview 0.3.0-alpha.17 (registry+https://github.com/rust-lang/crates.io-index)",
  "hcid 0.0.6 (registry+https://github.com/rust-lang/crates.io-index)",
- "holochain_json_derive 0.0.22 (git+https://github.com/holochain/holochain-serialization?branch=2020-01-22-wasmer)",
+ "holochain_json_derive 0.0.23 (registry+https://github.com/rust-lang/crates.io-index)",
  "multihash 0.8.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "objekt 0.1.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde 1.0.104 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -215,8 +215,8 @@ dependencies = [
 
 [[package]]
 name = "holochain_json_derive"
-version = "0.0.22"
-source = "git+https://github.com/holochain/holochain-serialization?branch=2020-01-22-wasmer#700a972c8e7a459186152fd2277120215ac6904f"
+version = "0.0.23"
+source = "registry+https://github.com/rust-lang/crates.io-index"
 dependencies = [
  "quote 0.6.11 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde 1.0.104 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -226,18 +226,31 @@ dependencies = [
 
 [[package]]
 name = "holochain_wasmer_common"
-version = "0.0.9"
+version = "0.0.10"
 dependencies = [
  "byte-slice-cast 0.3.5 (registry+https://github.com/rust-lang/crates.io-index)",
- "holochain_json_api 0.0.22 (git+https://github.com/holochain/holochain-serialization?branch=2020-01-22-wasmer)",
- "holochain_json_derive 0.0.22 (git+https://github.com/holochain/holochain-serialization?branch=2020-01-22-wasmer)",
+ "holochain_json_api 0.0.23 (registry+https://github.com/rust-lang/crates.io-index)",
+ "holochain_json_derive 0.0.23 (registry+https://github.com/rust-lang/crates.io-index)",
+ "serde 1.0.104 (registry+https://github.com/rust-lang/crates.io-index)",
+ "serde_derive 1.0.104 (registry+https://github.com/rust-lang/crates.io-index)",
+ "serde_json 1.0.47 (registry+https://github.com/rust-lang/crates.io-index)",
+]
+
+[[package]]
+name = "holochain_wasmer_common"
+version = "0.0.10"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+dependencies = [
+ "byte-slice-cast 0.3.5 (registry+https://github.com/rust-lang/crates.io-index)",
+ "holochain_json_api 0.0.23 (registry+https://github.com/rust-lang/crates.io-index)",
+ "holochain_json_derive 0.0.23 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]
 name = "holochain_wasmer_guest"
-version = "0.0.9"
+version = "0.0.10"
 dependencies = [
- "holochain_wasmer_common 0.0.9",
+ "holochain_wasmer_common 0.0.10",
 ]
 
 [[package]]
@@ -499,10 +512,23 @@ dependencies = [
 ]
 
 [[package]]
-name = "test_wasm"
-version = "0.0.9"
+name = "test_common"
+version = "0.0.10"
 dependencies = [
- "holochain_wasmer_guest 0.0.9",
+ "holochain_json_api 0.0.23 (registry+https://github.com/rust-lang/crates.io-index)",
+ "holochain_json_derive 0.0.23 (registry+https://github.com/rust-lang/crates.io-index)",
+ "holochain_wasmer_common 0.0.10 (registry+https://github.com/rust-lang/crates.io-index)",
+ "serde 1.0.104 (registry+https://github.com/rust-lang/crates.io-index)",
+ "serde_derive 1.0.104 (registry+https://github.com/rust-lang/crates.io-index)",
+ "serde_json 1.0.47 (registry+https://github.com/rust-lang/crates.io-index)",
+]
+
+[[package]]
+name = "test_wasm"
+version = "0.0.10"
+dependencies = [
+ "holochain_wasmer_guest 0.0.10",
+ "test_common 0.0.10",
  "wee_alloc 0.4.5 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
@@ -604,8 +630,9 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 "checksum generic-array 0.9.0 (registry+https://github.com/rust-lang/crates.io-index)" = "ef25c5683767570c2bbd7deba372926a55eaae9982d7726ee2a1050239d45b9d"
 "checksum hcid 0.0.6 (registry+https://github.com/rust-lang/crates.io-index)" = "9e5ea27f6b17df2ded5dcfc492ecd0db719d00b144dbaaf2df1658a7e38cfd2e"
 "checksum hermit-abi 0.1.6 (registry+https://github.com/rust-lang/crates.io-index)" = "eff2656d88f158ce120947499e971d743c05dbcbed62e5bd2f38f1698bbc3772"
-"checksum holochain_json_api 0.0.22 (git+https://github.com/holochain/holochain-serialization?branch=2020-01-22-wasmer)" = "<none>"
-"checksum holochain_json_derive 0.0.22 (git+https://github.com/holochain/holochain-serialization?branch=2020-01-22-wasmer)" = "<none>"
+"checksum holochain_json_api 0.0.23 (registry+https://github.com/rust-lang/crates.io-index)" = "723490ea3377bde2f4ac07ea63c7ccdf0bf20eb699a0ed580566fe927b735bba"
+"checksum holochain_json_derive 0.0.23 (registry+https://github.com/rust-lang/crates.io-index)" = "6d411807a76c2a2f45bee166d576e65eee2659be61a62f10008e94313be1b537"
+"checksum holochain_wasmer_common 0.0.10 (registry+https://github.com/rust-lang/crates.io-index)" = "f31bc5f6075cae5e2292d82aeb8dcbba885f8550d64149417d9768d1033485d9"
 "checksum indexmap 1.3.2 (registry+https://github.com/rust-lang/crates.io-index)" = "076f042c5b7b98f31d205f1249267e12a6518c1481e9dae9764af19b707d2292"
 "checksum itertools 0.7.11 (registry+https://github.com/rust-lang/crates.io-index)" = "0d47946d458e94a1b7bcabbf6521ea7c037062c81f534615abcad76e84d4970d"
 "checksum itoa 0.4.5 (registry+https://github.com/rust-lang/crates.io-index)" = "b8b7a7c0c47db5545ed3fef7468ee7bb5b74691498139e4b3f6a20685dc6dd8e"
