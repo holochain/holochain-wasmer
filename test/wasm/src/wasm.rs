@@ -11,7 +11,7 @@ static ALLOC: wee_alloc::WeeAlloc = wee_alloc::WeeAlloc::INIT;
 memory_externs!();
 
 // define a few functions we expect the host to provide for us
-host_externs!(__noop, __test_process_string);
+host_externs!(__this_func_doesnt_exist_but_we_can_extern_it_anyway, __test_process_string);
 
 #[no_mangle]
 pub extern "C" fn process_string(host_allocation_ptr: AllocationPtr) -> AllocationPtr {
