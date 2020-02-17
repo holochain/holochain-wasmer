@@ -63,13 +63,13 @@ echo "All finished!!!"
   # the commit hash that the release process should target
   # this will always be behind what ends up being deployed
   # the release process needs to add some commits for changelog etc.
-  commit = "388fe9689d77f694d9b64567cfb1bac65f7c4863";
+  commit = "99e98a679bf6057fb02f540f586ee48e71a4edd5";
 
   # the semver for prev and current releases
   # the previous version will be scanned/bumped by release scripts
   # the current version is what the release scripts bump *to*
   version = {
-   current = "0.0.12";
+   current = "0.0.13";
    previous = "_._._";
   };
 
