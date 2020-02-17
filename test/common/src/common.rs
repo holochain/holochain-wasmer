@@ -16,4 +16,8 @@ impl SomeStruct {
     pub fn new(inner: String) -> Self {
         Self{ inner }
     }
+
+    pub fn process(&mut self) {
+        self.inner = format!("processed: {}", self.inner);
+    }
 }
