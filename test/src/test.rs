@@ -5,6 +5,8 @@ extern crate holochain_json_api;
 
 use holochain_wasmer_host::guest;
 use holochain_wasmer_host::*;
+use std::convert::TryInto;
+use test_common::SomeStruct;
 use wasmer_runtime::Ctx;
 
 fn test_process_string(
@@ -13,8 +15,21 @@ fn test_process_string(
 ) -> Result<AllocationPtr, WasmError> {
     let guest_bytes = guest::read_from_allocation_ptr(ctx, allocation_ptr)?;
     let processed_string = format!("host: {}", std::str::from_utf8(&guest_bytes)?);
-    Ok(holochain_wasmer_host::bytes::to_allocation_ptr(
-        processed_string.into_bytes(),
+    Ok(holochain_wasmer_host::string::to_allocation_ptr(
+        processed_string,
+    ))
+}
+
+fn test_process_struct(
+    ctx: &mut Ctx,
+    allocation_ptr: AllocationPtr,
+) -> Result<AllocationPtr, WasmError> {
+    let guest_bytes = guest::read_from_allocation_ptr(ctx, allocation_ptr)?;
+    let guest_json = JsonString::from_bytes(guest_bytes);
+    let mut some_struct: SomeStruct = guest_json.try_into()?;
+    some_struct.process();
+    Ok(holochain_wasmer_host::json::to_allocation_ptr(
+        some_struct.into(),
     ))
 }
 
@@ -52,6 +67,18 @@ pub mod tests {
                 .expect("native type handling");
 
         assert_eq!(some_struct, result,);
+    }
+
+    #[test]
+    fn native_struct_test() {
+        let some_inner = "foo";
+        let some_struct = SomeStruct::new(some_inner.into());
+
+        let result: SomeStruct =
+            guest::call(&mut test_instance(), "process_native", some_struct.clone()).unwrap();
+
+        let expected = SomeStruct::new(format!("processed: {}", some_inner));
+        assert_eq!(result, expected,);
     }
 
     #[test]

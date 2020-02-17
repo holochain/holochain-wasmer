@@ -13,7 +13,7 @@ static ALLOC: wee_alloc::WeeAlloc = wee_alloc::WeeAlloc::INIT;
 memory_externs!();
 
 // define a few functions we expect the host to provide for us
-host_externs!(__this_func_doesnt_exist_but_we_can_extern_it_anyway, __test_process_string);
+host_externs!(__this_func_doesnt_exist_but_we_can_extern_it_anyway, __test_process_string, __test_process_struct);
 
 #[no_mangle]
 pub extern "C" fn process_string(host_allocation_ptr: AllocationPtr) -> AllocationPtr {
@@ -22,8 +22,15 @@ pub extern "C" fn process_string(host_allocation_ptr: AllocationPtr) -> Allocati
     let s = host_string!(host_allocation_ptr);
 
     let s = format!("guest: {}", s);
-    let s = host_call!(__test_process_string, s);
-    bytes::to_allocation_ptr(s.into_bytes())
+    let bytes = host_call_bytes!(__test_process_string, s.into_bytes());
+    bytes::to_allocation_ptr(bytes)
+}
+
+#[no_mangle]
+pub extern "C" fn process_native(host_allocation_ptr: AllocationPtr) -> AllocationPtr {
+    let input: SomeStruct = host_args!(host_allocation_ptr);
+    let processed: SomeStruct = host_call!(__test_process_struct, input);
+    ret!(processed);
 }
 
 #[no_mangle]
@@ -48,7 +55,7 @@ pub extern "C" fn some_ret_err(_: AllocationPtr) -> AllocationPtr {
 
 #[no_mangle]
 pub extern "C" fn native_type(host_allocation_ptr: AllocationPtr) -> AllocationPtr {
-    let input = host_args!(host_allocation_ptr, SomeStruct);
+    let input: SomeStruct = host_args!(host_allocation_ptr);
     ret!(input);
 }
 

@@ -53,25 +53,29 @@ pub fn map_bytes(host_allocation_ptr: Ptr) -> AllocationPtr {
 /// - if the deserialization fails, short circuit (return early) with a WasmError
 /// - if everything is Ok, return the restored data as a native rust type inside the guest
 macro_rules! host_args {
-    ( $ptr:ident, $type:ty ) => {{
+    ( $ptr:ident ) => {{
         use std::convert::TryInto;
 
-        let val: $type =
-            match $crate::json::from_allocation_ptr(holochain_wasmer_guest::map_bytes($ptr))
-                .try_into()
-            {
-                Ok(v) => v,
-                Err(_) => {
-                    $crate::allocation::deallocate_from_allocation_ptr($ptr);
-                    return $crate::json::to_allocation_ptr(
-                        $crate::result::WasmResult::Err(
-                            $crate::result::WasmError::ArgumentDeserializationFailed,
-                        )
-                        .into(),
-                    );
-                }
-            };
-        val
+        match $crate::json::from_allocation_ptr(holochain_wasmer_guest::map_bytes($ptr)).try_into()
+        {
+            Ok(v) => v,
+            Err(_) => {
+                $crate::allocation::deallocate_from_allocation_ptr($ptr);
+                return $crate::json::to_allocation_ptr(
+                    $crate::result::WasmResult::Err(
+                        $crate::result::WasmError::ArgumentDeserializationFailed,
+                    )
+                    .into(),
+                );
+            }
+        }
+    }};
+}
+
+#[macro_export]
+macro_rules! host_bytes {
+    ( $ptr:ident ) => {{
+        $crate::bytes::from_allocation_ptr($crate::map_bytes($ptr))
     }};
 }
 
@@ -83,15 +87,26 @@ macro_rules! host_string {
 }
 
 #[macro_export]
+macro_rules! host_call_bytes {
+    ( $func_name:ident, $input:expr ) => {{
+        let result_host_allocation_ptr =
+            unsafe { $func_name($crate::bytes::to_allocation_ptr($input)) };
+        host_bytes!(result_host_allocation_ptr)
+    }};
+}
+
+#[macro_export]
 macro_rules! host_call {
-    ($func_name:ident, $input:ident) => {{
-        let host_allocation_ptr = unsafe {
-            $func_name($crate::allocation::to_allocation_ptr([
-                $input.as_ptr() as $crate::Ptr,
-                $input.len() as $crate::Len,
-            ]))
-        };
-        host_string!(host_allocation_ptr)
+    ( $func_name:ident, $input:expr ) => {{
+        use std::convert::TryInto;
+        let json: $crate::JsonString = $input.into();
+        let bytes = json.to_bytes();
+        let result_bytes = $crate::host_call_bytes!($func_name, bytes);
+        let result_json = $crate::JsonString::from_bytes(result_bytes);
+        $crate::try_result!(
+            result_json.try_into(),
+            "failed to deserialize json from host call"
+        )
     }};
 }
 
@@ -118,7 +133,7 @@ macro_rules! try_result {
     ( $e:expr, $fail:literal ) => {{
         match $e {
             Ok(v) => v,
-            Err(_) => ret_err!($fail),
+            Err(_) => $crate::ret_err!($fail),
         }
     }};
 }

@@ -70,6 +70,12 @@ impl From<std::array::TryFromSliceError> for WasmError {
     }
 }
 
+impl From<JsonError> for WasmError {
+    fn from(_: JsonError) -> Self {
+        Self::Json
+    }
+}
+
 #[derive(Debug, Serialize, Deserialize, DefaultJson)]
 pub enum WasmResult {
     Ok(JsonString),
