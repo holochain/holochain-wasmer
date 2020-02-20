@@ -102,11 +102,7 @@ macro_rules! host_call {
         let json: $crate::JsonString = $input.into();
         let bytes = json.to_bytes();
         let result_bytes = $crate::host_call_bytes!($func_name, bytes);
-        let result_json = $crate::JsonString::from_bytes(result_bytes);
-        $crate::try_result!(
-            result_json.try_into(),
-            "failed to deserialize json from host call"
-        )
+        $crate::JsonString::from_bytes(result_bytes).try_into()
     }};
 }
 

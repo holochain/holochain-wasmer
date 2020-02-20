@@ -13,7 +13,16 @@ static ALLOC: wee_alloc::WeeAlloc = wee_alloc::WeeAlloc::INIT;
 memory_externs!();
 
 // define a few functions we expect the host to provide for us
-host_externs!(__this_func_doesnt_exist_but_we_can_extern_it_anyway, __test_process_string, __test_process_struct);
+host_externs!(__noop, __this_func_doesnt_exist_but_we_can_extern_it_anyway, __test_process_string, __test_process_struct);
+
+pub fn result_support() -> Result<(), WasmError> {
+    // want to show here that host_call!() supports the ? operator
+    // this is needed if we are to call host functions outside the externed functions that can only
+    // return AllocationPtrs
+    let _: SomeStruct = host_call!(__noop, "this string does not matter")?;
+
+    Ok(())
+}
 
 #[no_mangle]
 pub extern "C" fn process_string(host_allocation_ptr: AllocationPtr) -> AllocationPtr {
@@ -29,7 +38,7 @@ pub extern "C" fn process_string(host_allocation_ptr: AllocationPtr) -> Allocati
 #[no_mangle]
 pub extern "C" fn process_native(host_allocation_ptr: AllocationPtr) -> AllocationPtr {
     let input: SomeStruct = host_args!(host_allocation_ptr);
-    let processed: SomeStruct = host_call!(__test_process_struct, input);
+    let processed: SomeStruct = try_result!(host_call!(__test_process_struct, input), "could not deserialize SomeStruct in process_native");
     ret!(processed);
 }
 
