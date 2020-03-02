@@ -91,7 +91,7 @@ macro_rules! host_call_bytes {
     ( $func_name:ident, $input:expr ) => {{
         let result_host_allocation_ptr =
             unsafe { $func_name($crate::bytes::to_allocation_ptr($input)) };
-        host_bytes!(result_host_allocation_ptr)
+        $crate::host_bytes!(result_host_allocation_ptr)
     }};
 }
 
@@ -109,7 +109,6 @@ macro_rules! host_call {
 #[macro_export]
 macro_rules! ret {
     ( $e: expr) => {{
-        // enforce that everything be a ribosome result
         let json_string: $crate::JsonString = ($e).into();
         return $crate::json::to_allocation_ptr($crate::WasmResult::Ok(json_string).into());
     }};
