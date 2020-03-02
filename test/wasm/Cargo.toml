@@ -1,6 +1,6 @@
 [package]
 name = "test_wasm"
-version = "0.0.14"
+version = "0.0.15"
 authors = [ "thedavidmeister", "thedavidmeister@gmail.com" ]
 edition = "2018"
 
@@ -11,5 +11,5 @@ path = "src/wasm.rs"
 
 [dependencies]
 wee_alloc = "=0.4.5"
-holochain_wasmer_guest = { version = "=0.0.14", path = "../../crates/guest" }
-test_common = { version = "=0.0.14", path = "../common" }
+holochain_wasmer_guest = { version = "=0.0.15", path = "../../crates/guest" }
+test_common = { version = "=0.0.15", path = "../common" }
