@@ -84,7 +84,7 @@ pub mod tests {
     #[test]
     fn ret_test() {
         let result: Result<SomeStruct, WasmError> =
-            guest::call(&mut test_instance(), "some_ret", JsonString::null());
+            guest::call(&mut test_instance(), "some_ret", ());
         match result {
             Ok(some_struct) => {
                 assert_eq!(SomeStruct::new("foo".into()), some_struct,);
@@ -93,7 +93,7 @@ pub mod tests {
         };
 
         let err: Result<SomeStruct, WasmError> =
-            guest::call(&mut test_instance(), "some_ret_err", JsonString::null());
+            guest::call(&mut test_instance(), "some_ret_err", ());
         match err {
             Err(wasm_error) => assert_eq!(WasmError::Zome("oh no!".into()), wasm_error,),
             Ok(_) => unreachable!(),
@@ -102,11 +102,8 @@ pub mod tests {
 
     #[test]
     fn try_result_test() {
-        let success_result: Result<SomeStruct, WasmError> = guest::call(
-            &mut test_instance(),
-            "try_result_succeeds",
-            JsonString::null(),
-        );
+        let success_result: Result<SomeStruct, WasmError> =
+            guest::call(&mut test_instance(), "try_result_succeeds", ());
         match success_result {
             Ok(some_struct) => {
                 assert_eq!(SomeStruct::new("foo".into()), some_struct,);
@@ -114,11 +111,8 @@ pub mod tests {
             Err(_) => unreachable!(),
         };
 
-        let fail_result: Result<(), WasmError> = guest::call(
-            &mut test_instance(),
-            "try_result_fails_fast",
-            JsonString::null(),
-        );
+        let fail_result: Result<(), WasmError> =
+            guest::call(&mut test_instance(), "try_result_fails_fast", ());
         match fail_result {
             Err(wasm_error) => {
                 assert_eq!(WasmError::Zome("it fails!".into()), wasm_error,);
