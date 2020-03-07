@@ -8,7 +8,6 @@ pub mod allocation;
 pub mod bytes;
 pub mod json;
 pub mod result;
-pub mod string;
 
 pub use holochain_json_api::error::JsonError;
 pub use holochain_json_api::json::JsonString;

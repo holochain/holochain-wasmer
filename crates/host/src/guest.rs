@@ -22,7 +22,7 @@ pub fn write_bytes(ctx: &mut Ctx, guest_ptr: Ptr, bytes: Vec<u8>) {
     }
 }
 
-pub fn read_from_allocation_ptr(
+pub fn bytes_from_allocation_ptr(
     ctx: &mut Ctx,
     guest_allocation_ptr: AllocationPtr,
 ) -> Result<Vec<u8>, WasmError> {
@@ -40,6 +40,21 @@ pub fn read_from_allocation_ptr(
             .map(|cell| cell.get())
             .collect(),
     )
+}
+
+pub fn from_allocation_ptr<O: TryFrom<JsonString>>(
+    ctx: &mut Ctx,
+    guest_allocation_ptr: AllocationPtr,
+) -> Result<O, WasmError>
+where
+    O::Error: Into<String>,
+{
+    let bytes = bytes_from_allocation_ptr(ctx, guest_allocation_ptr)?;
+    let json = JsonString::from_bytes(bytes);
+    match json.try_into() {
+        Ok(v) => Ok(v),
+        Err(e) => Err(WasmError::GuestResultHandling(e.into())),
+    }
 }
 
 /// host calling guest for the function named `call` with the given `payload` in a vector of bytes
@@ -62,7 +77,7 @@ pub fn call_bytes(
         _ => unreachable!(),
     };
 
-    Ok(crate::guest::read_from_allocation_ptr(
+    Ok(crate::guest::bytes_from_allocation_ptr(
         instance.context_mut(),
         guest_allocation_ptr,
     )?)
