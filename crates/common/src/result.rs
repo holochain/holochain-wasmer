@@ -107,7 +107,7 @@ pub mod tests {
             WasmResult::Ok(json) => {
                 let foo_recover = Foo::try_from(json).expect("could not restore foo result");
                 assert_eq!(foo, foo_recover);
-            },
+            }
             _ => unreachable!(),
         };
     }
