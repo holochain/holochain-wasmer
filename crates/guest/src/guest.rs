@@ -1,7 +1,6 @@
 pub use holochain_wasmer_common::allocation;
 pub use holochain_wasmer_common::bytes;
 pub use holochain_wasmer_common::json;
-pub use holochain_wasmer_common::string;
 pub use holochain_wasmer_common::*;
 
 #[macro_export]
@@ -54,7 +53,7 @@ pub fn map_bytes(host_allocation_ptr: Ptr) -> AllocationPtr {
 /// - if everything is Ok, return the restored data as a native rust type inside the guest
 macro_rules! host_args {
     ( $ptr:ident ) => {{
-        use std::convert::TryInto;
+        use core::convert::TryInto;
 
         match $crate::json::from_allocation_ptr(holochain_wasmer_guest::map_bytes($ptr)).try_into()
         {
@@ -80,13 +79,6 @@ macro_rules! host_bytes {
 }
 
 #[macro_export]
-macro_rules! host_string {
-    ( $ptr:ident ) => {{
-        $crate::string::from_allocation_ptr($crate::map_bytes($ptr))
-    }};
-}
-
-#[macro_export]
 macro_rules! host_call_bytes {
     ( $func_name:ident, $input:expr ) => {{
         let result_host_allocation_ptr =
@@ -98,7 +90,7 @@ macro_rules! host_call_bytes {
 #[macro_export]
 macro_rules! host_call {
     ( $func_name:ident, $input:expr ) => {{
-        use std::convert::TryInto;
+        use core::convert::TryInto;
         let json: $crate::JsonString = $input.into();
         let bytes = json.to_bytes();
         let result_bytes = $crate::host_call_bytes!($func_name, bytes);
