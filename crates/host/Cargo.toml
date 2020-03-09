@@ -10,6 +10,7 @@ edition = "2018"
 wasmer-runtime = "=0.13.1"
 byte-slice-cast = "=0.3.5"
 holochain_wasmer_common = { version = "=0.0.17", path = "../common" }
+lazy_static = "1.4.0"
 
 [lib]
 name = "holochain_wasmer_host"
