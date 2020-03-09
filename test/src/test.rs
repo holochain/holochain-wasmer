@@ -38,13 +38,14 @@ pub mod tests {
     use crate::load_wasm::load_wasm;
     use holochain_json_api::json::RawString;
     use holochain_wasmer_host::guest;
+    use holochain_wasmer_host::instantiate::instantiate;
     use holochain_wasmer_host::*;
     use test_common::SomeStruct;
-    use wasmer_runtime::instantiate;
     use wasmer_runtime::Instance;
 
     fn test_instance() -> Instance {
-        instantiate(&load_wasm(), &import_object()).expect("build test instance")
+        let wasm = load_wasm();
+        instantiate(&wasm, &wasm, &import_object()).expect("build test instance")
     }
 
     #[test]

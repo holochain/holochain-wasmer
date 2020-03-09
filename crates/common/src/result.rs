@@ -44,6 +44,8 @@ pub enum WasmError {
     GuestResultHandling(String),
     /// something to do with zome logic that we don't know about
     Zome(String),
+    /// somehow wasmer failed to compile machine code from wasm byte code
+    Compile(String),
 }
 
 impl From<std::num::TryFromIntError> for WasmError {
