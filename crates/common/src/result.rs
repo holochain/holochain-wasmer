@@ -1,8 +1,7 @@
-use holochain_json_api::{error::JsonError, json::JsonString};
-use holochain_json_derive::DefaultJson;
+use holochain_serialized_bytes::prelude::*;
 
 /// Enum of all possible ERROR codes that a Zome API Function could return.
-#[derive(Clone, Debug, PartialEq, Eq, Hash, DefaultJson, PartialOrd, Ord, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Eq, Hash, PartialOrd, Ord, Serialize, Deserialize)]
 #[rustfmt::skip]
 pub enum WasmError {
     Unspecified,
@@ -30,9 +29,9 @@ pub enum WasmError {
     /// responsible for bytes and utf-8 in both directions.
     /// it is also possible that someone tries to throw invalid utf-8 at us to be evil.
     Utf8,
-    /// similar to Utf8 we have somehow hit a struct that isn't round-tripping through JsonString
-    /// correctly, which should be impossible for a well-behaved JsonStringAble thingie
-    Json,
+    /// similar to Utf8 we have somehow hit a struct that isn't round-tripping through SerializedBytes
+    /// correctly, which should be impossible for well behaved serialization
+    SerializedBytes,
     /// something went wrong while writing or reading bytes to/from wasm memory
     /// this means something like "reading 16 bytes did not produce 2x u64 ints"
     /// or maybe even "failed to write a byte to some pre-allocated wasm memory"
@@ -72,15 +71,15 @@ impl From<std::array::TryFromSliceError> for WasmError {
     }
 }
 
-impl From<JsonError> for WasmError {
-    fn from(_: JsonError) -> Self {
-        Self::Json
+impl From<SerializedBytesError> for WasmError {
+    fn from(_: SerializedBytesError) -> Self {
+        Self::SerializedBytes
     }
 }
 
-#[derive(Debug, Serialize, Deserialize, DefaultJson)]
+#[derive(Debug, Serialize, Deserialize)]
 pub enum WasmResult {
-    Ok(JsonString),
+    Ok(SerializedBytes),
     Err(WasmError),
 }
 
@@ -92,7 +91,7 @@ pub mod tests {
 
     #[test]
     fn wasm_result_json_round_trip() {
-        #[derive(Clone, PartialEq, Debug, Serialize, Deserialize, DefaultJson)]
+        #[derive(Clone, PartialEq, Debug, Serialize, Deserialize)]
         struct Foo(String);
 
         let foo = Foo(String::from("bar"));
