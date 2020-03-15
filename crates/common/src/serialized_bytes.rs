@@ -9,8 +9,6 @@ pub fn from_allocation_ptr(allocation_ptr: AllocationPtr) -> SerializedBytes {
     let allocation = allocation::from_allocation_ptr(allocation_ptr);
     let b: Vec<u8> =
         unsafe { std::slice::from_raw_parts(allocation[0] as _, allocation[1] as _) }.into();
-    println!("{:?}", allocation);
-    println!("{} {}", b.as_ptr() as Ptr, b.len());
     SerializedBytes::from(UnsafeBytes::from(b))
 }
 

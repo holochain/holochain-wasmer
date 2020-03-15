@@ -15,7 +15,7 @@ static ALLOC: wee_alloc::WeeAlloc = wee_alloc::WeeAlloc::INIT;
 memory_externs!();
 
 // define a few functions we expect the host to provide for us
-host_externs!(__noop, __this_func_doesnt_exist_but_we_can_extern_it_anyway, __test_process_string, __test_process_struct);
+host_externs!(__debug, __noop, __this_func_doesnt_exist_but_we_can_extern_it_anyway, __test_process_string, __test_process_struct);
 
 pub fn result_support() -> Result<(), WasmError> {
     // want to show here that host_call!() supports the ? operator

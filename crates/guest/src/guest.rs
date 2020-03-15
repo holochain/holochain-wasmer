@@ -56,9 +56,7 @@ macro_rules! host_args {
     ( $ptr:ident ) => {{
         use core::convert::TryInto;
 
-        match $crate::serialized_bytes::from_allocation_ptr(holochain_wasmer_guest::map_bytes($ptr))
-            .try_into()
-        {
+        match $crate::serialized_bytes::from_allocation_ptr($crate::map_bytes($ptr)).try_into() {
             Ok(v) => v,
             Err(_) => {
                 $crate::allocation::deallocate_from_allocation_ptr($ptr);
@@ -88,7 +86,9 @@ macro_rules! host_call {
                 let result_host_allocation_ptr: $crate::AllocationPtr =
                     unsafe { $func_name($crate::serialized_bytes::to_allocation_ptr(sb)) };
                 let result_sb: $crate::holochain_serialized_bytes::SerializedBytes =
-                    $crate::serialized_bytes::from_allocation_ptr(result_host_allocation_ptr);
+                    $crate::serialized_bytes::from_allocation_ptr($crate::map_bytes(
+                        result_host_allocation_ptr,
+                    ));
                 result_sb.try_into()
             }
             std::result::Result::Err(e) => Err(e),

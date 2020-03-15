@@ -15,9 +15,10 @@ fn test_process_string(
 ) -> Result<AllocationPtr, WasmError> {
     let processed_string: StringType = guest::from_allocation_ptr(ctx, allocation_ptr)?;
     let processed_string = format!("host: {}", String::from(processed_string));
-    Ok(holochain_wasmer_host::serialized_bytes::to_allocation_ptr(
-        StringType::from(processed_string).try_into()?,
-    ))
+    let sb: SerializedBytes = StringType::from(processed_string).try_into()?;
+    // println!("test_processed_string sb {:?}", sb);
+    let allocation_pointer = holochain_wasmer_host::serialized_bytes::to_allocation_ptr(sb);
+    Ok(allocation_pointer)
 }
 
 fn test_process_struct(
@@ -29,6 +30,11 @@ fn test_process_struct(
     Ok(holochain_wasmer_host::serialized_bytes::to_allocation_ptr(
         some_struct.try_into()?,
     ))
+}
+
+fn debug(_ctx: &mut Ctx, allocation_ptr: AllocationPtr) -> Result<AllocationPtr, WasmError> {
+    println!("debug {:?}", allocation_ptr);
+    Ok(0)
 }
 
 #[cfg(test)]
