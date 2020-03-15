@@ -11,8 +11,5 @@ path = "src/common.rs"
 
 [dependencies]
 holochain_wasmer_common = "=0.0.12"
+holochain_serialized_bytes = "=0.0.30"
 serde = "=1.0.104"
-serde_derive = "=1.0.104"
-serde_json = { version = "=1.0.47", features = ["preserve_order"] }
-holochain_json_api = "=0.0.23"
-holochain_json_derive = "=0.0.23"

@@ -1,22 +1,22 @@
 pub mod import;
 pub mod load_wasm;
 
-extern crate holochain_json_api;
+extern crate holochain_serialized_bytes;
 
-use holochain_json_api::json::RawString;
 use holochain_wasmer_host::guest;
 use holochain_wasmer_host::*;
 use test_common::SomeStruct;
+use test_common::StringType;
 use wasmer_runtime::Ctx;
 
 fn test_process_string(
     ctx: &mut Ctx,
     allocation_ptr: AllocationPtr,
 ) -> Result<AllocationPtr, WasmError> {
-    let processed_string: RawString = guest::from_allocation_ptr(ctx, allocation_ptr)?;
+    let processed_string: StringType = guest::from_allocation_ptr(ctx, allocation_ptr)?;
     let processed_string = format!("host: {}", String::from(processed_string));
-    Ok(holochain_wasmer_host::json::to_allocation_ptr(
-        RawString::from(processed_string).into(),
+    Ok(holochain_wasmer_host::serialized_bytes::to_allocation_ptr(
+        StringType::from(processed_string).try_into()?,
     ))
 }
 
@@ -26,8 +26,8 @@ fn test_process_struct(
 ) -> Result<AllocationPtr, WasmError> {
     let mut some_struct: SomeStruct = guest::from_allocation_ptr(ctx, allocation_ptr)?;
     some_struct.process();
-    Ok(holochain_wasmer_host::json::to_allocation_ptr(
-        some_struct.into(),
+    Ok(holochain_wasmer_host::serialized_bytes::to_allocation_ptr(
+        some_struct.try_into()?,
     ))
 }
 
@@ -36,11 +36,11 @@ pub mod tests {
 
     use crate::import::import_object;
     use crate::load_wasm::load_wasm;
-    use holochain_json_api::json::RawString;
     use holochain_wasmer_host::guest;
     use holochain_wasmer_host::instantiate::instantiate;
     use holochain_wasmer_host::*;
     use test_common::SomeStruct;
+    use test_common::StringType;
     use wasmer_runtime::Instance;
 
     fn test_instance() -> Instance {
@@ -49,23 +49,8 @@ pub mod tests {
     }
 
     #[test]
-    fn bytes_test() {
-        let result: Vec<u8> = guest::call_bytes(
-            &mut test_instance(),
-            "process_bytes",
-            vec![0_u8, 1_u8, 2_u8, 3_u8],
-        )
-        .expect("bytes call");
-
-        assert_eq!(
-            vec![0_u8, 1_u8, 2_u8, 3_u8, 50_u8, 60_u8, 70_u8, 80_u8],
-            result,
-        );
-    }
-
-    #[test]
     fn stacked_test() {
-        let result: RawString =
+        let result: StringType =
             guest::call(&mut test_instance(), "stacked_strings", ()).expect("stacked strings call");
 
         assert_eq!("first", &String::from(result));
@@ -77,10 +62,10 @@ pub mod tests {
         // and utf-8 are both working OK
         let starter_string = "╰▐ ✖ 〜 ✖ ▐╯".repeat((10_u32 * std::u16::MAX as u32) as _);
 
-        let result: RawString = guest::call(
+        let result: StringType = guest::call(
             &mut test_instance(),
             "process_string",
-            RawString::from(starter_string.clone()),
+            StringType::from(starter_string.clone()),
         )
         .expect("process string call");
 

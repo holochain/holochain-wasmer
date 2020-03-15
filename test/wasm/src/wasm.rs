@@ -2,10 +2,10 @@
 extern crate wee_alloc;
 extern crate test_common;
 
-use holochain_wasmer_guest::bytes;
 use holochain_wasmer_guest::*;
 use test_common::SomeStruct;
-use holochain_json_api::json::RawString;
+use test_common::StringType;
+use test_common::BytesType;
 
 // Use `wee_alloc` as the global allocator.
 #[global_allocator]
@@ -21,29 +21,32 @@ pub fn result_support() -> Result<(), WasmError> {
     // want to show here that host_call!() supports the ? operator
     // this is needed if we are to call host functions outside the externed functions that can only
     // return AllocationPtrs
-    let _: SomeStruct = host_call!(__noop, "this string does not matter")?;
+    let _: SomeStruct = host_call!(__noop, ())?;
 
     Ok(())
 }
 
 #[no_mangle]
 pub extern "C" fn process_bytes(host_allocation_ptr: AllocationPtr) -> AllocationPtr {
-    let mut b = host_bytes!(host_allocation_ptr);
+    let b: BytesType = host_args!(host_allocation_ptr);
+    let mut b = b.inner();
     let mut more_bytes = vec![50_u8, 60_u8, 70_u8, 80_u8];
     b.append(&mut more_bytes);
-    bytes::to_allocation_ptr(b)
+    let b = BytesType::from(b);
+    ret!(b);
 }
 
 #[no_mangle]
 pub extern "C" fn process_string(host_allocation_ptr: AllocationPtr) -> AllocationPtr {
     // get the string the host is trying to pass us out of memory
     // the ptr and cap line up with what was previously allocated with pre_alloc_string
-    let s: RawString = host_args!(host_allocation_ptr);
+    let s: StringType = host_args!(host_allocation_ptr);
 
-    let s = RawString::from(format!("guest: {}", String::from(s)));
-    let s: RawString = try_result!(host_call!(__test_process_string, s), "could not __test_process_string");
+    let s = StringType::from(format!("guest: {}", String::from(s)));
+    let s: StringType = try_result!(host_call!(__test_process_string, s), "could not __test_process_string");
     ret!(s);
 }
+
 
 #[no_mangle]
 pub extern "C" fn process_native(host_allocation_ptr: AllocationPtr) -> AllocationPtr {
@@ -59,7 +62,7 @@ pub extern "C" fn stacked_strings(_: AllocationPtr) -> AllocationPtr {
     // the second string allocation should do nothing to the first
     let _second = "second";
 
-    ret!(RawString::from(first));
+    ret!(StringType::from(String::from(first)));
 }
 
 #[no_mangle]
@@ -88,5 +91,5 @@ pub extern "C" fn try_result_succeeds(_: AllocationPtr) -> AllocationPtr {
 #[no_mangle]
 pub extern "C" fn try_result_fails_fast(_: AllocationPtr) -> AllocationPtr {
     try_result!(Err(()), "it fails!");
-    json::to_allocation_ptr(RawString::from("this never happens").into())
+    serialized_bytes::to_allocation_ptr(().try_into().unwrap())
 }

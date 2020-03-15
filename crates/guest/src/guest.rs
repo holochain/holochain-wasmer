@@ -1,5 +1,6 @@
+pub extern crate holochain_serialized_bytes;
+
 pub use holochain_wasmer_common::allocation;
-pub use holochain_wasmer_common::bytes;
 pub use holochain_wasmer_common::serialized_bytes;
 pub use holochain_wasmer_common::*;
 
@@ -55,16 +56,19 @@ macro_rules! host_args {
     ( $ptr:ident ) => {{
         use core::convert::TryInto;
 
-        match $crate::json::from_allocation_ptr(holochain_wasmer_guest::map_bytes($ptr)).try_into()
+        match $crate::serialized_bytes::from_allocation_ptr(holochain_wasmer_guest::map_bytes($ptr))
+            .try_into()
         {
             Ok(v) => v,
             Err(_) => {
                 $crate::allocation::deallocate_from_allocation_ptr($ptr);
-                return $crate::json::to_allocation_ptr(
+                return $crate::serialized_bytes::to_allocation_ptr(
                     $crate::result::WasmResult::Err(
                         $crate::result::WasmError::ArgumentDeserializationFailed,
                     )
-                    .into(),
+                    // should be impossible to fail to serialize a simple enum variant
+                    .try_into()
+                    .unwrap(),
                 );
             }
         }
@@ -75,16 +79,19 @@ macro_rules! host_args {
 macro_rules! host_call {
     ( $func_name:ident, $input:expr ) => {{
         use std::convert::TryInto;
-        let maybe_sb = $crate::holochain_serialized_bytes::SerializedBytes = $input.try_into();
+        let maybe_sb: std::result::Result<
+            $crate::holochain_serialized_bytes::SerializedBytes,
+            $crate::holochain_serialized_bytes::SerializedBytesError,
+        > = $input.try_into();
         match maybe_sb {
-            Ok(sb) => {
-                let result_host_allocation_ptr: $crate::holochain_serialized_bytes::AllocationPtr =
+            std::result::Result::Ok(sb) => {
+                let result_host_allocation_ptr: $crate::AllocationPtr =
                     unsafe { $func_name($crate::serialized_bytes::to_allocation_ptr(sb)) };
                 let result_sb: $crate::holochain_serialized_bytes::SerializedBytes =
                     $crate::serialized_bytes::from_allocation_ptr(result_host_allocation_ptr);
                 result_sb.try_into()
             }
-            Err(e) => Err(e),
+            std::result::Result::Err(e) => Err(e),
         }
     }};
 }
@@ -93,7 +100,7 @@ macro_rules! host_call {
 macro_rules! ret_err {
     ( $fail:expr ) => {{
         use std::convert::TryInto;
-        let maybe_wasm_result_sb: $crate::holochain_serialized_bytes::SerializedBytes =
+        let maybe_wasm_result_sb: std::result::Result<$crate::holochain_serialized_bytes::SerializedBytes, $crate::holochain_serialized_bytes::SerializedBytesError> =
             $crate::WasmResult::Err($crate::WasmError::Zome(String::from($fail))).try_into();
         match maybe_wasm_result_sb {
             std::result::Result::Ok(wasm_result_sb) => {
@@ -114,10 +121,10 @@ macro_rules! ret_err {
 macro_rules! ret {
     ( $e:expr) => {{
         use std::convert::TryInto;
-        let maybe_sb = $crate::holochain_serialized_bytes::SerializedBytes = ($e).try_into();
+        let maybe_sb: std::result::Result<$crate::holochain_serialized_bytes::SerializedBytes, $crate::holochain_serialized_bytes::SerializedBytesError> = ($e).try_into();
         match maybe_sb {
             Ok(sb) => {
-                let maybe_wasm_result_sb: $crate::holochain_serialized_bytes::SerializedBytes = $crate::WasmResult::Ok(sb).try_into();
+                let maybe_wasm_result_sb: std::result::Result<$crate::holochain_serialized_bytes::SerializedBytes, $crate::holochain_serialized_bytes::SerializedBytesError> = $crate::WasmResult::Ok(sb).try_into();
                 match maybe_wasm_result_sb {
                     std::result::Result::Ok(wasm_result_sb) => return $crate::serialized_bytes::to_allocation_ptr(wasm_result_sb),
                     std::result::Result::Err(e) => ret_err!(e),
@@ -130,7 +137,7 @@ macro_rules! ret {
 
 #[macro_export]
 macro_rules! try_result {
-    ( $e:expr, $fail:literal ) => {{
+    ( $e:expr, $fail:expr ) => {{
         match $e {
             Ok(v) => v,
             Err(_) => $crate::ret_err!($fail),

@@ -8,11 +8,8 @@ edition = "2018"
 wasmer-runtime = "=0.13.1"
 byte-slice-cast = "=0.3.5"
 holochain_wasmer_host = { path = "../crates/host" }
+holochain_serialized_bytes = "=0.0.30"
 serde = "=1.0.104"
-serde_derive = "=1.0.104"
-serde_json = { version = "=1.0.47", features = ["preserve_order"] }
-holochain_json_api = "=0.0.23"
-holochain_json_derive = "=0.0.23"
 test_common = { version = "=0.0.18", path = "./common" }
 
 [lib]

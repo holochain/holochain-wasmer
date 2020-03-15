@@ -1,5 +1,4 @@
 pub mod allocation;
-pub mod bytes;
 pub mod result;
 pub mod serialized_bytes;
 

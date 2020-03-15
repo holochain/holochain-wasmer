@@ -8,5 +8,5 @@ edition = "2018"
 
 [dependencies]
 byte-slice-cast = "=0.3.5"
-holochain_serialized_bytes = "=0.0.28"
+holochain_serialized_bytes = "=0.0.30"
 serde = "=1.0.104"
