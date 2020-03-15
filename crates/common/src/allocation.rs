@@ -17,7 +17,6 @@ pub type AllocationBytes = [u8; ALLOCATION_BYTES_ITEMS];
 /// return the pointer to it so bytes can be written to the allocation
 pub extern "C" fn allocate(len: Len) -> Ptr {
     // https://doc.rust-lang.org/std/string/struct.String.html#examples-8
-    // Prevent automatically dropping the String's data
     let dummy: Vec<u8> = Vec::with_capacity(len as _);
     let ptr = dummy.as_slice().as_ptr() as Ptr;
     mem::ManuallyDrop::new(dummy);

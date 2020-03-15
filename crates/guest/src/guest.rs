@@ -1,6 +1,7 @@
+pub extern crate holochain_serialized_bytes;
+
 pub use holochain_wasmer_common::allocation;
-pub use holochain_wasmer_common::bytes;
-pub use holochain_wasmer_common::json;
+pub use holochain_wasmer_common::serialized_bytes;
 pub use holochain_wasmer_common::*;
 
 #[macro_export]
@@ -55,16 +56,17 @@ macro_rules! host_args {
     ( $ptr:ident ) => {{
         use core::convert::TryInto;
 
-        match $crate::json::from_allocation_ptr(holochain_wasmer_guest::map_bytes($ptr)).try_into()
-        {
+        match $crate::serialized_bytes::from_allocation_ptr($crate::map_bytes($ptr)).try_into() {
             Ok(v) => v,
             Err(_) => {
                 $crate::allocation::deallocate_from_allocation_ptr($ptr);
-                return $crate::json::to_allocation_ptr(
+                return $crate::serialized_bytes::to_allocation_ptr(
                     $crate::result::WasmResult::Err(
                         $crate::result::WasmError::ArgumentDeserializationFailed,
                     )
-                    .into(),
+                    // should be impossible to fail to serialize a simple enum variant
+                    .try_into()
+                    .unwrap(),
                 );
             }
         }
@@ -72,52 +74,70 @@ macro_rules! host_args {
 }
 
 #[macro_export]
-macro_rules! host_bytes {
-    ( $ptr:ident ) => {{
-        $crate::bytes::from_allocation_ptr($crate::map_bytes($ptr))
-    }};
-}
-
-#[macro_export]
-macro_rules! host_call_bytes {
-    ( $func_name:ident, $input:expr ) => {{
-        let result_host_allocation_ptr =
-            unsafe { $func_name($crate::bytes::to_allocation_ptr($input)) };
-        $crate::host_bytes!(result_host_allocation_ptr)
-    }};
-}
-
-#[macro_export]
 macro_rules! host_call {
     ( $func_name:ident, $input:expr ) => {{
-        use core::convert::TryInto;
-        let json: $crate::JsonString = $input.into();
-        let bytes = json.to_bytes();
-        let result_bytes = $crate::host_call_bytes!($func_name, bytes);
-        $crate::JsonString::from_bytes(result_bytes).try_into()
-    }};
-}
-
-#[macro_export]
-macro_rules! ret {
-    ( $e: expr) => {{
-        let json_string: $crate::JsonString = ($e).into();
-        return $crate::json::to_allocation_ptr($crate::WasmResult::Ok(json_string).into());
+        use std::convert::TryInto;
+        let maybe_sb: std::result::Result<
+            $crate::holochain_serialized_bytes::SerializedBytes,
+            $crate::holochain_serialized_bytes::SerializedBytesError,
+        > = $input.try_into();
+        match maybe_sb {
+            std::result::Result::Ok(sb) => {
+                let result_host_allocation_ptr: $crate::AllocationPtr =
+                    unsafe { $func_name($crate::serialized_bytes::to_allocation_ptr(sb)) };
+                let result_sb: $crate::holochain_serialized_bytes::SerializedBytes =
+                    $crate::serialized_bytes::from_allocation_ptr($crate::map_bytes(
+                        result_host_allocation_ptr,
+                    ));
+                result_sb.try_into()
+            }
+            std::result::Result::Err(e) => Err(e),
+        }
     }};
 }
 
 #[macro_export]
 macro_rules! ret_err {
-    ( $fail:literal ) => {{
-        return $crate::json::to_allocation_ptr(
-            $crate::WasmResult::Err($crate::WasmError::Zome($fail.into())).into(),
-        );
+    ( $fail:expr ) => {{
+        use std::convert::TryInto;
+        let maybe_wasm_result_sb: std::result::Result<$crate::holochain_serialized_bytes::SerializedBytes, $crate::holochain_serialized_bytes::SerializedBytesError> =
+            $crate::WasmResult::Err($crate::WasmError::Zome(String::from($fail))).try_into();
+        match maybe_wasm_result_sb {
+            std::result::Result::Ok(wasm_result_sb) => {
+                return $crate::serialized_bytes::to_allocation_ptr(wasm_result_sb);
+            },
+            // we could end up down here if the fail string somehow fails to convert to SerializedBytes
+            // for example it could be too big for messagepack or include invalid bytes
+            std::result::Result::Err(e) => {
+                return $crate::serialized_bytes::to_allocation_ptr(
+                    $crate::WasmResult::Err($crate::WasmError::Zome(String::from("errored while erroring (this should never happen)"))).try_into().unwrap()
+                );
+            }
+        };
+    }};
+}
+
+#[macro_export]
+macro_rules! ret {
+    ( $e:expr) => {{
+        use std::convert::TryInto;
+        let maybe_sb: std::result::Result<$crate::holochain_serialized_bytes::SerializedBytes, $crate::holochain_serialized_bytes::SerializedBytesError> = ($e).try_into();
+        match maybe_sb {
+            Ok(sb) => {
+                let maybe_wasm_result_sb: std::result::Result<$crate::holochain_serialized_bytes::SerializedBytes, $crate::holochain_serialized_bytes::SerializedBytesError> = $crate::WasmResult::Ok(sb).try_into();
+                match maybe_wasm_result_sb {
+                    std::result::Result::Ok(wasm_result_sb) => return $crate::serialized_bytes::to_allocation_ptr(wasm_result_sb),
+                    std::result::Result::Err(e) => ret_err!(e),
+                };
+            },
+            std::result::Result::Err(e) => ret_err!(e),
+        };
     }};
 }
 
 #[macro_export]
 macro_rules! try_result {
-    ( $e:expr, $fail:literal ) => {{
+    ( $e:expr, $fail:expr ) => {{
         match $e {
             Ok(v) => v,
             Err(_) => $crate::ret_err!($fail),

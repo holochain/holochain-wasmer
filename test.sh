@@ -1,4 +1,5 @@
 export RUST_BACKTRACE=full
+export WASMER_BACKTRACE=1
 cargo fmt
 ( cd test && cargo fmt )
 cargo test
