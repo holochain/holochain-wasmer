@@ -4,19 +4,6 @@ use holochain_serialized_bytes::prelude::*;
 #[derive(Clone, Debug, PartialEq, Eq, Hash, PartialOrd, Ord, Serialize, Deserialize)]
 #[rustfmt::skip]
 pub enum WasmError {
-    Unspecified,
-    ArgumentDeserializationFailed,
-    OutOfMemory,
-    ReceivedWrongActionResult,
-    CallbackFailed,
-    RecursiveCallForbidden,
-    ResponseSerializationFailed,
-    NotAnAllocation,
-    ZeroSizedAllocation,
-    UnknownEntryType,
-    MismatchWasmCallDataType,
-    EntryNotFound,
-    WorkflowFailed,
     /// while converting pointers and lengths between u64 and i64 across the host/guest
     /// we hit either a negative number (cannot fit in u64) or very large number (cannot fit in i64)
     /// negative pointers and lengths are almost certainly indicative of a critical bug somewhere

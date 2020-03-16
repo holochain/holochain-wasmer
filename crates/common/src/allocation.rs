@@ -27,16 +27,15 @@ pub extern "C" fn allocate(len: Len) -> Ptr {
 /// this needs to be called on anything allocated above as the allocator
 /// will never free the memory otherwise
 pub extern "C" fn deallocate<'a>(ptr: Ptr, len: Len) {
-    let drop_me: Vec<u8> = unsafe { Vec::from_raw_parts(ptr as _, len as _, len as _) };
-    // let dropbox: Box<[u8]> = unsafe { Box::new(slice::from_raw_parts(ptr as _, len as _)) };
-    // let drop_me: &'a [u8] = unsafe { slice::from_raw_parts(ptr as _, len as _) };
-    // let drop_me: Vec<u8> = dropbox.into_vec();
-    drop(drop_me);
+    let _: Vec<u8> = unsafe { Vec::from_raw_parts(ptr as _, len as _, len as _) };
 }
 
 pub extern "C" fn deallocate_from_allocation_ptr(allocation_ptr: AllocationPtr) {
     let allocation: Allocation = from_allocation_ptr(allocation_ptr);
+    // deallocate what the pointer is pointing to
     deallocate(allocation[0], allocation[1]);
+    // deallocate the allocation itself
+    deallocate(allocation_ptr, ALLOCATION_ITEMS as _)
 }
 
 pub fn to_allocation_ptr(allocation: Allocation) -> AllocationPtr {
@@ -76,30 +75,20 @@ pub mod tests {
     fn dellocate_test() {
         let len = 3 as Len;
 
+        let expected = vec![0, 0, 0];
         let ptr = allocation::allocate(len);
 
         println!("first alloc {} {}", ptr, len);
 
         let slice: &[u8] = unsafe { std::slice::from_raw_parts(ptr as _, len as _) };
 
-        println!("first slice {:?}", slice);
-
-        drop(slice);
-
-        println!("another allocation {}", allocation::allocate(len));
+        assert_eq!(expected, slice);
 
         allocation::deallocate(ptr, len);
 
         let some_vec = vec![1_u8, 10_u8, 100_u8];
 
-        let slice: &[u8] = unsafe { std::slice::from_raw_parts(ptr as _, len as _) };
-
-        println!("slice again {:?}", slice);
-        println!("some vec {:?} {} {}", some_vec, some_vec.as_ptr() as Ptr, some_vec.len() as Len);
-
-        drop(some_vec);
-
-        let some_new_vec = vec![5_u8, 15_u8, 25_u8];
-        println!("some new vec {:?} {} {}", some_new_vec, some_new_vec.as_ptr() as Ptr, some_new_vec.len() as Len);
+        // the new vec should have the same pointer as the original allocation after we deallocate
+        assert_eq!(ptr, some_vec.as_ptr() as Ptr);
     }
 }
