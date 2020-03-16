@@ -26,22 +26,17 @@ pub extern "C" fn allocate(len: Len) -> Ptr {
 /// restore an allocation so that it is dropped immediately
 /// this needs to be called on anything allocated above as the allocator
 /// will never free the memory otherwise
-pub extern "C" fn deallocate(ptr: Ptr, len: Len) {
-    let _: &[u8] = unsafe { slice::from_raw_parts(ptr as _, len as _) };
+pub extern "C" fn deallocate<'a>(ptr: Ptr, len: Len) {
+    let drop_me: Vec<u8> = unsafe { Vec::from_raw_parts(ptr as _, len as _, len as _) };
+    // let dropbox: Box<[u8]> = unsafe { Box::new(slice::from_raw_parts(ptr as _, len as _)) };
+    // let drop_me: &'a [u8] = unsafe { slice::from_raw_parts(ptr as _, len as _) };
+    // let drop_me: Vec<u8> = dropbox.into_vec();
+    drop(drop_me);
 }
 
 pub extern "C" fn deallocate_from_allocation_ptr(allocation_ptr: AllocationPtr) {
     let allocation: Allocation = from_allocation_ptr(allocation_ptr);
     deallocate(allocation[0], allocation[1]);
-    // @TODO - i don't know if this deallocates the allocation itself
-    // `allocation` hits the end of the fn so should be dropped but also it's just a
-    // slice not a vector so i don't know what that means for the underlying bytes.
-    // i know the bytes never get allocated for a slice, only a vector, not sure about
-    // the deallocation side of things, so it should be tested.
-    // realistically this will never be a problem on the guest side as wasm instances
-    // are too short lived for a few [u64; 2] allocations to have any impact on 4GB of
-    // memory, but in theory it could be problematic on the host side for very long
-    // running hosts with memory constraints
 }
 
 pub fn to_allocation_ptr(allocation: Allocation) -> AllocationPtr {
@@ -75,5 +70,36 @@ pub mod tests {
         let restored_allocation = allocation::from_allocation_ptr(allocation_ptr);
 
         assert_eq!([some_ptr, some_len], restored_allocation,);
+    }
+
+    #[test]
+    fn dellocate_test() {
+        let len = 3 as Len;
+
+        let ptr = allocation::allocate(len);
+
+        println!("{} {}", ptr, len);
+
+        let slice: &[u8] = unsafe { std::slice::from_raw_parts(ptr as _, len as _) };
+
+        println!("{:?}", slice);
+
+        drop(slice);
+
+        println!("{}", allocation::allocate(len));
+
+        allocation::deallocate(ptr, len);
+
+        let some_vec = vec![1_u8, 10_u8, 100_u8];
+
+        let slice: &[u8] = unsafe { std::slice::from_raw_parts(ptr as _, len as _) };
+
+        println!("{:?}", slice);
+        println!("{:?} {} {}", some_vec, some_vec.as_ptr() as Ptr, some_vec.len() as Len);
+
+        drop(some_vec);
+
+        let some_new_vec = vec![5_u8, 15_u8, 25_u8];
+        println!("{:?} {} {}", some_new_vec, some_new_vec.as_ptr() as Ptr, some_new_vec.len() as Len);
     }
 }
