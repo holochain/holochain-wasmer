@@ -78,15 +78,15 @@ pub mod tests {
 
         let ptr = allocation::allocate(len);
 
-        println!("{} {}", ptr, len);
+        println!("first alloc {} {}", ptr, len);
 
         let slice: &[u8] = unsafe { std::slice::from_raw_parts(ptr as _, len as _) };
 
-        println!("{:?}", slice);
+        println!("first slice {:?}", slice);
 
         drop(slice);
 
-        println!("{}", allocation::allocate(len));
+        println!("another allocation {}", allocation::allocate(len));
 
         allocation::deallocate(ptr, len);
 
@@ -94,12 +94,12 @@ pub mod tests {
 
         let slice: &[u8] = unsafe { std::slice::from_raw_parts(ptr as _, len as _) };
 
-        println!("{:?}", slice);
-        println!("{:?} {} {}", some_vec, some_vec.as_ptr() as Ptr, some_vec.len() as Len);
+        println!("slice again {:?}", slice);
+        println!("some vec {:?} {} {}", some_vec, some_vec.as_ptr() as Ptr, some_vec.len() as Len);
 
         drop(some_vec);
 
         let some_new_vec = vec![5_u8, 15_u8, 25_u8];
-        println!("{:?} {} {}", some_new_vec, some_new_vec.as_ptr() as Ptr, some_new_vec.len() as Len);
+        println!("some new vec {:?} {} {}", some_new_vec, some_new_vec.as_ptr() as Ptr, some_new_vec.len() as Len);
     }
 }
