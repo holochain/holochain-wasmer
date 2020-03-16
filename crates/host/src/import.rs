@@ -5,6 +5,7 @@ use crate::*;
 use byte_slice_cast::AsByteSlice;
 use std::io::Read;
 use wasmer_runtime::Ctx;
+use holochain_wasmer_common::allocation::deallocate_from_allocation_ptr;
 
 /// import an allocation from the host to the guest
 /// - the guest allocation pointer must be preallocated
@@ -30,6 +31,11 @@ pub fn __import_allocation(
         // - results are not FFI safe so not compatible with wasm imports
         cell.set(byte.expect("a byte did not exist while writing to guest"));
     }
+
+    // note that we do NOT deallocate here as the host allocation_ptr needs to still be valid
+    // when __import_bytes pulls the actual data across
+    // the __import_bytes function deallocates both the allocation and the bytes it points to on
+    // the host side
 }
 
 /// import bytes from the host allocation pointer to the guest bytes pointer
@@ -39,4 +45,7 @@ pub fn __import_bytes(ctx: &mut Ctx, host_allocation_ptr: AllocationPtr, guest_b
     let serialized_bytes: SerializedBytes =
         serialized_bytes::from_allocation_ptr(host_allocation_ptr);
     guest::write_bytes(ctx, guest_bytes_ptr, serialized_bytes);
+
+    // deallocate the host-side allocation now that the guest holds it and all the bytes
+    deallocate_from_allocation_ptr(host_allocation_ptr);
 }
