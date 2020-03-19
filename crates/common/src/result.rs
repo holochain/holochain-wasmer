@@ -91,7 +91,6 @@ pub mod tests {
         let wasm_result = WasmResult::Ok(foo.clone().try_into().unwrap());
 
         let wasm_result_sb = SerializedBytes::try_from(wasm_result).unwrap();
-        println!("{:?}", wasm_result_sb);
 
         let wasm_result_recover =
             WasmResult::try_from(wasm_result_sb).expect("could not restore wasm result");

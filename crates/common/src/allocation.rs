@@ -1,6 +1,7 @@
 use crate::AllocationPtr;
 use crate::Len;
 use crate::Ptr;
+use holochain_serialized_bytes::prelude::*;
 use std::mem;
 
 /// Allocation is a 2 item u64 slice of offset/length
@@ -16,9 +17,8 @@ pub type AllocationBytes = [u8; ALLOCATION_BYTES_ITEMS];
 /// allocate a length of bytes that won't be dropped by the allocator
 /// return the pointer to it so bytes can be written to the allocation
 pub extern "C" fn allocate(len: Len) -> Ptr {
-    // https://doc.rust-lang.org/std/string/struct.String.html#examples-8
     let dummy: Vec<u8> = Vec::with_capacity(len as _);
-    let ptr = dummy.as_slice().as_ptr() as Ptr;
+    let ptr = dummy.as_ptr() as Ptr;
     mem::ManuallyDrop::new(dummy);
     ptr
 }
@@ -54,8 +54,8 @@ impl From<Allocation> for AllocationPtr {
 
 impl From<AllocationPtr> for Allocation {
     fn from(allocation_ptr: AllocationPtr) -> Allocation {
-        // this is the inverse of to_allocation_ptr
-        // it deallocates what to_allocation_ptr did an unsafe allocation for
+        // this is the inverse of From<Allocation>
+        // it deallocates what From<Allocation> did an unsafe allocation for
         let allocation_vec: Vec<u64> = unsafe {
             Vec::from_raw_parts(allocation_ptr.0 as _, ALLOCATION_ITEMS, ALLOCATION_ITEMS)
         };
@@ -64,14 +64,24 @@ impl From<AllocationPtr> for Allocation {
     }
 }
 
-impl AllocationPtr {
-    /// get the Allocation for this Allocation _without_ deallocating the Allocation in the process
-    /// usually you do not want to do this because From<AllocationPtr> for Allocation consumes the
-    /// original AllocationPtr and returns a new identical Allocation
-    pub fn peek_allocation(&self) -> Allocation {
-        let allocation_slice: &[u64] =
-            unsafe { std::slice::from_raw_parts(self.0 as _, ALLOCATION_ITEMS) };
-        [allocation_slice[0], allocation_slice[1]]
+impl From<AllocationPtr> for SerializedBytes {
+    fn from(allocation_ptr: AllocationPtr) -> SerializedBytes {
+        let allocation = Allocation::from(allocation_ptr);
+        let b: Vec<u8> = unsafe {
+            Vec::from_raw_parts(allocation[0] as _, allocation[1] as _, allocation[1] as _)
+        };
+        SerializedBytes::from(UnsafeBytes::from(b))
+    }
+}
+
+impl From<SerializedBytes> for AllocationPtr {
+    fn from(sb: SerializedBytes) -> AllocationPtr {
+        let bytes: Vec<u8> = UnsafeBytes::from(sb).into();
+        let bytes_ptr = bytes.as_ptr() as Ptr;
+        let bytes_len = bytes.len() as Len;
+        std::mem::ManuallyDrop::new(bytes);
+        let allocation: Allocation = [bytes_ptr, bytes_len];
+        AllocationPtr::from(allocation)
     }
 }
 
@@ -80,9 +90,13 @@ pub mod tests {
 
     use crate::allocation;
     use crate::allocation::Allocation;
-    use crate::AllocationPtr;
-    use crate::Len;
-    use crate::Ptr;
+    use crate::*;
+    use holochain_serialized_bytes::prelude::*;
+
+    #[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
+    struct Foo(String);
+
+    holochain_serial!(Foo);
 
     #[test]
     fn allocate_allocation_ptr_test() {
@@ -100,18 +114,22 @@ pub mod tests {
     fn dellocate_test() {
         let len = 3 as Len;
 
-        let expected: Vec<u8> = vec![0, 0, 0];
         let ptr = allocation::allocate(len);
-
-        println!("first alloc {} {}", ptr, len);
 
         let _vec_that_might_overwrite_the_allocation: Vec<u8> = vec![1, 2, 3];
 
-        let slice: &[u8] = unsafe { std::slice::from_raw_parts(ptr as _, len as _) };
-
         // this shows that the 3 bytes we allocated are all 0 as expected
         // this probably means that the allocation worked
-        assert_eq!(expected, slice);
+        // @TODO actually this doesn't mean anything
+        // https://doc.rust-lang.org/std/vec/struct.Vec.html#capacity-and-reallocation
+        // > Vec will not specifically overwrite any data that is removed from it, but also won't
+        // > specifically preserve it. Its uninitialized memory is scratch space that it may use
+        // > however it wants. It will generally just do whatever is most efficient or otherwise
+        // > easy to implement.
+        // > Even if you zero a Vec's memory first, that may not actually happen because the
+        // > optimizer does not consider this a side-effect that must be preserved.
+        // let slice: &[u8] = unsafe { std::slice::from_raw_parts(ptr as _, len as _) };
+        // assert_eq!(vec![0, 0, 0], slice);
 
         allocation::deallocate(ptr, len);
 
@@ -124,5 +142,73 @@ pub mod tests {
 
         // the same sized slice at the same pointer now looks like some_vec
         assert_eq!(slice.to_vec(), some_vec);
+    }
+
+    #[test]
+    fn allocation_ptr_round_trip() {
+        let allocation: Allocation = [1, 2];
+        let allocation_ptr: AllocationPtr = allocation.into();
+        let remote_ptr: RemotePtr = allocation_ptr.as_remote_ptr();
+
+        // can peek without any deallocations
+        assert_eq!(allocation_ptr.peek_allocation(), [1, 2],);
+        assert_eq!(allocation_ptr.peek_allocation(), [1, 2],);
+
+        // can round trip back
+        let returned_allocation: Allocation = allocation_ptr.into();
+
+        assert_eq!(returned_allocation, [1, 2]);
+
+        // round tripping above deallocates the original allocation
+        // put something here to try and make sure memory doesn't stick around
+        let _: Allocation = [3, 4];
+        assert_ne!(
+            AllocationPtr::from_remote_ptr(remote_ptr).peek_allocation(),
+            [1, 2]
+        );
+    }
+
+    #[test]
+    fn serialized_bytes_from_allocation_test() {
+        let foo: Foo = Foo("foo".into());
+        let foo_clone = foo.clone();
+        let foo_sb: SerializedBytes = foo.try_into().unwrap();
+        let foo_sb_clone = foo_sb.clone();
+
+        let ptr: AllocationPtr = foo_sb.into();
+        let remote_ptr: RemotePtr = ptr.as_remote_ptr();
+
+        // the Allocation should get deallocated so this should not match
+        // after the
+        let unexpected_allocation: Allocation = ptr.peek_allocation();
+
+        // ownership of these bytes should be taken by SerializedBytes
+        let inner_bytes: Vec<u8> = unsafe {
+            std::slice::from_raw_parts(unexpected_allocation[0] as _, unexpected_allocation[1] as _)
+        }
+        .to_vec();
+
+        let recovered_foo_sb: SerializedBytes = ptr.into();
+
+        // the AllocationPtr's Allocation should be deallocated here
+        assert_ne!(
+            AllocationPtr::from_remote_ptr(remote_ptr).peek_allocation(),
+            unexpected_allocation
+        );
+
+        assert_eq!(foo_sb_clone, recovered_foo_sb);
+
+        let recovered_foo: Foo = recovered_foo_sb.try_into().unwrap();
+
+        let inner_bytes_2: Vec<u8> = unsafe {
+            std::slice::from_raw_parts(unexpected_allocation[0] as _, unexpected_allocation[1] as _)
+        }
+        .to_vec();
+
+        // inner_bytes_2 should be nothing because inner_bytes was owned by SerializedBytes which
+        // turned into a Foo
+        assert_ne!(inner_bytes, inner_bytes_2,);
+
+        assert_eq!(foo_clone, recovered_foo);
     }
 }

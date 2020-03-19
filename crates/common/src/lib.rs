@@ -1,9 +1,11 @@
 pub mod allocation;
 pub mod result;
-pub mod serialized_bytes;
 
 pub use holochain_serialized_bytes::prelude::*;
 pub use result::*;
+
+use crate::allocation::Allocation;
+use crate::allocation::ALLOCATION_ITEMS;
 
 pub type Ptr = u64;
 pub type Len = u64;
@@ -20,12 +22,6 @@ pub type RemotePtr = Ptr;
 /// deallocated in an undefined way
 pub struct AllocationPtr(Ptr);
 
-impl From<Ptr> for AllocationPtr {
-    fn from(ptr: Ptr) -> AllocationPtr {
-        AllocationPtr(ptr)
-    }
-}
-
 impl AllocationPtr {
     /// normally we don't want to expose the inner Ptr because cloning or reusing it
     /// can lead to bad allocation and deallocation
@@ -38,5 +34,14 @@ impl AllocationPtr {
 
     pub fn from_remote_ptr(host_ptr: RemotePtr) -> Self {
         Self(host_ptr)
+    }
+
+    /// get the Allocation for this Allocation _without_ deallocating the Allocation in the process
+    /// usually you do not want to do this because From<AllocationPtr> for Allocation consumes the
+    /// original AllocationPtr and returns a new identical Allocation
+    pub fn peek_allocation(&self) -> Allocation {
+        let allocation_slice: &[u64] =
+            unsafe { std::slice::from_raw_parts(self.0 as _, ALLOCATION_ITEMS) };
+        [allocation_slice[0], allocation_slice[1]]
     }
 }

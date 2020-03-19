@@ -1,7 +1,6 @@
 pub extern crate holochain_serialized_bytes;
 
 pub use holochain_wasmer_common::allocation;
-pub use holochain_wasmer_common::serialized_bytes;
 pub use holochain_wasmer_common::*;
 
 #[macro_export]
