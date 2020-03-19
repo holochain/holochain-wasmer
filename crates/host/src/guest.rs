@@ -65,7 +65,7 @@ fn call_inner(
 
     // this requires that the guest exported function being called knows what to do with a
     // host allocation pointer
-    let guest_allocation_ptr = match instance
+    let guest_allocation_ptr: RemotePtr = match instance
         .call(
             call,
             &[Value::I64(host_allocation_ptr.as_remote_ptr().try_into()?)],
@@ -76,10 +76,19 @@ fn call_inner(
         _ => unreachable!(),
     };
 
-    Ok(crate::guest::serialized_bytes_from_guest_ptr(
+    let return_value: SerializedBytes = crate::guest::serialized_bytes_from_guest_ptr(
         instance.context_mut(),
         guest_allocation_ptr,
-    )?)
+    )?;
+
+    instance
+        .call(
+            "__deallocate_return_value",
+            &[Value::I64(guest_allocation_ptr.try_into()?)],
+        )
+        .expect("deallocate return value error");
+
+    Ok(return_value)
 }
 
 /// convenience wrapper around call_bytes to handling input and output of any struct that:

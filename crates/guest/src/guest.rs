@@ -15,6 +15,18 @@ macro_rules! memory_externs {
 }
 memory_externs!();
 
+#[no_mangle]
+/// when we return an AllocationPtr(serialized_bytes).as_remote_ptr() to the host there is still a
+/// bunch of SerializedBytes sitting in the wasm memory
+/// the host needs to read these bytes out of memory to get the return value from the guest but
+/// the host then needs to tell the guest that memory can be freed
+/// this function allows the host to notify the guest that it is finished with a RemotePtr that it
+/// received from the return of a guest function call.
+pub extern "C" fn __deallocate_return_value(return_allocation_ptr: RemotePtr) {
+    // rehydrating and dropping the SerializedBytes is enough for allocations to be cleaned up
+    let _: SerializedBytes = AllocationPtr::from_remote_ptr(return_allocation_ptr).into();
+}
+
 #[macro_export]
 macro_rules! host_externs {
     ( $( $func_name:ident ),* ) => {
@@ -84,8 +96,14 @@ macro_rules! host_call {
         > = $input.try_into();
         match maybe_sb {
             std::result::Result::Ok(sb) => {
+                let input_allocation_ptr: $crate::AllocationPtr = sb.into();
                 let result_host_allocation_ptr: $crate::RemotePtr =
-                    unsafe { $func_name($crate::AllocationPtr::from(sb).as_remote_ptr()) };
+                    unsafe { $func_name(input_allocation_ptr.as_remote_ptr()) };
+
+                // need to shift the input allocation ptr back to sb so it can be dropped properly
+                let _: $crate::holochain_serialized_bytes::SerializedBytes =
+                    input_allocation_ptr.into();
+
                 let result_sb: $crate::holochain_serialized_bytes::SerializedBytes =
                     $crate::map_bytes(result_host_allocation_ptr).into();
                 result_sb.try_into()
