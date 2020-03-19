@@ -4,19 +4,6 @@ use holochain_serialized_bytes::prelude::*;
 #[derive(Clone, Debug, PartialEq, Eq, Hash, PartialOrd, Ord, Serialize, Deserialize)]
 #[rustfmt::skip]
 pub enum WasmError {
-    Unspecified,
-    ArgumentDeserializationFailed,
-    OutOfMemory,
-    ReceivedWrongActionResult,
-    CallbackFailed,
-    RecursiveCallForbidden,
-    ResponseSerializationFailed,
-    NotAnAllocation,
-    ZeroSizedAllocation,
-    UnknownEntryType,
-    MismatchWasmCallDataType,
-    EntryNotFound,
-    WorkflowFailed,
     /// while converting pointers and lengths between u64 and i64 across the host/guest
     /// we hit either a negative number (cannot fit in u64) or very large number (cannot fit in i64)
     /// negative pointers and lengths are almost certainly indicative of a critical bug somewhere
@@ -45,6 +32,8 @@ pub enum WasmError {
     Zome(String),
     /// somehow wasmer failed to compile machine code from wasm byte code
     Compile(String),
+    /// failed to deserialize arguments when moving across the wasm host/guest boundary
+    ArgumentDeserializationFailed,
 }
 
 impl From<std::num::TryFromIntError> for WasmError {
@@ -102,7 +91,6 @@ pub mod tests {
         let wasm_result = WasmResult::Ok(foo.clone().try_into().unwrap());
 
         let wasm_result_sb = SerializedBytes::try_from(wasm_result).unwrap();
-        println!("{:?}", wasm_result_sb);
 
         let wasm_result_recover =
             WasmResult::try_from(wasm_result_sb).expect("could not restore wasm result");

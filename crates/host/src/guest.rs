@@ -1,5 +1,4 @@
 use crate::allocation;
-use crate::serialized_bytes;
 use crate::*;
 use byte_slice_cast::AsSliceOf;
 use holochain_serialized_bytes::prelude::*;
@@ -8,7 +7,7 @@ use wasmer_runtime::Ctx;
 use wasmer_runtime::Instance;
 use wasmer_runtime::Value;
 
-pub fn write_bytes(ctx: &mut Ctx, guest_ptr: Ptr, serialized_bytes: SerializedBytes) {
+pub fn write_bytes(ctx: &mut Ctx, guest_ptr: RemotePtr, serialized_bytes: SerializedBytes) {
     let memory = ctx.memory(0);
 
     for (byte, cell) in serialized_bytes.bytes().iter().zip(
@@ -19,9 +18,9 @@ pub fn write_bytes(ctx: &mut Ctx, guest_ptr: Ptr, serialized_bytes: SerializedBy
     }
 }
 
-pub fn serialized_bytes_from_allocation_ptr(
+pub fn serialized_bytes_from_guest_ptr(
     ctx: &mut Ctx,
-    guest_allocation_ptr: AllocationPtr,
+    guest_allocation_ptr: RemotePtr,
 ) -> Result<SerializedBytes, WasmError> {
     let view: MemoryView<u8> = ctx.memory(0).view();
     let bytes_vec: Vec<u8> = view[guest_allocation_ptr as _
@@ -39,15 +38,15 @@ pub fn serialized_bytes_from_allocation_ptr(
     )))
 }
 
-pub fn from_allocation_ptr<O: TryFrom<SerializedBytes>>(
+pub fn from_guest_ptr<O: TryFrom<SerializedBytes>>(
     ctx: &mut Ctx,
-    guest_allocation_ptr: AllocationPtr,
+    guest_allocation_ptr: RemotePtr,
 ) -> Result<O, WasmError>
 where
     O::Error: Into<String>,
 {
     let serialized_bytes: SerializedBytes =
-        serialized_bytes_from_allocation_ptr(ctx, guest_allocation_ptr)?;
+        serialized_bytes_from_guest_ptr(ctx, guest_allocation_ptr)?;
     match serialized_bytes.try_into() {
         Ok(v) => Ok(v),
         Err(e) => Err(WasmError::GuestResultHandling(e.into())),
@@ -62,22 +61,34 @@ fn call_inner(
     call: &str,
     payload: SerializedBytes,
 ) -> Result<SerializedBytes, WasmError> {
-    let host_allocation_ptr = serialized_bytes::to_allocation_ptr(payload);
+    let host_allocation_ptr: AllocationPtr = payload.into();
 
     // this requires that the guest exported function being called knows what to do with a
     // host allocation pointer
-    let guest_allocation_ptr = match instance
-        .call(call, &[Value::I64(host_allocation_ptr.try_into()?)])
+    let guest_allocation_ptr: RemotePtr = match instance
+        .call(
+            call,
+            &[Value::I64(host_allocation_ptr.as_remote_ptr().try_into()?)],
+        )
         .expect("call error")[0]
     {
         Value::I64(i) => i as u64,
         _ => unreachable!(),
     };
 
-    Ok(crate::guest::serialized_bytes_from_allocation_ptr(
+    let return_value: SerializedBytes = crate::guest::serialized_bytes_from_guest_ptr(
         instance.context_mut(),
         guest_allocation_ptr,
-    )?)
+    )?;
+
+    instance
+        .call(
+            "__deallocate_return_value",
+            &[Value::I64(guest_allocation_ptr.try_into()?)],
+        )
+        .expect("deallocate return value error");
+
+    Ok(return_value)
 }
 
 /// convenience wrapper around call_bytes to handling input and output of any struct that:
