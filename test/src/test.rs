@@ -9,31 +9,24 @@ use test_common::SomeStruct;
 use test_common::StringType;
 use wasmer_runtime::Ctx;
 
-fn test_process_string(
-    ctx: &mut Ctx,
-    allocation_ptr: AllocationPtr,
-) -> Result<AllocationPtr, WasmError> {
-    let processed_string: StringType = guest::from_allocation_ptr(ctx, allocation_ptr)?;
+fn test_process_string(ctx: &mut Ctx, guest_ptr: RemotePtr) -> Result<RemotePtr, WasmError> {
+    let processed_string: StringType = guest::from_guest_ptr(ctx, guest_ptr)?;
     let processed_string = format!("host: {}", String::from(processed_string));
     let sb: SerializedBytes = StringType::from(processed_string).try_into()?;
-    // println!("test_processed_string sb {:?}", sb);
-    let allocation_pointer = holochain_wasmer_host::serialized_bytes::to_allocation_ptr(sb);
-    Ok(allocation_pointer)
+    let allocation_pointer: AllocationPtr = sb.into();
+    Ok(allocation_pointer.as_remote_ptr())
 }
 
-fn test_process_struct(
-    ctx: &mut Ctx,
-    allocation_ptr: AllocationPtr,
-) -> Result<AllocationPtr, WasmError> {
-    let mut some_struct: SomeStruct = guest::from_allocation_ptr(ctx, allocation_ptr)?;
+fn test_process_struct(ctx: &mut Ctx, guest_ptr: RemotePtr) -> Result<RemotePtr, WasmError> {
+    let mut some_struct: SomeStruct = guest::from_guest_ptr(ctx, guest_ptr)?;
     some_struct.process();
-    Ok(holochain_wasmer_host::serialized_bytes::to_allocation_ptr(
-        some_struct.try_into()?,
-    ))
+    let sb: SerializedBytes = some_struct.try_into()?;
+    let allocation_ptr: AllocationPtr = sb.into();
+    Ok(allocation_ptr.as_remote_ptr())
 }
 
-fn debug(_ctx: &mut Ctx, allocation_ptr: AllocationPtr) -> Result<AllocationPtr, WasmError> {
-    println!("debug {:?}", allocation_ptr);
+fn debug(_ctx: &mut Ctx, some_number: Ptr) -> Result<RemotePtr, WasmError> {
+    println!("debug {:?}", some_number);
     Ok(0)
 }
 

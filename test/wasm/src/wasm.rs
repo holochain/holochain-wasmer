@@ -27,7 +27,7 @@ pub fn result_support() -> Result<(), WasmError> {
 }
 
 #[no_mangle]
-pub extern "C" fn process_bytes(host_allocation_ptr: AllocationPtr) -> AllocationPtr {
+pub extern "C" fn process_bytes(host_allocation_ptr: RemotePtr) -> RemotePtr {
     let b: BytesType = host_args!(host_allocation_ptr);
     let mut b = b.inner();
     let mut more_bytes = vec![50_u8, 60_u8, 70_u8, 80_u8];
@@ -37,7 +37,7 @@ pub extern "C" fn process_bytes(host_allocation_ptr: AllocationPtr) -> Allocatio
 }
 
 #[no_mangle]
-pub extern "C" fn process_string(host_allocation_ptr: AllocationPtr) -> AllocationPtr {
+pub extern "C" fn process_string(host_allocation_ptr: RemotePtr) -> RemotePtr {
     // get the string the host is trying to pass us out of memory
     // the ptr and cap line up with what was previously allocated with pre_alloc_string
     let s: StringType = host_args!(host_allocation_ptr);
@@ -49,14 +49,14 @@ pub extern "C" fn process_string(host_allocation_ptr: AllocationPtr) -> Allocati
 
 
 #[no_mangle]
-pub extern "C" fn process_native(host_allocation_ptr: AllocationPtr) -> AllocationPtr {
+pub extern "C" fn process_native(host_allocation_ptr: RemotePtr) -> RemotePtr {
     let input: SomeStruct = host_args!(host_allocation_ptr);
     let processed: SomeStruct = try_result!(host_call!(__test_process_struct, input), "could not deserialize SomeStruct in process_native");
     ret!(processed);
 }
 
 #[no_mangle]
-pub extern "C" fn stacked_strings(_: AllocationPtr) -> AllocationPtr {
+pub extern "C" fn stacked_strings(_: RemotePtr) -> RemotePtr {
     // get the first string allocated to be returned
     let first = "first";
     // the second string allocation should do nothing to the first
@@ -66,30 +66,30 @@ pub extern "C" fn stacked_strings(_: AllocationPtr) -> AllocationPtr {
 }
 
 #[no_mangle]
-pub extern "C" fn some_ret(_: AllocationPtr) -> AllocationPtr {
+pub extern "C" fn some_ret(_: RemotePtr) -> RemotePtr {
     ret!(SomeStruct::new("foo".into()));
 }
 
 #[no_mangle]
-pub extern "C" fn some_ret_err(_: AllocationPtr) -> AllocationPtr {
+pub extern "C" fn some_ret_err(_: RemotePtr) -> RemotePtr {
     ret_err!("oh no!");
 }
 
 #[no_mangle]
-pub extern "C" fn native_type(host_allocation_ptr: AllocationPtr) -> AllocationPtr {
+pub extern "C" fn native_type(host_allocation_ptr: RemotePtr) -> RemotePtr {
     let input: SomeStruct = host_args!(host_allocation_ptr);
     ret!(input);
 }
 
 #[no_mangle]
-pub extern "C" fn try_result_succeeds(_: AllocationPtr) -> AllocationPtr {
+pub extern "C" fn try_result_succeeds(_: RemotePtr) -> RemotePtr {
     let ok: Result<SomeStruct, ()> = Ok(SomeStruct::new("foo".into()));
     let result = try_result!(ok, "this can't fail");
     ret!(result);
 }
 
 #[no_mangle]
-pub extern "C" fn try_result_fails_fast(_: AllocationPtr) -> AllocationPtr {
+pub extern "C" fn try_result_fails_fast(_: RemotePtr) -> RemotePtr {
     try_result!(Err(()), "it fails!");
-    serialized_bytes::to_allocation_ptr(().try_into().unwrap())
+    ret!(());
 }

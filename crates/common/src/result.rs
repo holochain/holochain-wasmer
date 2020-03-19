@@ -32,6 +32,8 @@ pub enum WasmError {
     Zome(String),
     /// somehow wasmer failed to compile machine code from wasm byte code
     Compile(String),
+    /// failed to deserialize arguments when moving across the wasm host/guest boundary
+    ArgumentDeserializationFailed,
 }
 
 impl From<std::num::TryFromIntError> for WasmError {

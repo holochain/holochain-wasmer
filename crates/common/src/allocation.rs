@@ -2,13 +2,13 @@ use crate::AllocationPtr;
 use crate::Len;
 use crate::Ptr;
 use std::mem;
-use std::slice;
 
 /// Allocation is a 2 item u64 slice of offset/length
 pub const ALLOCATION_ITEMS: usize = 2;
 pub type Allocation = [u64; ALLOCATION_ITEMS];
 
 /// Need Allocation to be u8 to copy as bytes across host/guest
+/// the u64 integers of an allocation are broken down into u8 bytes to copy into wasm memory
 pub const ALLOCATION_BYTES_ITEMS: usize = 16;
 pub type AllocationBytes = [u8; ALLOCATION_BYTES_ITEMS];
 
@@ -30,32 +30,57 @@ pub extern "C" fn deallocate<'a>(ptr: Ptr, len: Len) {
     let _: Vec<u8> = unsafe { Vec::from_raw_parts(ptr as _, len as _, len as _) };
 }
 
-pub extern "C" fn deallocate_from_allocation_ptr(allocation_ptr: AllocationPtr) {
-    let allocation: Allocation = from_allocation_ptr(allocation_ptr);
-    // deallocate what the pointer is pointing to
-    deallocate(allocation[0], allocation[1]);
-    // deallocate the allocation itself
-    deallocate(allocation_ptr, ALLOCATION_ITEMS as _)
+/// given an Allocation returns a u64 pointer to it
+/// the Allocation (slice) is internally converted to a Vec<u8> that requires a manual drop
+/// i.e. the allocation vec is not dropped when it goes out of scope
+/// the pointer returned is to this new vector and the originally passed allocation is handled by
+/// the rust allocater as per normal ownership rules
+/// this allows us to pass the AllocationPtr across the host/guest boundary in either direction and
+/// have the Allocation bytes remain in memory until the AllocationPtr recipient is ready to have
+/// them copied in.
+/// the from_allocation_ptr function does the inverse and internally deallocates the allocation
+/// vector that is created here.
+/// to avoid memory leaks, every Allocation must fully round-trip through these two functions.
+impl From<Allocation> for AllocationPtr {
+    fn from(allocation: Allocation) -> AllocationPtr {
+        // the allocation must exist as a vector or it will be dropped
+        // slices drop even with ManuallyDrop
+        let allocation_vec: Vec<u64> = vec![allocation[0], allocation[1]];
+        let allocation_ptr = allocation_vec.as_ptr() as Ptr;
+        mem::ManuallyDrop::new(allocation_vec);
+        AllocationPtr(allocation_ptr)
+    }
 }
 
-pub fn to_allocation_ptr(allocation: Allocation) -> AllocationPtr {
-    // the allocation must exist as a vector or it will be dropped
-    // slices drop even with ManuallyDrop
-    let allocation_vec = vec![allocation[0], allocation[1]];
-    let allocation_ptr = allocation_vec.as_ptr() as AllocationPtr;
-    mem::ManuallyDrop::new(allocation_vec);
-    allocation_ptr
+impl From<AllocationPtr> for Allocation {
+    fn from(allocation_ptr: AllocationPtr) -> Allocation {
+        // this is the inverse of to_allocation_ptr
+        // it deallocates what to_allocation_ptr did an unsafe allocation for
+        let allocation_vec: Vec<u64> = unsafe {
+            Vec::from_raw_parts(allocation_ptr.0 as _, ALLOCATION_ITEMS, ALLOCATION_ITEMS)
+        };
+        // this is a new allocation that will be handled by the rust allocator
+        [allocation_vec[0], allocation_vec[1]]
+    }
 }
 
-pub fn from_allocation_ptr(allocation_ptr: AllocationPtr) -> Allocation {
-    let slice = unsafe { slice::from_raw_parts(allocation_ptr as _, ALLOCATION_ITEMS) };
-    [slice[0], slice[1]]
+impl AllocationPtr {
+    /// get the Allocation for this Allocation _without_ deallocating the Allocation in the process
+    /// usually you do not want to do this because From<AllocationPtr> for Allocation consumes the
+    /// original AllocationPtr and returns a new identical Allocation
+    pub fn peek_allocation(&self) -> Allocation {
+        let allocation_slice: &[u64] =
+            unsafe { std::slice::from_raw_parts(self.0 as _, ALLOCATION_ITEMS) };
+        [allocation_slice[0], allocation_slice[1]]
+    }
 }
 
 #[cfg(test)]
 pub mod tests {
 
     use crate::allocation;
+    use crate::allocation::Allocation;
+    use crate::AllocationPtr;
     use crate::Len;
     use crate::Ptr;
 
@@ -64,9 +89,9 @@ pub mod tests {
         let some_ptr = 50 as Ptr;
         let some_len = 100 as Len;
 
-        let allocation_ptr = allocation::to_allocation_ptr([some_ptr, some_len]);
+        let allocation_ptr = AllocationPtr::from([some_ptr, some_len]);
 
-        let restored_allocation = allocation::from_allocation_ptr(allocation_ptr);
+        let restored_allocation: Allocation = allocation_ptr.into();
 
         assert_eq!([some_ptr, some_len], restored_allocation,);
     }
@@ -75,20 +100,29 @@ pub mod tests {
     fn dellocate_test() {
         let len = 3 as Len;
 
-        let expected = vec![0, 0, 0];
+        let expected: Vec<u8> = vec![0, 0, 0];
         let ptr = allocation::allocate(len);
 
         println!("first alloc {} {}", ptr, len);
 
+        let _vec_that_might_overwrite_the_allocation: Vec<u8> = vec![1, 2, 3];
+
         let slice: &[u8] = unsafe { std::slice::from_raw_parts(ptr as _, len as _) };
 
+        // this shows that the 3 bytes we allocated are all 0 as expected
+        // this probably means that the allocation worked
         assert_eq!(expected, slice);
 
         allocation::deallocate(ptr, len);
 
-        let some_vec = vec![1_u8, 10_u8, 100_u8];
+        let some_vec: Vec<u8> = vec![1_u8, 10_u8, 100_u8];
 
         // the new vec should have the same pointer as the original allocation after we deallocate
         assert_eq!(ptr, some_vec.as_ptr() as Ptr);
+
+        let slice: &[u8] = unsafe { std::slice::from_raw_parts(ptr as _, len as _) };
+
+        // the same sized slice at the same pointer now looks like some_vec
+        assert_eq!(slice.to_vec(), some_vec);
     }
 }
