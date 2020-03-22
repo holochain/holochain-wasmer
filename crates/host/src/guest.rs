@@ -79,6 +79,16 @@ fn call_inner(
     let return_value: SerializedBytes = crate::guest::serialized_bytes_from_guest_ptr(
         instance.context_mut(),
         guest_allocation_ptr,
+    // this ? might be a bit controversial as it means we return with an error WITHOUT telling the
+    // guest that it can deallocate the return value
+    // PROS:
+    // - it's possible that we actually can't safely deallocate the return value here
+    // - leaving the data in the guest may aid in debugging
+    // - we avoid 'panicked while panicking' type situations
+    // - slightly simpler code and clearer error handling
+    // CONS:
+    // - leaves 'memory leak' style cruft in the wasm guest
+    //   (NOTE: all WASM memory is dropped when the instance is dropped anyway)
     )?;
 
     instance
