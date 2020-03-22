@@ -108,6 +108,11 @@ host function that in turn copies bytes directly into the guest's shared memory
 somewhere, and then this function returns to the guest a pointer to where the
 data was copied.
 
+When the guest calls the host, it is not possible for the host to call back into
+the guest (although the host can create a new, separate wasm instance and call
+that). The host must wait for guest calls to complete before calling again and
+the guest must wait for the host to complete before it can continue.
+
 WASM has a hard limit in the spec of 4GB total memory, with 64kb pages.
 Some WASM implementations, notably in some web browsers, limit this further.
 Pages can be added at initialization or dynamically at runtime, but cannot be
@@ -194,7 +199,7 @@ an `Allocation`. It exists so that we can implement `From` round-trips through
 `mem::ManuallyDrop` and `unsafe { Vec::from_raw_parts() }` symmetrically.
 
 Moving `From<SerializedBytes>` to `AllocationPtr` leaves both the bytes and an
-`Allocation` dangling in memory to be read and manually dropped later.
+`Allocation` leaked in memory to be read and manually dropped later.
 
 Moving `From<AllocationPtr>` to `SerializedBytes` drops both the `AllocationPtr`
 and intermediate `Allocation` and gives ownership of the bytes to `SerializedBytes`.
@@ -221,7 +226,7 @@ This is handled via. `host::guest::call()` on the host side and the `host_args!`
 macro on the guest side.
 
 - The host moves `SomeDataType` into `SerializedBytes` on the host using the host allocator
-- The host moves `SerializedBytes` into `AllocationPtr`, leaving the bytes and an `Allocation` dangling on the host
+- The host moves `SerializedBytes` into `AllocationPtr`, leaving the bytes and an `Allocation` leaked on the host
 - The host passes a `RemotePtr` to a guest function
 - The guest receives the `RemotePtr` from the host and calls the `host_args!` macro
 - Internally the guest calls `guest::map_bytes()` with the `RemotePtr`
@@ -229,10 +234,51 @@ macro on the guest side.
 - The host writes the host `Allocation` (including the host ptr/len) directly over the fake guest `Allocation`
 - The guest allocates `len` bytes based on the host's allocation and now has a guest ptr
 - The guest asks the host to copy `len` bytes from the host's ptr to the guest ptr
-- The host drops its copy of the bytes and the `Allocation` that were dangling, after writing them to the guest
+- The host drops its copy of the bytes and the `Allocation` that were leaked, after writing them to the guest
 - The guest can now build a meaningful `Allocation` and `AllocationPtr` from the `len` and guest ptr
 - The guest uses the populated `AllocationPtr` to build `SerializedBytes`
 - The guest attempts to build `SomeDataType` from the `SerializedBytes`
+
+##### Guest returning to host
+
+On the guest this is handled by the `ret!`, `ret_err!` and `try_result!` macros.
+
+There is a shared `WasmResult` enum that can either be `WasmResult::Ok<SerializedBytes>`
+or `WasmResult::Err<WasmError>` where `WasmError` is another enum including some
+basic variants.
+
+All these macros work in broadly the same way, by wrapping some data in an enum
+to fake a rust native `Result`.
+
+The `host::guest::call()` function knows what to do with the `WasmResult`, the
+host only needs to line up `SomeDataType` of the guest inner return value with
+the `host::guest::call()` return value.
+
+- The guest calls one of the `ret!` style macros with `SomeDataType`
+- Internal to `ret!` et. al. a `WasmResult` is built out of (maybe) `SerializedBytes` or just an error, leaving data leaked on the guest
+- The macro returns a `RemotePtr` to the host
+- The host reads `Allocation` and `SerializedBytes` directly from the host shared memory (see below)
+- The host calls the `__deallocate_return_value` function inside the guest with the same guest `RemotePtr`
+- The guest frees the data leaked earlier
+- The host does a `try_into()` from the _inner_ `SerializedBytes` _if_ the return was a `WasmResult::Ok<SerializedBytes>`
+
+##### Guest calling host
+
+On the guest side this is the first half of the `host_call!` macro.
+
+The host side uses the `host::guest::from_guest_ptr()` function that reads bytes
+straight from the shared memory based on a `RemotePtr` the guest passes to the
+host.
+
+- The guest moves `SomeDataType` into `SerializedBytes`
+- The guest moves `SerializedBytes` into an `AllocationPtr` with leaked bytes and `Allocation` on the guest
+- The guest calls the host with `RemotePtr` from its `AllocationPtr`
+- The host reads `Allocation` directly from the guest memory using `RemotePtr`, it can do this because `Allocation` is of known length (2x `u64`)
+- The host reads the bytes directly from the guest memory using the offset/length it read from the guest `Allocation`
+- The host builds `SerializedBytes` from the bytes it read from the guest
+- The host builds `SomeDataType` from `SerializedBytes` and treats it as the input to the imported host function
+- Note: due to a limitation in wasmer it is not possible for the host to call back into the host during an imported function call, so at this point bytes and `Allocation` are still leaked on the guest with no way to free them
+- After the host call returns, the `host_call!` macro frees the previously leaked bytes and `Allocation`
 
 ##### Host returning data from imported function to guest
 
@@ -246,7 +292,7 @@ this alongside the HDK and internal workflow implementations.
 - The host function does whatever it does as native rust
 - The host function return value is `SomeDataType`
 - The host converts the return value to `SerializedBytes`
-- The host converts the `SerializedBytes` to an `AllocationPtr` with dangling bytes and `Allocation`
+- The host converts the `SerializedBytes` to an `AllocationPtr` with leaked bytes and `Allocation`
 - The host returns a `RemotePtr` to the guest
 - The guest, as part of the `host_call!` macro, calls `map_bytes`
 - `map_bytes` functions as explained above, freeing the bytes and `Allocation` from the host and giving `SerializedBytes` to the guest
