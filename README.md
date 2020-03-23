@@ -41,6 +41,415 @@ The main dependencies are:
 - [holochain_serialization](https://github.com/holochain/holochain-serialization): our crates to normalize serialization at the byte level
 - [holonix](https://github.com/holochain/holonix): specifically the nightly Rust version management and wasm tooling
 
+## How to use
+
+There are several places we need to implement things:
+
+- Holochain core needs to [act as a wasm host](https://docs.wasmer.io/integrations/rust/examples/hello-world) to build modules and instances to run wasm functions
+- Holochain core [needs to provide](https://docs.wasmer.io/integrations/rust/examples/host-functions) 'imported functions' as an `ImportObject`
+- Holochain HDK needs to use the holochain_wasmer_guest macros to wrap the imported functions in something ergonomic for happ developers
+- Happ developers need to be broadly aware of how to get their data into `SerializedBytes` from the `holochain_serialized_bytes` crate
+
+### Holochain core
+
+#### Being a good wasm host
+
+It is a multi-step process to get from rust code to running a wasm function.
+
+0. Rust guest .rs files are compiled to .wasm files
+1. Rust wasmer host compiles the .wasm files to a native 'module'
+2. The module is instantiated to an 'instance' with imported functions, linear memory and whatever else wasmer needs to call functions
+
+The first step needs to be handled by happ developers using relevant tooling.
+
+Holochain core will be passed a .wasm file and needs to build running instances.
+
+Basic performance testing showed that the default wasmer handling of a ~40mb .wasm
+file takes 1-2 seconds to compile into a module.
+
+Wasmer has a native cache trait and can serialize modules into something that loads much faster.
+
+Loading a serialized module from an NVMe disk and instantiating it still takes about `500ms`.
+
+The default file system cache is about 2-4x faster than cold compiling a module
+but is still too slow to be hitting on every function call.
+
+Putting a module in a lazy static and instantiating it takes about `1ms` which is
+very reasonable overhead for the host to build a completely fresh instance.
+
+With low overhead like this, core is relatively free to decide when it wants to
+re-instantiate an already-in-memory module.
+
+Re-instantiating modules has several potential benefits:
+
+- Fresh linear memory every time means simpler wasm logic and less memory footprint (because wasm memory _pages_ can never be freed)
+- Core can provide fresh references (e.g. `Arc::clone`) to its internals and fresh closures on each function call
+- Potentially simpler core code to simply create a new instance each call vs. trying to manage shared/global/long running things
+
+Note though, that cache key generate for modules in memory (e.g. multiple DNAs in
+ memory) has performance implications too.
+
+The default wasmer handling hashes the wasm bytes passed to it to create a key to
+lookup a module for.
+
+Hashing a 40mb wasm file with the wasmer algorithm takes about `15ms` which is not
+huge but is a bit high to be doing every function call.
+
+Given that we already hash DNAs, it makes sense that we pass in the DNA hash, or
+something similar, and use this as the cache key per function call, which takes only
+a few nanoseconds.
+
+To handle all this use `host::instantiate::instantiate()` which is a wrapper around
+the default wasmer instantiate.
+
+It takes an additional argument `cache_key_bytes: &[u8]` which can either be the
+raw wasm or something precalculated like the DNA hash.
+
+Internally the module will be compiled once and stored in a lazy static and then
+every new instance will re-use the module.
+
+The full `instantiate` signature is:
+
+- `cache_key_bytes: &[u8]`: the key for the in-memory module cache
+- `wasm: &[u8]`: the raw bytes of the wasm to compile into a module (can be the same as the cache key)
+- `wasm_imports: &ImportObject`: a standard wasmer `ImportObject`
+
+It is expected that the `instantiate` function here will evolve alongside the
+core persistence implementation so that e.g. lmdb could be used as a cache backend.
+
+See `test_instance` for an example of getting an instance:
+
+```rust
+fn test_instance() -> Instance {
+    let wasm = load_wasm();
+    instantiate(&wasm, &wasm, &import_object()).expect("build test instance")
+}
+```
+
+And `native_test` to show how to call a function with structure input/output:
+
+```rust
+#[test]
+fn native_test() {
+    let some_inner = "foo";
+    let some_struct = SomeStruct::new(some_inner.into());
+
+    let result: SomeStruct =
+        guest::call(&mut test_instance(), "native_type", some_struct.clone())
+            .expect("native type handling");
+
+    assert_eq!(some_struct, result,);
+}
+```
+
+All the magic happens in `host::guest:call()`, just make sure to tell Rust the
+return type in the `let result: SomeStruct = ...` expression.
+
+#### Building an `ImportObject`
+
+The [wasmer docs](https://docs.wasmer.io/integrations/rust/examples/host-functions) generally provide a good overview.
+
+See the [PR i opened against the old system](https://github.com/holochain/holochain-rust/pull/2079/files#diff-f066dcca6e836742cae1afd74341a72aR169) for working examples and macros.
+
+Also see the tests in this repository for a minimal example.
+
+However, there are a few 'gotchas' to be aware of.
+
+##### Don't plan to call back into the same instance
+
+The function signature of an `ImportObject` function includes a wasmer context `&mut Ctx`
+as the first argument but it does not provide access to the current instance.
+
+This means that an imported function can build new instances for the same module
+if there is an `Arc` or similar available in the closure, but these new instances
+would have their own memory and closures.
+
+One potential (untested) workaround for this could be to init some constant inside
+the wasm guest that is a key for a global registry of active instances on the host
+but i'd generally avoid something complex like this that would involve global state,
+mutexes probably, cleanup, etc.
+
+Better to design core such that imported functions are 'self contained' on the
+host side and don't need to call back into the guest.
+
+For example, we would NOT be able to write validation callbacks in the wasm guest
+that read from global memory that was previously written to by the guest. The
+validation callback would be running in a separate wasm instance with isolated
+memory from the original wasm that called the host function that triggered the
+callback.
+
+I'd argue that this is A Good Thing for us anyway, as guest callbacks should be
+pure functions of their arguments, and isolating their memory is an effective
+way to limit the potential for accidental state creeping into callbacks.
+
+Note this is just about sharing the same wasm guest, it doesn't stop us from keeping
+a consistent persistence cursor/transaction open across all the related wasm guest
+calls, it just means they can't share the internal instance state.
+
+##### Always need fresh references in closures
+
+The functions in an `ImportObject` MUST be an `Fn`, e.g. not an `FnOnce` or `FnMut`.
+
+I found the easiest way to achieve this without fighting lifetimes or global scope
+is to do the following:
+
+- Some struct exists that can be passed around that can access wasm bytes
+- This struct `impl` some instantiate method
+- The instantiate method builds an `ImportObject` internally
+- The instantiate method does `Arc::clone()` to `self` (the struct that can access wasm bytes)
+- All the functions inside the closures that 'do work' also recieve newly cloned `Arc`s on each call
+
+As long as we are cloning fresh `Arc` values on each instantiate and each function
+call, we get to keep `Fn` which makes wasmer happy without us worrying about lifetimes.
+
+Having an `Arc` to `self` which has access to wasm bytes allows us to create new
+modules/instances inside imported function closures, which will probably be needed
+e.g. for nice callback handling.
+
+##### Use the host crate and write macros
+
+See [the example PR](https://github.com/holochain/holochain-rust/pull/2079/files#diff-f066dcca6e836742cae1afd74341a72aR169) for examples of macros.
+
+It's really easy to make a mistake in the data handling (see below) and end up
+with memory leaks or serialization mistakes, missing tracing or whatever else.
+
+The previous implementation was plagued with a thousand paper cuts of inconsistencies
+that made the work of this upgrade significantly harder than it had to be.
+
+Spend the time to get it right and then turn it into a macro and use this for as
+many imported functions as possible.
+
+Use the `holochain_wasmer_host` crate to do as much heavy lifing as possible.
+
+The `test_process_struct` shows a good minimal example of an import function:
+
+```rust
+fn test_process_struct(ctx: &mut Ctx, guest_ptr: RemotePtr) -> Result<RemotePtr, WasmError> {
+    let mut some_struct: SomeStruct = guest::from_guest_ptr(ctx, guest_ptr)?;
+    some_struct.process();
+    let sb: SerializedBytes = some_struct.try_into()?;
+    let allocation_ptr: AllocationPtr = sb.into();
+    Ok(allocation_ptr.as_remote_ptr())
+}
+```
+
+It shows how to retrieve the input struct from the guest:
+
+```rust
+let mut some_struct: SomeStruct = guest::from_guest_ptr(ctx, guest_ptr)?;
+```
+
+And how to build a return value that wasmer understands and the guest can read:
+
+```rust
+let sb: SerializedBytes = some_struct.try_into()?;
+let allocation_ptr: AllocationPtr = sb.into();
+Ok(allocation_ptr.as_remote_ptr())
+```
+
+### Being a good wasm guest
+
+Ideally we want the HDK to hide as much of this as possible.
+
+The experience of building a happ should be as close to building a native Rust
+binary as possible.
+
+That said, there are some details that won't be able to be hidden completely.
+
+Devs will need to (likely with the help of macros and RAD tooling):
+
+- round trip inputs and outputs through `SerializedBytes` (i.e. not accept/return rust primitives other than structs/enums)
+- use the same version of `holochain_serialized_bytes` as HDK/core
+- define functions that can be exposed to a wasm host
+
+Generally we want the HDK/tooling to hide/smooth at least the following details:
+
+- Keeping a small .wasm file (e.g. using `wee_alloc` and optimisation tooling)
+- All memory management (other than moving in/out of `SerializedBytes`)
+- Implementing sane wrappers around imported holochain functions to be ergonomic
+- Needing to call the correct `ret!` style macro or interacting with `WasmResult`
+- Lots of other things...
+
+At a high level there isn't much that a guest needs to do:
+
+- Define externs that will be overwritten by the imported host functions
+- Use `wee_alloc` to keep wasm file size down
+- Write extern functions that the host will call
+- Use `host_args!` to receive the input arguments from the host
+- Use `host_call!` to call a host function
+- Use `ret!` to return a value to the host
+- Use `ret_err!` to return an error to the host
+- Use `try_result!` to emulate a `?` in a function that returns to the host
+
+The tests wasm includes examples for all of these.
+
+#### Define externs that will be overwritten by the imported host functions
+
+There are two sets of externs to define:
+
+- The 'internal' externs used to make memory work
+- The externs that represent callable functions on the host
+
+The HDK absolutely should handle all of this for the happ developer as the
+memory externs are mandatory and the callable functiosn are all set by holochain
+core.
+
+Use the `memory_externs!()` macro to define the memory externs (call it anywhere).
+
+Use the `host_externs!(foo, bar, baz, ...)` macro to list all the importable host functions.
+
+#### Use `wee_alloc`
+
+This is techincally optional but it makes a lot of sense to bundle into the HDK.
+
+Simply define `wee_alloc` [crate](https://github.com/rustwasm/wee_alloc) as a dependency then do this:
+
+```
+// Use `wee_alloc` as the global allocator.
+#[global_allocator]
+static ALLOC: wee_alloc::WeeAlloc = wee_alloc::WeeAlloc::INIT;
+```
+
+#### Write extern functions that the host will call
+
+The HDK could probably macrotize this to make it more beginner friendly.
+
+All functions that the host can call must look like this to be compatible with our setup:
+
+```rust
+#[no_mangle]
+pub extern "C" fn foo(remote_ptr: RemotePtr) -> RemotePtr {
+
+}
+```
+
+This tells the rust compiler to make `foo` available in the final .wasm file as
+something that can be called by the host as `"foo"`.
+
+As the host is dealing with strings rather than functions, we will likely want to
+implement some kind of 'hook' style callback system into the HDK.
+
+E.g. the guest could implement `validate_MY_THING` and the host can call
+`"validate_MY_THING"` if the function exists in the wasm module.
+
+Note that the inputs and outputs are `RemotePtr` which is a single `u64`.
+
+This means that structured data for input/output and `Result` style return
+values (and therefore also `?`) need to be faked with macros (see below).
+
+#### Use `host_args!` to receive input from the host
+
+This is easy, `host_args!` takes a `RemotePtr` and tries to inject it into `SomeType`:
+
+```rust
+#[no_mangle]
+pub extern "C" fn foo(remote_ptr: RemotePtr) -> RemotePtr {
+ let bar: SomeType = host_args!(remote_ptr);
+}
+```
+
+The `host_args!` function internally _returns a `RemotePtr` if it errors_.
+
+It can only be used in a function with `RemotePtr` input and output (e.g. an extern).
+
+#### Use `host_call!` to call host functions
+
+This works a bit different to `host_args!` as it _returns a native Rust `Result`_.
+
+This allows it to be used anywhere in a wasm (e.g. outside of an extern).
+
+Pass the extern defined in `host_externs!` along with something that can round-trip
+through `SerializedBytes` and give it a type hint for the return value.
+
+```rust
+host_externs!(__some_host_function);
+
+#[derive(Serialize, Deserialize)]
+struct HostFunctionInput {
+ inner: String,
+}
+
+holochain_serial!(HostFunctionInput);
+
+fn foo() -> Result<SomeStruct, WasmError> {
+ let input = HostFunctionInput { inner: String::from("bar") };
+
+ // host_call! returns the Result as per the function return value
+ // it also respects ? (see test wasm for examples)
+ // it knows to pull the return from the host back into a SomeStruct based on
+ // the Ok arm of the Result
+ host_call!(__some_host_function, input)
+}
+```
+
+In a guest extern you will likely want to wrap the `host_call!` in a `try_result!` (see below):
+
+```rust
+host_externs!(__some_host_function);
+
+#[derive(Serialize, Deserialize)]
+struct HostFunctionInput {
+ inner: String,
+}
+
+holochain_serial!(HostFunctionInput);
+
+fn foo() -> RemotePtr {
+ let input = HostFunctionInput { inner: String::from("bar") };
+
+ // note the try_result! wrapper to be compatible with RemotePtr return value
+ try_result!(host_call!(__some_host_function, input), "failed to call __some_host_function");
+}
+```
+
+#### Use return macros
+
+Inside an extern we must return a `RemotePtr`.
+
+The host is expecting a `WasmResult` (see below) and besides we have arbitrary
+`SerializedBytes` to return even if we succeed.
+
+Rather than returning from an extern directly, there are three macros to make
+the most common situations easier.
+
+All three macros hide the internal `WasmResult` handling.
+
+`ret!` accepts anything that goes to `SerializedBytes`:
+
+```rust
+#[derive(Serialize, Deserialize)]
+struct Returnable(());
+
+holochain_serial!(Returnable);
+
+#[no_mangle]
+pub extern "C" fn foo(remote_ptr: RemotePtr) -> RemotePtr {
+ ret!(Returnable(()));
+}
+```
+
+`ret_err!` accepts any expression that fits into `String::from` (it will be wrapped in `WasmError::Zome`):
+
+```rust
+#[no_mangle]
+pub extern "C" fn foo(remote_ptr: RemotePtr) -> RemotePtr {
+ ret_err!("oh no!");
+}
+```
+
+`try_result!` takes an expression to try and unwrap and an expression to `ret_err!` if the thing to try fails.
+
+This works similarly to `?`:
+
+```rust
+#[no_mangle]
+pub extern "C" fn foo(remote_ptr: RemotePtr) -> RemotePtr {
+ let all_good: () = try_result!(Ok(()), "oh no!");
+
+ // we're all good...
+}
+```
+
 ## Background information
 
 I won't attempt a comprehensive guide to wasm here, it's a huge topic.
