@@ -10,6 +10,6 @@ crate-type = [ "cdylib", "rlib" ]
 path = "src/common.rs"
 
 [dependencies]
-holochain_wasmer_common = "=0.0.12"
-holochain_serialized_bytes = "=0.0.30"
+holochain_wasmer_common = { path = "../../crates/common" }
+holochain_serialized_bytes = "=0.0.32"
 serde = "=1.0.104"

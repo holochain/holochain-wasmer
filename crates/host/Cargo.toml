@@ -11,7 +11,7 @@ wasmer-runtime = "=0.13.1"
 byte-slice-cast = "=0.3.5"
 holochain_wasmer_common = { version = "=0.0.19", path = "../common" }
 lazy_static = "1.4.0"
-holochain_serialized_bytes = "=0.0.30"
+holochain_serialized_bytes = "=0.0.32"
 serde = "=1.0.104"
 
 [lib]
