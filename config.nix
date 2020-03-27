@@ -51,7 +51,7 @@ hn-release-hook-preflight-manual
    # bump versions in the repo
    version = ''
 hn-release-hook-version-rust
-hw-release-hook-version
+hn-release-hook-version-rust-deps 'holochain_wasmer_common holochain_wasmer_guest test_common'
 '';
 
    # publish artifacts to the world

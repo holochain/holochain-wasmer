@@ -27,13 +27,6 @@ with holonix.pkgs;
   buildInputs = [ ]
    ++ holonix.shell.buildInputs
    ++ config.buildInputs
-
-   # release hooks
-   ++ (holonix.pkgs.callPackage ./release {
-    holonix = holonix;
-    pkgs = holonix.pkgs;
-    config = config;
-   }).buildInputs
-  ;
+   ;
  });
 }
