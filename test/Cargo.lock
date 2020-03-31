@@ -250,20 +250,21 @@ dependencies = [
 
 [[package]]
 name = "holochain_wasmer_common"
-version = "0.0.19"
+version = "0.0.20"
 dependencies = [
  "byte-slice-cast 0.3.5 (registry+https://github.com/rust-lang/crates.io-index)",
  "holochain_serialized_bytes 0.0.32 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde 1.0.104 (registry+https://github.com/rust-lang/crates.io-index)",
+ "thiserror 1.0.10 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]
 name = "holochain_wasmer_host"
-version = "0.0.19"
+version = "0.0.20"
 dependencies = [
  "byte-slice-cast 0.3.5 (registry+https://github.com/rust-lang/crates.io-index)",
  "holochain_serialized_bytes 0.0.32 (registry+https://github.com/rust-lang/crates.io-index)",
- "holochain_wasmer_common 0.0.19",
+ "holochain_wasmer_common 0.0.20",
  "lazy_static 1.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde 1.0.104 (registry+https://github.com/rust-lang/crates.io-index)",
  "wasmer-runtime 0.13.1 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -580,22 +581,22 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 
 [[package]]
 name = "test"
-version = "0.0.19"
+version = "0.0.20"
 dependencies = [
  "byte-slice-cast 0.3.5 (registry+https://github.com/rust-lang/crates.io-index)",
  "holochain_serialized_bytes 0.0.32 (registry+https://github.com/rust-lang/crates.io-index)",
- "holochain_wasmer_host 0.0.19",
+ "holochain_wasmer_host 0.0.20",
  "serde 1.0.104 (registry+https://github.com/rust-lang/crates.io-index)",
- "test_common 0.0.19",
+ "test_common 0.0.20",
  "wasmer-runtime 0.13.1 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]
 name = "test_common"
-version = "0.0.19"
+version = "0.0.20"
 dependencies = [
  "holochain_serialized_bytes 0.0.32 (registry+https://github.com/rust-lang/crates.io-index)",
- "holochain_wasmer_common 0.0.19",
+ "holochain_wasmer_common 0.0.20",
  "serde 1.0.104 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 

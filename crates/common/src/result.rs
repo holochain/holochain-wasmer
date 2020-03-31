@@ -1,7 +1,8 @@
 use holochain_serialized_bytes::prelude::*;
+use thiserror::Error;
 
 /// Enum of all possible ERROR codes that a Zome API Function could return.
-#[derive(Clone, Debug, PartialEq, Eq, Hash, PartialOrd, Ord, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Eq, Hash, PartialOrd, Ord, Serialize, Deserialize, Error)]
 #[rustfmt::skip]
 pub enum WasmError {
     /// while converting pointers and lengths between u64 and i64 across the host/guest
@@ -63,6 +64,12 @@ impl From<std::array::TryFromSliceError> for WasmError {
 impl From<SerializedBytesError> for WasmError {
     fn from(_: SerializedBytesError) -> Self {
         Self::SerializedBytes
+    }
+}
+
+impl std::fmt::Display for WasmError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{:?}", self)
     }
 }
 
