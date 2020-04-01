@@ -13,5 +13,5 @@ path = "src/guest.rs"
 
 [dependencies]
 holochain_wasmer_common = { version = "=0.0.21", path = "../common" }
-holochain_serialized_bytes = "=0.0.32"
+holochain_serialized_bytes = "=0.0.36"
 serde = "=1.0.104"
