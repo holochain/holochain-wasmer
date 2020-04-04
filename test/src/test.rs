@@ -3,11 +3,9 @@ pub mod load_wasm;
 
 extern crate holochain_serialized_bytes;
 
-use holochain_wasmer_host::guest;
-use holochain_wasmer_host::*;
+use holochain_wasmer_host::prelude::*;
 use test_common::SomeStruct;
 use test_common::StringType;
-use wasmer_runtime::Ctx;
 
 fn test_process_string(ctx: &mut Ctx, guest_ptr: RemotePtr) -> Result<RemotePtr, WasmError> {
     let processed_string: StringType = guest::from_guest_ptr(ctx, guest_ptr)?;
@@ -35,12 +33,9 @@ pub mod tests {
 
     use crate::import::import_object;
     use crate::load_wasm::load_wasm;
-    use holochain_wasmer_host::guest;
-    use holochain_wasmer_host::instantiate::instantiate;
-    use holochain_wasmer_host::*;
+    use holochain_wasmer_host::prelude::*;
     use test_common::SomeStruct;
     use test_common::StringType;
-    use wasmer_runtime::Instance;
 
     fn test_instance() -> Instance {
         let wasm = load_wasm();
