@@ -1,6 +1,5 @@
-use crate::allocation;
 use crate::guest;
-use crate::*;
+use crate::prelude::*;
 use byte_slice_cast::AsByteSlice;
 use std::io::Read;
 use wasmer_runtime::Ctx;
