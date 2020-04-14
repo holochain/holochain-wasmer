@@ -7,7 +7,7 @@ pub struct SomeStruct {
 
 impl SomeStruct {
     pub fn new(inner: String) -> Self {
-        Self{ inner }
+        Self { inner }
     }
 
     pub fn process(&mut self) {
@@ -19,13 +19,13 @@ impl SomeStruct {
 pub struct StringType(String);
 
 impl From<String> for StringType {
-    fn from (s: String) -> StringType {
+    fn from(s: String) -> StringType {
         StringType(s)
     }
 }
 
 impl From<StringType> for String {
-    fn from (s: StringType) -> String {
+    fn from(s: StringType) -> String {
         s.0.clone()
     }
 }

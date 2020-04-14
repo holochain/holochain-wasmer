@@ -70,11 +70,11 @@ macro_rules! host_args {
             .try_into()
         {
             Ok(v) => v,
-            Err(_) => {
+            Err(e) => {
                 return $crate::AllocationPtr::from(
                     $crate::holochain_serialized_bytes::SerializedBytes::try_from(
                         $crate::result::WasmResult::Err(
-                            $crate::result::WasmError::ArgumentDeserializationFailed,
+                            $crate::result::WasmError::SerializedBytes(e),
                         ),
                     )
                     // should be impossible to fail to serialize a simple enum variant

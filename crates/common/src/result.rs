@@ -34,12 +34,6 @@ impl From<std::num::TryFromIntError> for WasmError {
     }
 }
 
-impl From<std::str::Utf8Error> for WasmError {
-    fn from(_: std::str::Utf8Error) -> Self {
-        Self::Utf8
-    }
-}
-
 impl From<byte_slice_cast::Error> for WasmError {
     fn from(_: byte_slice_cast::Error) -> Self {
         Self::Memory
@@ -53,8 +47,8 @@ impl From<std::array::TryFromSliceError> for WasmError {
 }
 
 impl From<SerializedBytesError> for WasmError {
-    fn from(_: SerializedBytesError) -> Self {
-        Self::SerializedBytes
+    fn from(error: SerializedBytesError) -> Self {
+        Self::SerializedBytes(error)
     }
 }
 
