@@ -13,5 +13,5 @@ path = "src/wasm.rs"
 wee_alloc = "=0.4.5"
 holochain_wasmer_guest = { path = "../../crates/guest" }
 test_common = { version = "=0.0.24", path = "../common" }
-holochain_serialized_bytes = "=0.0.36"
+holochain_serialized_bytes = "=0.0.37"
 serde = "=1.0.104"

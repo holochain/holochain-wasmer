@@ -1,11 +1,10 @@
-
-extern crate wee_alloc;
 extern crate test_common;
+extern crate wee_alloc;
 
 use holochain_wasmer_guest::*;
+use test_common::BytesType;
 use test_common::SomeStruct;
 use test_common::StringType;
-use test_common::BytesType;
 
 // Use `wee_alloc` as the global allocator.
 #[global_allocator]
@@ -15,7 +14,13 @@ static ALLOC: wee_alloc::WeeAlloc = wee_alloc::WeeAlloc::INIT;
 memory_externs!();
 
 // define a few functions we expect the host to provide for us
-host_externs!(__debug, __noop, __this_func_doesnt_exist_but_we_can_extern_it_anyway, __test_process_string, __test_process_struct);
+host_externs!(
+    __debug,
+    __noop,
+    __this_func_doesnt_exist_but_we_can_extern_it_anyway,
+    __test_process_string,
+    __test_process_struct
+);
 
 pub fn result_support() -> Result<(), WasmError> {
     // want to show here that host_call!() supports the ? operator
@@ -43,15 +48,20 @@ pub extern "C" fn process_string(host_allocation_ptr: RemotePtr) -> RemotePtr {
     let s: StringType = host_args!(host_allocation_ptr);
 
     let s = StringType::from(format!("guest: {}", String::from(s)));
-    let s: StringType = try_result!(host_call!(__test_process_string, s), "could not __test_process_string");
+    let s: StringType = try_result!(
+        host_call!(__test_process_string, s),
+        "could not __test_process_string"
+    );
     ret!(s);
 }
-
 
 #[no_mangle]
 pub extern "C" fn process_native(host_allocation_ptr: RemotePtr) -> RemotePtr {
     let input: SomeStruct = host_args!(host_allocation_ptr);
-    let processed: SomeStruct = try_result!(host_call!(__test_process_struct, input), "could not deserialize SomeStruct in process_native");
+    let processed: SomeStruct = try_result!(
+        host_call!(__test_process_struct, input),
+        "could not deserialize SomeStruct in process_native"
+    );
     ret!(processed);
 }
 
