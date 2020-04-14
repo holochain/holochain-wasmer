@@ -11,30 +11,21 @@ pub enum WasmError {
     /// max i64 represents about 9.2 exabytes so should keep us going long enough to patch wasmer
     /// if commercial hardware ever threatens to overstep this limit
     PointerMap,
-    /// while shuffling raw bytes back and forward between Vec<u8> and utf-8 str values we have hit
-    /// an invalid utf-8 string.
-    /// in normal operations this is always a critical bug as the same rust internals are
-    /// responsible for bytes and utf-8 in both directions.
-    /// it is also possible that someone tries to throw invalid utf-8 at us to be evil.
-    Utf8,
     /// similar to Utf8 we have somehow hit a struct that isn't round-tripping through SerializedBytes
     /// correctly, which should be impossible for well behaved serialization
-    SerializedBytes,
+    SerializedBytes(SerializedBytesError),
     /// something went wrong while writing or reading bytes to/from wasm memory
     /// this means something like "reading 16 bytes did not produce 2x u64 ints"
     /// or maybe even "failed to write a byte to some pre-allocated wasm memory"
     /// whatever this is it is very bad and probably not recoverable
     Memory,
     /// failed to take bytes out of the guest and do something with it
-    /// the most common reason is a bad deserialization
-    /// the string is whatever error message comes back from the interal process (e.g. a JsonError)
+    /// the string is whatever error message comes back from the interal process
     GuestResultHandling(String),
     /// something to do with zome logic that we don't know about
     Zome(String),
     /// somehow wasmer failed to compile machine code from wasm byte code
     Compile(String),
-    /// failed to deserialize arguments when moving across the wasm host/guest boundary
-    ArgumentDeserializationFailed,
 }
 
 impl From<std::num::TryFromIntError> for WasmError {
