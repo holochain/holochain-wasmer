@@ -37,6 +37,16 @@ pub mod tests {
     use test_common::SomeStruct;
     use test_common::StringType;
 
+    #[test]
+    fn smoke_module() {
+        let wasm = load_wasm();
+        let module: Module = module(&wasm, &wasm).unwrap();
+        assert!(module
+            .info()
+            .exports
+            .contains_key("__deallocate_return_value"));
+    }
+
     fn test_instance() -> Instance {
         let wasm = load_wasm();
         instantiate(&wasm, &wasm, &import_object()).expect("build test instance")
