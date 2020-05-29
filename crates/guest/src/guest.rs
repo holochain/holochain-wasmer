@@ -13,6 +13,49 @@ macro_rules! memory_externs {
         }
     };
 }
+
+#[macro_export]
+macro_rules! host_externs {
+    ( $( $func_name:ident ),* ) => {
+        extern "C" {
+            $( fn $func_name(guest_allocation_ptr: $crate::RemotePtr) -> $crate::RemotePtr; )*
+        }
+    };
+}
+
+#[macro_export]
+macro_rules! holochain_externs {
+    () => {
+        memory_externs!();
+        host_externs!(
+            __globals,
+            __call,
+            __capability,
+            __commit_entry,
+            __decrypt,
+            __encrypt,
+            __show_env,
+            __property,
+            __query,
+            __remove_link,
+            __send,
+            __sign,
+            __schedule,
+            __update_entry,
+            __emit_signal,
+            __remove_entry,
+            __link_entries,
+            __keystore,
+            __get_links,
+            __get_entry,
+            __entry_type_properties,
+            __entry_address,
+            __sys_time,
+            __debug
+        );
+    };
+}
+
 memory_externs!();
 
 #[no_mangle]
@@ -25,15 +68,6 @@ memory_externs!();
 pub extern "C" fn __deallocate_return_value(return_allocation_ptr: RemotePtr) {
     // rehydrating and dropping the SerializedBytes is enough for allocations to be cleaned up
     let _: SerializedBytes = AllocationPtr::from_remote_ptr(return_allocation_ptr).into();
-}
-
-#[macro_export]
-macro_rules! host_externs {
-    ( $( $func_name:ident ),* ) => {
-        extern "C" {
-            $( fn $func_name(guest_allocation_ptr: $crate::RemotePtr) -> $crate::RemotePtr; )*
-        }
-    };
 }
 
 /// given a pointer to an allocation on the host, copy the allocation into the guest and return the
