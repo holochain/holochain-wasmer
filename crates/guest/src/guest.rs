@@ -8,8 +8,8 @@ macro_rules! memory_externs {
     () => {
         extern "C" {
             // memory stuff
-            fn __import_allocation(guest_allocation_ptr: RemotePtr, host_allocation_ptr: RemotePtr);
-            fn __import_bytes(host_allocation_ptr: RemotePtr, guest_bytes_ptr: RemotePtr);
+            fn __import_allocation(guest_allocation_ptr: $crate::RemotePtr, host_allocation_ptr: $crate::RemotePtr);
+            fn __import_bytes(host_allocation_ptr: $crate::RemotePtr, guest_bytes_ptr: $crate::RemotePtr);
         }
     };
 }
@@ -26,8 +26,8 @@ macro_rules! host_externs {
 #[macro_export]
 macro_rules! holochain_externs {
     () => {
-        memory_externs!();
-        host_externs!(
+        $crate::memory_externs!();
+        $crate::host_externs!(
             __globals,
             __call,
             __capability,

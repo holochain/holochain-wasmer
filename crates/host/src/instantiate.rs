@@ -7,7 +7,7 @@ use wasmer_runtime::ImportObject;
 use wasmer_runtime::Instance;
 use wasmer_runtime::Module;
 
-pub fn module(cache_key_bytes: &[u8], wasm: &Vec<u8>) -> Result<Module, WasmError> {
+pub fn module(cache_key_bytes: &[u8], wasm: &[u8]) -> Result<Module, WasmError> {
     // @TODO figure out how best to use the file system
     let mut cache = MemoryFallbackFileSystemCache::new::<String>(None)
         .map_err(|e| WasmError::Compile(e.to_string()))?;
@@ -27,7 +27,7 @@ pub fn module(cache_key_bytes: &[u8], wasm: &Vec<u8>) -> Result<Module, WasmErro
 
 pub fn instantiate(
     cache_key_bytes: &[u8],
-    wasm: &Vec<u8>,
+    wasm: &[u8],
     wasm_imports: &ImportObject,
 ) -> Result<Instance, WasmError> {
     let instance = module(cache_key_bytes, wasm)?

@@ -6,6 +6,21 @@ use holochain_serialized_bytes::prelude::*;
 use criterion::Throughput;
 use criterion::BenchmarkId;
 
+const EMPTY_WASM: &[u8] = include_bytes!(concat!(
+    env!("OUT_DIR"),
+    "/wasm32-unknown-unknown/release/test_wasm_empty.wasm"
+));
+
+const NOOP_WASM: &[u8] = include_bytes!(concat!(
+    env!("OUT_DIR"),
+    "/wasm32-unknown-unknown/release/test_wasm_noop.wasm"
+));
+
+const TEST_WASM: &[u8] = include_bytes!(concat!(
+    env!("OUT_DIR"),
+    "/wasm32-unknown-unknown/release/test_wasm.wasm"
+));
+
 // simply allocate and deallocate some bytes
 fn allocate_deallocate(c: &mut Criterion) {
     let mut group = c.benchmark_group("allocate_deallocate");
@@ -57,6 +72,53 @@ fn sb_round_trip(c: &mut Criterion) {
     group.finish();
 }
 
-criterion_group!(benches, allocate_deallocate, sb_round_trip);
+fn wasm_instance(c: &mut Criterion) {
+    let mut group = c.benchmark_group("wasm_instance");
+
+    for (name, wasm) in vec![
+        ("empty", EMPTY_WASM),
+        ("noop", NOOP_WASM),
+        ("test", TEST_WASM),
+    ] {
+        group.bench_with_input(BenchmarkId::new("wasm_instance", name), &wasm, |b, &wasm| {
+            b.iter(|| {
+                holochain_wasmer_host::instantiate::instantiate(
+                    &vec![0],
+                    wasm,
+                    &wasmer_runtime::imports!(),
+                ).unwrap();
+            });
+        });
+    }
+
+    group.finish();
+}
+
+fn wasm_call(c: &mut Criterion) {
+    let mut group = c.benchmark_group("wasm_call");
+
+    for (name, wasm, f) in vec![
+        ("noop", NOOP_WASM, "a"),
+    ] {
+        group.bench_with_input(BenchmarkId::new("wasm_call", name), &wasm, |b, &wasm| {
+            let mut instance = holochain_wasmer_host::instantiate::instantiate(
+                &vec![0],
+                wasm,
+                &wasmer_runtime::imports!(),
+            ).unwrap();
+
+            b.iter(|| {
+                let _: () = holochain_wasmer_host::guest::call(
+                    &mut instance,
+                    f,
+                    (),
+                ).unwrap();
+            });
+        });
+    }
+    group.finish();
+}
+
+criterion_group!(benches, allocate_deallocate, sb_round_trip, wasm_instance, wasm_call);
 
 criterion_main!(benches);
