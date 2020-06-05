@@ -24,7 +24,9 @@ with holonix.pkgs;
  dev-shell = stdenv.mkDerivation (holonix.shell // {
   name = "dev-shell";
 
-  buildInputs = [ ]
+  buildInputs = [
+   holonix.pkgs.gnuplot
+  ]
    ++ holonix.shell.buildInputs
    ++ config.buildInputs
    ;
