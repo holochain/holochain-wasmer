@@ -206,10 +206,22 @@ dependencies = [
 ]
 
 [[package]]
+name = "test_common"
+version = "0.0.31"
+dependencies = [
+ "holochain_serialized_bytes 0.0.39 (registry+https://github.com/rust-lang/crates.io-index)",
+ "holochain_wasmer_common 0.0.31",
+ "serde 1.0.104 (registry+https://github.com/rust-lang/crates.io-index)",
+]
+
+[[package]]
 name = "test_wasm_noop"
 version = "0.0.31"
 dependencies = [
+ "holochain_serialized_bytes 0.0.39 (registry+https://github.com/rust-lang/crates.io-index)",
  "holochain_wasmer_guest 0.0.31",
+ "serde 1.0.104 (registry+https://github.com/rust-lang/crates.io-index)",
+ "test_common 0.0.31",
  "wee_alloc 0.4.5 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 

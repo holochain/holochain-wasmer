@@ -8,5 +8,17 @@ holochain_wasmer_guest::holochain_externs!();
 
 #[no_mangle]
 pub extern "C" fn a(_: RemotePtr) -> RemotePtr {
-    ret!(());
+    ret!(test_common::StringType::from(String::new()));
+}
+
+#[no_mangle]
+pub extern "C" fn b(ptr: RemotePtr) -> RemotePtr {
+    let _: test_common::StringType = host_args!(ptr);
+    ret!(test_common::StringType::from(String::new()));
+}
+
+#[no_mangle]
+pub extern "C" fn c(ptr: RemotePtr) -> RemotePtr {
+    let r: test_common::StringType = host_args!(ptr);
+    ret!(r);
 }
