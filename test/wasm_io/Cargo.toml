@@ -1,11 +1,11 @@
 [package]
-name = "test_wasm_noop"
+name = "test_wasm_io"
 version = "0.0.31"
 authors = [ "thedavidmeister", "thedavidmeister@gmail.com" ]
 edition = "2018"
 
 [lib]
-name = "test_wasm_noop"
+name = "test_wasm_io"
 crate-type = [ "cdylib", "rlib" ]
 path = "src/wasm.rs"
 
@@ -14,3 +14,4 @@ holochain_wasmer_guest = { path = "../../crates/guest" }
 test_common = { version = "=0.0.31", path = "../common" }
 holochain_serialized_bytes = { git = "https://github.com/holochain/holochain-serialization", branch = "2020-06-06-serde-bytes" }
 serde = "=1.0.104"
+paste = "0.1.16"
