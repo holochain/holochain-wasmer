@@ -3,4 +3,8 @@
  cd test && \
  cargo bench
 )
-# flamegraph cargo bench --bench allocation -- --profile-time 10
+
+# it's possible to flamegraph the benchmarks like this:
+#
+# cd test
+# flamegraph cargo bench --bench bench -- --profile-time 10
