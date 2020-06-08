@@ -114,6 +114,10 @@ fn call_inner(
     call: &str,
     payload: SerializedBytes,
 ) -> Result<SerializedBytes, WasmError> {
+    // @TODO this is insecure because it leaks the payload and relies on the guest to consume it
+    // with host_args!()
+    // if the guest never consumes this ptr then the payload stays leaked so we want to fix/guard
+    // against that by dropping the payload bytes if the guest never uses them
     let host_allocation_ptr: AllocationPtr = payload.into();
 
     // this requires that the guest exported function being called knows what to do with a
