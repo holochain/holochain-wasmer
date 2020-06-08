@@ -1,12 +1,11 @@
 use crate::prelude::*;
 use byte_slice_cast::AsSliceOf;
 use holochain_serialized_bytes::prelude::*;
-// use wasmer_runtime::memory::MemoryView;
 use wasmer_runtime::Ctx;
 use wasmer_runtime::Instance;
 use wasmer_runtime::Value;
 
-/// safely and quickly write a slice of bytes to the guest
+/// write a slice of bytes to the guest in a safe-ish way
 ///
 /// a naive approach would look like this:
 ///
@@ -21,14 +20,22 @@ use wasmer_runtime::Value;
 /// }
 /// ```
 ///
-/// the guest memory is simply a reserved secction of the host memory, so we get the host's pointer
-/// to the start of the guest's memory with view.as_ptr() then we add the guest's pointer to where
-/// it wants to see the written bytes then copy the slice directly across.
+/// the guest memory is part of the host memory, so we get the host's pointer to the start of the
+/// guest's memory with view.as_ptr() then we add the guest's pointer to where it wants to see the
+/// written bytes then copy the slice directly across.
 ///
 /// the problem with this approach is that the guest_ptr typically needs to be provided by the
 /// allocator in the guest wasm in order to be safe for the guest's consumption, but a malicious
 /// guest could provide bogus guest_ptr values that point outside the bounds of the guest memory.
 /// the naive host would then corrupt its own memory by copying bytes... wherever, basically.
+///
+/// a better approach is to use wasmer's WasmPtr abstraction, which checks against the memory
+/// bounds of the guest based on the input type and can be dereferenced to a [Cell] slice that we
+/// can write to more safely.
+///
+/// @see https://docs.rs/wasmer-runtime-core/0.17.0/src/wasmer_runtime_core/memory/ptr.rs.html#120
+///
+/// this is still not completely safe in the face of shared memory and threads, etc.
 pub fn write_slice(ctx: &mut Ctx, guest_ptr: RemotePtr, slice: &[u8]) {
     let ptr: WasmPtr<u8, Array> = WasmPtr::new(guest_ptr as _);
     for (byte, cell) in slice.iter().zip(unsafe {
@@ -40,6 +47,25 @@ pub fn write_slice(ctx: &mut Ctx, guest_ptr: RemotePtr, slice: &[u8]) {
     }
 }
 
+/// read a slice of bytes from the guest in a safe-ish way
+///
+/// a naive approach would look like this:
+///
+/// ```ignore
+/// let view: MemoryView<u8> = ctx.memory(0).view();
+/// unsafe {
+///     std::slice::from_raw_parts::<u8>(
+///         view.as_ptr().add(guest_ptr as usize) as _,
+///         len as _
+///     )
+/// }.to_vec()
+/// ```
+///
+/// this is similar to the naive write_slice approach and has similar problems
+/// @see write_slice()
+///
+/// a better approach is to use an immutable deref from a WasmPtr, which checks against memory
+/// bounds for the guest, and map over the whole thing to a Vec<u8>
 pub fn read_slice(ctx: &mut Ctx, guest_ptr: RemotePtr, len: Len) -> Vec<u8> {
     let ptr: WasmPtr<u8, Array> = WasmPtr::new(guest_ptr as _);
     ptr.deref(ctx.memory(0), 0, len as _)
@@ -57,8 +83,7 @@ pub fn serialized_bytes_from_guest_ptr(
         ctx,
         guest_allocation_ptr,
         allocation::ALLOCATION_BYTES_ITEMS as Len,
-    )
-    .to_vec();
+    );
     let guest_allocation: allocation::Allocation = bytes_vec.as_slice_of::<u64>()?.try_into()?;
 
     Ok(SerializedBytes::from(UnsafeBytes::from(
