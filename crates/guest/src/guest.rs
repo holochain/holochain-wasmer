@@ -8,8 +8,14 @@ macro_rules! memory_externs {
     () => {
         extern "C" {
             // memory stuff
-            fn __import_allocation(guest_allocation_ptr: $crate::RemotePtr, host_allocation_ptr: $crate::RemotePtr);
-            fn __import_bytes(host_allocation_ptr: $crate::RemotePtr, guest_bytes_ptr: $crate::RemotePtr);
+            fn __import_allocation(
+                guest_allocation_ptr: $crate::RemotePtr,
+                host_allocation_ptr: $crate::RemotePtr,
+            );
+            fn __import_bytes(
+                host_allocation_ptr: $crate::RemotePtr,
+                guest_bytes_ptr: $crate::RemotePtr,
+            );
         }
     };
 }

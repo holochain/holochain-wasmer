@@ -5,8 +5,9 @@ use holochain_serialized_bytes::prelude::*;
 use holochain_wasmer_common::allocation::allocate;
 use holochain_wasmer_common::allocation::deallocate;
 use holochain_wasmer_common::AllocationPtr;
+use rand::prelude::*;
 
-const EMPTY_WASM: &[u8] = include_bytes!(concat!(
+pub const EMPTY_WASM: &[u8] = include_bytes!(concat!(
     env!("OUT_DIR"),
     "/wasm32-unknown-unknown/release/test_wasm_empty.wasm"
 ));
@@ -21,8 +22,14 @@ const TEST_WASM: &[u8] = include_bytes!(concat!(
     "/wasm32-unknown-unknown/release/test_wasm.wasm"
 ));
 
-// simply allocate and deallocate some bytes
-fn allocate_deallocate(c: &mut Criterion) {
+/// allocate and deallocate some bytes
+/// there are several approaches commonly referenced to work with wasm memory, e.g.
+/// - directly using pointers to the wasm memory from the host
+/// - mapping over wasm memory cells per-byte
+/// - using the WasmPtr abstraction
+/// the higher level strategies provide stronger security guarantees but it's worth benchmarking
+/// any implementation to ensure the checks and balances don't slow things down
+pub fn allocate_deallocate(c: &mut Criterion) {
     let mut group = c.benchmark_group("allocate_deallocate");
     for n in vec![
         // 1 byte
@@ -44,7 +51,7 @@ fn allocate_deallocate(c: &mut Criterion) {
     group.finish();
 }
 
-fn sb_round_trip(c: &mut Criterion) {
+pub fn sb_round_trip(c: &mut Criterion) {
     let mut group = c.benchmark_group("sb_round_trip");
 
     for n in vec![
@@ -71,7 +78,7 @@ fn sb_round_trip(c: &mut Criterion) {
     group.finish();
 }
 
-fn wasm_instance(c: &mut Criterion) {
+pub fn wasm_instance(c: &mut Criterion) {
     let mut group = c.benchmark_group("wasm_instance");
 
     for (name, wasm) in vec![
@@ -101,64 +108,107 @@ fn wasm_instance(c: &mut Criterion) {
 fn wasm_call(c: &mut Criterion) {
     let mut group = c.benchmark_group("wasm_call");
 
-    for f in vec!["a", "b", "c"] {
+    let mut fs = vec![
+        "string_input_ignored_empty_ret",
+        "string_input_args_empty_ret",
+        "string_input_args_echo_ret",
+        "string_serialize_large",
+        "string_ret_large"
+    ];
+    fs.shuffle(&mut thread_rng());
+
+    for f in fs {
+        // let n = 1_000_000;
         for n in vec![0, 1, 1_000, 1_000_000] {
             group.throughput(Throughput::Bytes(n as _));
             group.sample_size(10);
-            group.bench_with_input(BenchmarkId::new(&format!("noop {}", f), n), &n, |b, n| {
-                let mut instance = holochain_wasmer_host::instantiate::instantiate(
-                    &vec![1],
-                    NOOP_WASM,
-                    &test::import::memory_only(),
-                )
-                .unwrap();
-                let input = test_common::StringType::from(".".repeat(*n));
-
+            let mut instance = holochain_wasmer_host::instantiate::instantiate(
+                &vec![1],
+                NOOP_WASM,
+                &test::import::memory_only(),
+            )
+            .unwrap();
+            let input = test_common::StringType::from(".".repeat(n));
+            group.bench_with_input(BenchmarkId::new(&format!("noop {}", f), n), &n, |b, _n| {
                 b.iter_batched(
                     || input.clone(),
                     |i| {
                         let _: test_common::StringType =
                             holochain_wasmer_host::guest::call(&mut instance, f, i).unwrap();
                     },
-                    criterion::BatchSize::PerIteration,
+                    criterion::BatchSize::LargeInput,
                 );
             });
         }
     }
 
-    for n in vec![0, 1, 1_000, 1_000_000] {
-        group.throughput(Throughput::Bytes(n as _));
-        group.sample_size(10);
-        group.bench_with_input(BenchmarkId::new("test_process_string", n), &n, |b, n| {
-            let mut instance = holochain_wasmer_host::instantiate::instantiate(
-                &vec![2],
-                TEST_WASM,
-                &test::import::import_object(),
-            )
-            .unwrap();
-            let input = test_common::StringType::from(".".repeat(*n));
+    // for n in vec![0, 1, 1_000, 1_000_000] {
+    //     group.throughput(Throughput::Bytes(n as _));
+    //     group.sample_size(10);
+    //     group.bench_with_input(BenchmarkId::new("test_process_string", n), &n, |b, n| {
+    //         let mut instance = holochain_wasmer_host::instantiate::instantiate(
+    //             &vec![2],
+    //             TEST_WASM,
+    //             &test::import::import_object(),
+    //         )
+    //         .unwrap();
+    //         let input = test_common::StringType::from(".".repeat(*n));
+    //
+    //         b.iter_batched(
+    //             || input.clone(),
+    //             |i| {
+    //                 let _: test_common::StringType =
+    //                     holochain_wasmer_host::guest::call(&mut instance, "process_string", i)
+    //                         .unwrap();
+    //             },
+    //             criterion::BatchSize::PerIteration,
+    //         );
+    //     });
+    // }
 
-            b.iter_batched(
-                || input.clone(),
-                |i| {
-                    let _: test_common::StringType =
-                        holochain_wasmer_host::guest::call(&mut instance, "process_string", i)
-                            .unwrap();
-                },
-                criterion::BatchSize::PerIteration,
-            );
-        });
-    }
+    group.finish();
+}
+
+
+// #[derive(serde::Serialize, serde::Deserialize, SerializedBytes)]
+// struct GenericBytesNewType(Vec<u8>);
+#[derive(serde::Serialize, serde::Deserialize, SerializedBytes)]
+struct SpecializedBytesNewType(#[serde(with = "serde_bytes")] Vec<u8>);
+pub fn round_trip_bytes(c: &mut Criterion) {
+    let mut group = c.benchmark_group("round_trip_bytes");
+
+    macro_rules! do_it {
+        ( $newtype:tt ) => {
+            for n in vec![0, 1, 1_000, 1_000_000] {
+                group.throughput(Throughput::Bytes(n as _));
+                group.sample_size(10);
+                group.bench_with_input(BenchmarkId::new(stringify!($newtype), n), &n, |b, &n| {
+                    b.iter_batched(
+                        || vec![0_u8; n],
+                        |s| {
+                            <$newtype>::try_from(SerializedBytes::try_from($newtype(s)).unwrap())
+                                .unwrap();
+                        },
+                        criterion::BatchSize::PerIteration,
+                    );
+                });
+            }
+        };
+    };
+
+    // do_it!(GenericBytesNewType);
+    do_it!(SpecializedBytesNewType);
 
     group.finish();
 }
 
 criterion_group!(
     benches,
-    allocate_deallocate,
-    sb_round_trip,
-    wasm_instance,
-    wasm_call
+    // allocate_deallocate,
+    // sb_round_trip,
+    // wasm_instance,
+    wasm_call,
+    // round_trip_bytes
 );
 
 criterion_main!(benches);

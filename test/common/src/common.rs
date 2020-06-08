@@ -31,7 +31,7 @@ impl From<StringType> for String {
 }
 
 #[derive(Serialize, Deserialize)]
-pub struct BytesType(Vec<u8>);
+pub struct BytesType(#[serde(with = "serde_bytes")] Vec<u8>);
 
 impl From<Vec<u8>> for BytesType {
     fn from(b: Vec<u8>) -> Self {

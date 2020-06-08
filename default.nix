@@ -26,6 +26,7 @@ with holonix.pkgs;
 
   buildInputs = [
    holonix.pkgs.gnuplot
+   holonix.pkgs.flamegraph
   ]
    ++ holonix.shell.buildInputs
    ++ config.buildInputs

@@ -1,39 +1,68 @@
 use crate::prelude::*;
 use byte_slice_cast::AsSliceOf;
 use holochain_serialized_bytes::prelude::*;
-use wasmer_runtime::memory::MemoryView;
+// use wasmer_runtime::memory::MemoryView;
 use wasmer_runtime::Ctx;
 use wasmer_runtime::Instance;
 use wasmer_runtime::Value;
 
-pub fn write_bytes(ctx: &mut Ctx, guest_ptr: RemotePtr, serialized_bytes: SerializedBytes) {
-    let memory = ctx.memory(0);
-
-    for (byte, cell) in serialized_bytes.bytes().iter().zip(
-        memory.view()[guest_ptr as _..(guest_ptr + serialized_bytes.bytes().len() as Ptr) as _]
-            .iter(),
-    ) {
-        cell.set(byte.to_owned());
+/// safely and quickly write a slice of bytes to the guest
+///
+/// a naive approach would look like this:
+///
+/// ```ignore
+/// let view: MemoryView<u8> = ctx.memory(0).view();
+/// unsafe {
+///       std::ptr::copy_nonoverlapping(
+///         slice.as_ptr(),
+///         view.as_ptr().add(guest_ptr as usize) as *mut u8,
+///         slice.len(),
+///     );
+/// }
+/// ```
+///
+/// the guest memory is simply a reserved secction of the host memory, so we get the host's pointer
+/// to the start of the guest's memory with view.as_ptr() then we add the guest's pointer to where
+/// it wants to see the written bytes then copy the slice directly across.
+///
+/// the problem with this approach is that the guest_ptr typically needs to be provided by the
+/// allocator in the guest wasm in order to be safe for the guest's consumption, but a malicious
+/// guest could provide bogus guest_ptr values that point outside the bounds of the guest memory.
+/// the naive host would then corrupt its own memory by copying bytes... wherever, basically.
+pub fn write_slice(ctx: &mut Ctx, guest_ptr: RemotePtr, slice: &[u8]) {
+    let ptr: WasmPtr<u8, Array> = WasmPtr::new(guest_ptr as _);
+    for (byte, cell) in slice.iter().zip(unsafe {
+        ptr.deref_mut(ctx.memory(0), 0, slice.len() as _)
+            .expect("pointer in bounds")
+            .iter()
+    }) {
+        cell.set(*byte)
     }
+}
+
+pub fn read_slice(ctx: &mut Ctx, guest_ptr: RemotePtr, len: Len) -> Vec<u8> {
+    let ptr: WasmPtr<u8, Array> = WasmPtr::new(guest_ptr as _);
+    ptr.deref(ctx.memory(0), 0, len as _)
+        .expect("pointer in bounds")
+        .iter()
+        .map(|cell| cell.get())
+        .collect::<Vec<u8>>()
 }
 
 pub fn serialized_bytes_from_guest_ptr(
     ctx: &mut Ctx,
     guest_allocation_ptr: RemotePtr,
 ) -> Result<SerializedBytes, WasmError> {
-    let view: MemoryView<u8> = ctx.memory(0).view();
-    let bytes_vec: Vec<u8> = view[guest_allocation_ptr as _
-        ..(guest_allocation_ptr + allocation::ALLOCATION_BYTES_ITEMS as Ptr) as _]
-        .iter()
-        .map(|cell| cell.get())
-        .collect();
+    let bytes_vec: Vec<u8> = read_slice(
+        ctx,
+        guest_allocation_ptr,
+        allocation::ALLOCATION_BYTES_ITEMS as Len,
+    )
+    .to_vec();
     let guest_allocation: allocation::Allocation = bytes_vec.as_slice_of::<u64>()?.try_into()?;
 
     Ok(SerializedBytes::from(UnsafeBytes::from(
-        view[guest_allocation[0] as usize..(guest_allocation[0] + guest_allocation[1]) as usize]
-            .iter()
-            .map(|cell| cell.get())
-            .collect::<Vec<u8>>(),
+        read_slice(ctx, guest_allocation[0], guest_allocation[1]).to_vec(),
     )))
 }
 

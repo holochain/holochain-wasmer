@@ -10,5 +10,4 @@ crate-type = [ "cdylib", "rlib" ]
 path = "src/wasm.rs"
 
 [dependencies]
-wee_alloc = "=0.4.5"
 holochain_wasmer_guest = { path = "../../crates/guest" }

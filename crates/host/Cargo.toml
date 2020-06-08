@@ -12,7 +12,7 @@ wasmer-runtime = "=0.16.2"
 byte-slice-cast = "=0.3.5"
 holochain_wasmer_common = { version = "=0.0.31", path = "../common" }
 lazy_static = "1.4.0"
-holochain_serialized_bytes = "0.0.39"
+holochain_serialized_bytes = { git = "https://github.com/holochain/holochain-serialization", branch = "2020-06-06-serde-bytes" }
 serde = "=1.0.104"
 
 [lib]

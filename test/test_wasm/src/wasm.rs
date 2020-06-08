@@ -1,14 +1,9 @@
 extern crate test_common;
-extern crate wee_alloc;
 
 use holochain_wasmer_guest::*;
 use test_common::BytesType;
 use test_common::SomeStruct;
 use test_common::StringType;
-
-// Use `wee_alloc` as the global allocator.
-#[global_allocator]
-static ALLOC: wee_alloc::WeeAlloc = wee_alloc::WeeAlloc::INIT;
 
 // define the host functions we require in order to pull/push data across the host/guest boundary
 memory_externs!();

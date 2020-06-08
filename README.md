@@ -264,7 +264,7 @@ Devs will need to (likely with the help of macros and RAD tooling):
 
 Generally we want the HDK/tooling to hide/smooth at least the following details:
 
-- Keeping a small .wasm file (e.g. using `wee_alloc` and optimisation tooling)
+- Keeping a small .wasm file (e.g. optimisation tooling)
 - All memory management (other than moving in/out of `SerializedBytes`)
 - Implementing sane wrappers around imported holochain functions to be ergonomic
 - Needing to call the correct `ret!` style macro or interacting with `WasmResult`
@@ -273,7 +273,6 @@ Generally we want the HDK/tooling to hide/smooth at least the following details:
 At a high level there isn't much that a guest needs to do:
 
 - Define externs that will be overwritten by the imported host functions
-- Use `wee_alloc` to keep wasm file size down
 - Write extern functions that the host will call
 - Use `host_args!` to receive the input arguments from the host
 - Use `host_call!` to call a host function
@@ -297,18 +296,6 @@ core.
 Use the `memory_externs!()` macro to define the memory externs (call it anywhere).
 
 Use the `host_externs!(foo, bar, baz, ...)` macro to list all the importable host functions.
-
-#### Use `wee_alloc`
-
-This is techincally optional but it makes a lot of sense to bundle into the HDK.
-
-Simply define `wee_alloc` [crate](https://github.com/rustwasm/wee_alloc) as a dependency then do this:
-
-```
-// Use `wee_alloc` as the global allocator.
-#[global_allocator]
-static ALLOC: wee_alloc::WeeAlloc = wee_alloc::WeeAlloc::INIT;
-```
 
 #### Write extern functions that the host will call
 
@@ -530,9 +517,7 @@ large amount of data crosses into the guest even momentarily.
 
 Rust helps the situation a lot by providing a strong memory management model
 enforced by the compiler but also allows for the host and the guest to have
-different allocation models. Notably, [custom allocators](https://doc.rust-lang.org/1.15.1/book/custom-allocators.html) are common
-in WASM, such as [wee_alloc](https://github.com/rustwasm/wee_alloc) designed to
-keep the overall footprint small.
+different allocation models.
 
 Even 'simple' primitives like `String` are not safe to round trip through their
 'raw parts' (e.g. length, capacity and pointer for `String`) if the allocator
