@@ -3,6 +3,7 @@ pub mod load_wasm;
 
 extern crate holochain_serialized_bytes;
 
+use holochain_wasmer_host::import::set_context_data;
 use holochain_wasmer_host::prelude::*;
 use test_common::SomeStruct;
 use test_common::StringType;
@@ -11,20 +12,14 @@ fn test_process_string(ctx: &mut Ctx, guest_ptr: GuestPtr) -> Result<Len, WasmEr
     let processed_string: StringType = guest::from_guest_ptr(ctx, guest_ptr)?;
     let processed_string = format!("host: {}", String::from(processed_string));
     let sb: SerializedBytes = StringType::from(processed_string).try_into()?;
-    let len = sb.bytes().len();
-    let allocation_pointer: AllocationPtr = sb.into();
-    ctx.data = allocation_pointer.as_guest_ptr() as _;
-    Ok(len as _)
+    Ok(set_context_data(ctx, sb))
 }
 
 fn test_process_struct(ctx: &mut Ctx, guest_ptr: GuestPtr) -> Result<Len, WasmError> {
     let mut some_struct: SomeStruct = guest::from_guest_ptr(ctx, guest_ptr)?;
     some_struct.process();
     let sb: SerializedBytes = some_struct.try_into()?;
-    let len = sb.bytes().len();
-    let allocation_ptr: AllocationPtr = sb.into();
-    ctx.data = allocation_ptr.as_guest_ptr() as _;
-    Ok(len as _)
+    Ok(set_context_data(ctx, sb))
 }
 
 fn debug(_ctx: &mut Ctx, some_number: Ptr) -> Result<Len, WasmError> {
