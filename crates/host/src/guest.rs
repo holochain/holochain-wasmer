@@ -36,7 +36,7 @@ use wasmer_runtime::Value;
 /// @see https://docs.rs/wasmer-runtime-core/0.17.0/src/wasmer_runtime_core/memory/ptr.rs.html#120
 ///
 /// this is still not completely safe in the face of shared memory and threads, etc.
-pub fn write_slice(ctx: &mut Ctx, guest_ptr: RemotePtr, slice: &[u8]) {
+pub fn write_slice(ctx: &mut Ctx, guest_ptr: GuestPtr, slice: &[u8]) {
     let ptr: WasmPtr<u8, Array> = WasmPtr::new(guest_ptr as _);
     for (byte, cell) in slice.iter().zip(unsafe {
         ptr.deref_mut(ctx.memory(0), 0, slice.len() as _)
@@ -66,7 +66,7 @@ pub fn write_slice(ctx: &mut Ctx, guest_ptr: RemotePtr, slice: &[u8]) {
 ///
 /// a better approach is to use an immutable deref from a WasmPtr, which checks against memory
 /// bounds for the guest, and map over the whole thing to a Vec<u8>
-pub fn read_slice(ctx: &Ctx, guest_ptr: RemotePtr, len: Len) -> Vec<u8> {
+pub fn read_slice(ctx: &Ctx, guest_ptr: GuestPtr, len: Len) -> Vec<u8> {
     let ptr: WasmPtr<u8, Array> = WasmPtr::new(guest_ptr as _);
     ptr.deref(ctx.memory(0), 0, len as _)
         .expect("pointer in bounds")
@@ -75,37 +75,35 @@ pub fn read_slice(ctx: &Ctx, guest_ptr: RemotePtr, len: Len) -> Vec<u8> {
         .collect::<Vec<u8>>()
 }
 
+/// read an Allocation out of the guest from a guest pointer
 pub fn allocation_from_guest_ptr(
     ctx: &Ctx,
-    guest_allocation_ptr: RemotePtr,
+    guest_ptr: GuestPtr,
 ) -> Result<allocation::Allocation, WasmError> {
-    let bytes_vec: Vec<u8> = read_slice(
-        ctx,
-        guest_allocation_ptr,
-        allocation::ALLOCATION_BYTES_ITEMS as Len,
-    );
-    Ok(bytes_vec.as_slice_of::<u64>()?.try_into()?)
+    let bytes_vec: Vec<u8> = read_slice(ctx, guest_ptr, allocation::ALLOCATION_BYTES_ITEMS as Len);
+    Ok(bytes_vec.as_slice_of::<GuestPtr>()?.try_into()?)
 }
 
+/// read serialized bytes out of the guest from a guest pointer
 pub fn serialized_bytes_from_guest_ptr(
     ctx: &mut Ctx,
-    guest_allocation_ptr: RemotePtr,
+    guest_ptr: GuestPtr,
 ) -> Result<SerializedBytes, WasmError> {
-    let guest_allocation = allocation_from_guest_ptr(ctx, guest_allocation_ptr)?;
+    let guest_allocation = allocation_from_guest_ptr(ctx, guest_ptr)?;
     Ok(SerializedBytes::from(UnsafeBytes::from(
         read_slice(ctx, guest_allocation[0], guest_allocation[1]).to_vec(),
     )))
 }
 
+/// deserialize any SerializeBytes type out of the guest from a guest pointer
 pub fn from_guest_ptr<O: TryFrom<SerializedBytes>>(
     ctx: &mut Ctx,
-    guest_allocation_ptr: RemotePtr,
+    guest_ptr: GuestPtr,
 ) -> Result<O, WasmError>
 where
     O::Error: Into<String>,
 {
-    let serialized_bytes: SerializedBytes =
-        serialized_bytes_from_guest_ptr(ctx, guest_allocation_ptr)?;
+    let serialized_bytes: SerializedBytes = serialized_bytes_from_guest_ptr(ctx, guest_ptr)?;
     match serialized_bytes.try_into() {
         Ok(v) => Ok(v),
         Err(e) => Err(WasmError::GuestResultHandling(e.into())),
@@ -120,7 +118,8 @@ fn call_inner(
     call: &str,
     payload: SerializedBytes,
 ) -> Result<SerializedBytes, WasmError> {
-    let guest_input_ptr: RemotePtr = match instance
+    // get a pre-allocated guest pointer to write the input into
+    let guest_input_ptr: GuestPtr = match instance
         .call(
             "__allocation_ptr_uninitialized",
             &[Value::I64(payload.bytes().len().try_into()?)],
@@ -133,11 +132,12 @@ fn call_inner(
 
     let guest_allocation = allocation_from_guest_ptr(instance.context(), guest_input_ptr)?;
 
+    // write the input payload into the guest at the offset specified by the allocation
     write_slice(instance.context_mut(), guest_allocation[0], payload.bytes());
 
-    // this requires that the guest exported function being called knows what to do with a
-    // host allocation pointer
-    let guest_allocation_ptr: RemotePtr = match instance
+    // call the guest function with its own pointer to its input
+    // collect the guest's pointer to its output
+    let guest_return_ptr: GuestPtr = match instance
         .call(call, &[Value::I64(guest_input_ptr.try_into()?)])
         .expect("call error")[0]
     {
@@ -147,7 +147,7 @@ fn call_inner(
 
     let return_value: SerializedBytes = crate::guest::serialized_bytes_from_guest_ptr(
         instance.context_mut(),
-        guest_allocation_ptr,
+        guest_return_ptr,
         // this ? might be a bit controversial as it means we return with an error WITHOUT telling the
         // guest that it can deallocate the return value
         // PROS:
@@ -160,10 +160,11 @@ fn call_inner(
         //   (NOTE: all WASM memory is dropped when the instance is dropped anyway)
     )?;
 
+    // tell the guest we are finished with the return pointer's data
     instance
         .call(
-            "__deallocate_return_value",
-            &[Value::I64(guest_allocation_ptr.try_into()?)],
+            "__deallocate_guest_allocation",
+            &[Value::I64(guest_return_ptr.try_into()?)],
         )
         .expect("deallocate return value error");
 

@@ -148,7 +148,7 @@ pub mod tests {
     fn allocation_ptr_round_trip() {
         let allocation: Allocation = [1, 2];
         let allocation_ptr: AllocationPtr = allocation.into();
-        let remote_ptr: RemotePtr = allocation_ptr.as_remote_ptr();
+        let guest_ptr: GuestPtr = allocation_ptr.as_guest_ptr();
 
         // can peek without any deallocations
         assert_eq!(allocation_ptr.peek_allocation(), [1, 2],);
@@ -163,7 +163,7 @@ pub mod tests {
         // put something here to try and make sure memory doesn't stick around
         let _: Allocation = [3, 4];
         assert_ne!(
-            AllocationPtr::from_remote_ptr(remote_ptr).peek_allocation(),
+            AllocationPtr::from_guest_ptr(guest_ptr).peek_allocation(),
             [1, 2]
         );
     }
@@ -176,7 +176,7 @@ pub mod tests {
         let foo_sb_clone = foo_sb.clone();
 
         let ptr: AllocationPtr = foo_sb.into();
-        let remote_ptr: RemotePtr = ptr.as_remote_ptr();
+        let guest_ptr: GuestPtr = ptr.as_guest_ptr();
 
         // the Allocation should get deallocated so this should not match
         // after the
@@ -192,7 +192,7 @@ pub mod tests {
 
         // the AllocationPtr's Allocation should be deallocated here
         assert_ne!(
-            AllocationPtr::from_remote_ptr(remote_ptr).peek_allocation(),
+            AllocationPtr::from_guest_ptr(guest_ptr).peek_allocation(),
             unexpected_allocation
         );
 

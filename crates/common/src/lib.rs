@@ -10,8 +10,7 @@ use crate::allocation::ALLOCATION_ITEMS;
 pub type Ptr = u64;
 pub type Len = u64;
 
-/// an unwrapped AllocationPtr that is on the other side of the host/wasm boundary
-pub type RemotePtr = Ptr;
+pub type GuestPtr = Ptr;
 
 /// AllocationPtr wraps a ptr that is used to pass the location of an Allocation
 /// between the host and guest (in either direction).
@@ -28,12 +27,12 @@ impl AllocationPtr {
     /// in the case that we pass the inner Ptr over to the host we do need to access it
     /// this function is just like From<AllocationPtr> for Ptr but renamed to make it
     /// clear that it has only one valid use-case
-    pub fn as_remote_ptr(&self) -> RemotePtr {
+    pub fn as_guest_ptr(&self) -> GuestPtr {
         self.0
     }
 
-    pub fn from_remote_ptr(host_ptr: RemotePtr) -> Self {
-        Self(host_ptr)
+    pub fn from_guest_ptr(guest_ptr: GuestPtr) -> Self {
+        Self(guest_ptr)
     }
 
     /// get the Allocation for this Allocation _without_ deallocating the Allocation in the process

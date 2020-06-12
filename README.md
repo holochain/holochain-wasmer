@@ -229,7 +229,7 @@ fn test_process_struct(ctx: &mut Ctx, guest_ptr: RemotePtr) -> Result<RemotePtr,
     some_struct.process();
     let sb: SerializedBytes = some_struct.try_into()?;
     let allocation_ptr: AllocationPtr = sb.into();
-    Ok(allocation_ptr.as_remote_ptr())
+    Ok(allocation_ptr.as_guest_ptr())
 }
 ```
 
@@ -244,7 +244,7 @@ And how to build a return value that wasmer understands and the guest can read:
 ```rust
 let sb: SerializedBytes = some_struct.try_into()?;
 let allocation_ptr: AllocationPtr = sb.into();
-Ok(allocation_ptr.as_remote_ptr())
+Ok(allocation_ptr.as_guest_ptr())
 ```
 
 ### Being a good wasm guest
@@ -606,7 +606,7 @@ achieve 1:1 round-trips everywhere and not read or write to the wrong place.
 passed across the wasm host/guest boundary either as function inputs or outputs.
 As a Rust primitive we have little ability to extend or control its behaviour
 (e.g. forcing it to not be copied/cloned/reused) so we hide it behind
-`allocation_ptr.as_remote_ptr()` and `AllocationPtr::from_remote_ptr()` methods
+`allocation_ptr.as_guest_ptr()` and `AllocationPtr::from_remote_ptr()` methods
 to try and make it as clear as possible when we move to it.
 
 #### How data round trips the host and the guest (details)

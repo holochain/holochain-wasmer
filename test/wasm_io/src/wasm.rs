@@ -20,7 +20,7 @@ macro_rules! _s {
 
             #[no_mangle]
             /// load the input args and do nothing with it
-            pub extern "C" fn [< $t:lower _input_args_empty_ret >](ptr: RemotePtr) -> RemotePtr {
+            pub extern "C" fn [< $t:lower _input_args_empty_ret >](ptr: GuestPtr) -> GuestPtr {
                 paste::expr! {
                     let _: test_common::[< $t:camel Type >] = host_args!(ptr);
                 }
@@ -33,7 +33,7 @@ macro_rules! _s {
 
             #[no_mangle]
             /// load the input args and return it
-            pub extern "C" fn [< $t:lower _input_args_echo_ret >](ptr: RemotePtr) -> RemotePtr {
+            pub extern "C" fn [< $t:lower _input_args_echo_ret >](ptr: GuestPtr) -> GuestPtr {
                 let r: test_common::[< $t:camel Type >] = host_args!(ptr);
                 ret!(r);
             }
@@ -48,7 +48,7 @@ macro_rules! _n {
     ( $t:tt; $n:ident; $inner:expr; $empty:expr; ) => {
         paste::item! {
             #[no_mangle]
-            pub extern "C" fn [< $t:lower _serialize_n >](ptr: RemotePtr) -> RemotePtr {
+            pub extern "C" fn [< $t:lower _serialize_n >](ptr: GuestPtr) -> GuestPtr {
                 // build it
                 let $n: test_common::IntegerType = host_args!(ptr);
                 let s = paste::expr! {
@@ -65,7 +65,7 @@ macro_rules! _n {
             }
 
             #[no_mangle]
-            pub extern "C" fn [< $t:lower _ret_n >](ptr: RemotePtr) -> RemotePtr {
+            pub extern "C" fn [< $t:lower _ret_n >](ptr: GuestPtr) -> GuestPtr {
                 // build it
                 let $n: test_common::IntegerType = host_args!(ptr);
                 let s = paste::expr! {
