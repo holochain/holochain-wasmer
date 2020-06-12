@@ -61,7 +61,8 @@ pub extern "C" fn process_native(host_allocation_ptr: RemotePtr) -> RemotePtr {
 }
 
 #[no_mangle]
-pub extern "C" fn stacked_strings(_: RemotePtr) -> RemotePtr {
+pub extern "C" fn stacked_strings(host_allocation_ptr: RemotePtr) -> RemotePtr {
+    let _: () = host_args!(host_allocation_ptr);
     // get the first string allocated to be returned
     let first = "first";
     // the second string allocation should do nothing to the first
@@ -71,12 +72,14 @@ pub extern "C" fn stacked_strings(_: RemotePtr) -> RemotePtr {
 }
 
 #[no_mangle]
-pub extern "C" fn some_ret(_: RemotePtr) -> RemotePtr {
+pub extern "C" fn some_ret(host_allocation_ptr: RemotePtr) -> RemotePtr {
+    let _: () = host_args!(host_allocation_ptr);
     ret!(SomeStruct::new("foo".into()));
 }
 
 #[no_mangle]
-pub extern "C" fn some_ret_err(_: RemotePtr) -> RemotePtr {
+pub extern "C" fn some_ret_err(host_allocation_ptr: RemotePtr) -> RemotePtr {
+    let _: () = host_args!(host_allocation_ptr);
     ret_err!("oh no!");
 }
 
@@ -87,14 +90,16 @@ pub extern "C" fn native_type(host_allocation_ptr: RemotePtr) -> RemotePtr {
 }
 
 #[no_mangle]
-pub extern "C" fn try_result_succeeds(_: RemotePtr) -> RemotePtr {
+pub extern "C" fn try_result_succeeds(host_allocation_ptr: RemotePtr) -> RemotePtr {
+    let _: () = host_args!(host_allocation_ptr);
     let ok: Result<SomeStruct, ()> = Ok(SomeStruct::new("foo".into()));
     let result = try_result!(ok, "this can't fail");
     ret!(result);
 }
 
 #[no_mangle]
-pub extern "C" fn try_result_fails_fast(_: RemotePtr) -> RemotePtr {
+pub extern "C" fn try_result_fails_fast(host_allocation_ptr: RemotePtr) -> RemotePtr {
+    let _: () = host_args!(host_allocation_ptr);
     try_result!(Err(()), "it fails!");
     ret!(());
 }
