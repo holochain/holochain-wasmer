@@ -66,7 +66,7 @@ pub fn write_slice(ctx: &mut Ctx, guest_ptr: RemotePtr, slice: &[u8]) {
 ///
 /// a better approach is to use an immutable deref from a WasmPtr, which checks against memory
 /// bounds for the guest, and map over the whole thing to a Vec<u8>
-pub fn read_slice(ctx: &mut Ctx, guest_ptr: RemotePtr, len: Len) -> Vec<u8> {
+pub fn read_slice(ctx: &Ctx, guest_ptr: RemotePtr, len: Len) -> Vec<u8> {
     let ptr: WasmPtr<u8, Array> = WasmPtr::new(guest_ptr as _);
     ptr.deref(ctx.memory(0), 0, len as _)
         .expect("pointer in bounds")
@@ -75,17 +75,23 @@ pub fn read_slice(ctx: &mut Ctx, guest_ptr: RemotePtr, len: Len) -> Vec<u8> {
         .collect::<Vec<u8>>()
 }
 
-pub fn serialized_bytes_from_guest_ptr(
-    ctx: &mut Ctx,
+pub fn allocation_from_guest_ptr(
+    ctx: &Ctx,
     guest_allocation_ptr: RemotePtr,
-) -> Result<SerializedBytes, WasmError> {
+) -> Result<allocation::Allocation, WasmError> {
     let bytes_vec: Vec<u8> = read_slice(
         ctx,
         guest_allocation_ptr,
         allocation::ALLOCATION_BYTES_ITEMS as Len,
     );
-    let guest_allocation: allocation::Allocation = bytes_vec.as_slice_of::<u64>()?.try_into()?;
+    Ok(bytes_vec.as_slice_of::<u64>()?.try_into()?)
+}
 
+pub fn serialized_bytes_from_guest_ptr(
+    ctx: &mut Ctx,
+    guest_allocation_ptr: RemotePtr,
+) -> Result<SerializedBytes, WasmError> {
+    let guest_allocation = allocation_from_guest_ptr(ctx, guest_allocation_ptr)?;
     Ok(SerializedBytes::from(UnsafeBytes::from(
         read_slice(ctx, guest_allocation[0], guest_allocation[1]).to_vec(),
     )))
@@ -114,19 +120,25 @@ fn call_inner(
     call: &str,
     payload: SerializedBytes,
 ) -> Result<SerializedBytes, WasmError> {
-    // @TODO this is insecure because it leaks the payload and relies on the guest to consume it
-    // with host_args!()
-    // if the guest never consumes this ptr then the payload stays leaked so we want to fix/guard
-    // against that by dropping the payload bytes if the guest never uses them
-    let host_allocation_ptr: AllocationPtr = payload.into();
+    let guest_input_ptr: RemotePtr = match instance
+        .call(
+            "__allocation_ptr_uninitialized",
+            &[Value::I64(payload.bytes().len().try_into()?)],
+        )
+        .expect("allocation init error")[0]
+    {
+        Value::I64(i) => i as u64,
+        _ => unreachable!(),
+    };
+
+    let guest_allocation = allocation_from_guest_ptr(instance.context(), guest_input_ptr)?;
+
+    write_slice(instance.context_mut(), guest_allocation[0], payload.bytes());
 
     // this requires that the guest exported function being called knows what to do with a
     // host allocation pointer
     let guest_allocation_ptr: RemotePtr = match instance
-        .call(
-            call,
-            &[Value::I64(host_allocation_ptr.as_remote_ptr().try_into()?)],
-        )
+        .call(call, &[Value::I64(guest_input_ptr.try_into()?)])
         .expect("call error")[0]
     {
         Value::I64(i) => i as u64,
