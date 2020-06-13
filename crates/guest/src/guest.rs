@@ -1,6 +1,9 @@
+pub mod allocation;
+
 pub extern crate holochain_serialized_bytes;
 
-pub use holochain_wasmer_common::allocation;
+use crate::allocation::AllocationPtr;
+pub use holochain_wasmer_common::fat_ptr;
 pub use holochain_wasmer_common::*;
 
 #[no_mangle]
@@ -85,12 +88,12 @@ macro_rules! host_args {
     ( $ptr:ident ) => {{
         use core::convert::TryInto;
 
-        let ptr = AllocationPtr::from_guest_ptr($ptr);
+        let ptr = $crate::allocation::AllocationPtr::from_guest_ptr($ptr);
 
         match $crate::holochain_serialized_bytes::SerializedBytes::from(ptr).try_into() {
             Ok(v) => v,
             Err(e) => {
-                return $crate::AllocationPtr::from(
+                return $crate::allocation::AllocationPtr::from(
                     $crate::holochain_serialized_bytes::SerializedBytes::try_from(
                         $crate::result::WasmResult::Err(
                             $crate::result::WasmError::SerializedBytes(e),
@@ -116,7 +119,7 @@ macro_rules! host_call {
         match maybe_sb {
             std::result::Result::Ok(sb) => {
                 // prepare an input allocation pointer so the host can read sb out of the guest
-                let input_allocation_ptr: $crate::AllocationPtr = sb.into();
+                let input_allocation_ptr: $crate::allocation::AllocationPtr = sb.into();
 
                 // call the host function and receive the length of the serialized result
                 let result_len: $crate::Len =
@@ -127,7 +130,7 @@ macro_rules! host_call {
                     input_allocation_ptr.into();
 
                 // prepare a new allocation pointer on the guest side to store the result
-                let result_allocation_ptr: $crate::AllocationPtr =
+                let result_allocation_ptr: $crate::allocation::AllocationPtr =
                     $crate::__allocation_ptr_uninitialized(result_len);
 
                 // ask the host to populate the result allocation pointer with its result
@@ -155,12 +158,12 @@ macro_rules! ret_err {
             $crate::WasmResult::Err($crate::WasmError::Zome(String::from($fail))).try_into();
         match maybe_wasm_result_sb {
             std::result::Result::Ok(wasm_result_sb) => {
-                return $crate::AllocationPtr::from(wasm_result_sb).as_guest_ptr();
+                return $crate::allocation::AllocationPtr::from(wasm_result_sb).as_guest_ptr();
             },
             // we could end up down here if the fail string somehow fails to convert to SerializedBytes
             // for example it could be too big for messagepack or include invalid bytes
             std::result::Result::Err(e) => {
-                return $crate::AllocationPtr::from($crate::holochain_serialized_bytes::SerializedBytes::try_from(
+                return $crate::allocation::AllocationPtr::from($crate::holochain_serialized_bytes::SerializedBytes::try_from(
                     $crate::WasmResult::Err($crate::WasmError::Zome(String::from("errored while erroring (this should never happen)")))
                 ).unwrap()).as_guest_ptr();
             }
@@ -177,7 +180,7 @@ macro_rules! ret {
             Ok(sb) => {
                 let maybe_wasm_result_sb: std::result::Result<$crate::holochain_serialized_bytes::SerializedBytes, $crate::holochain_serialized_bytes::SerializedBytesError> = $crate::WasmResult::Ok(sb).try_into();
                 match maybe_wasm_result_sb {
-                    std::result::Result::Ok(wasm_result_sb) => return $crate::AllocationPtr::from($crate::holochain_serialized_bytes::SerializedBytes::from(wasm_result_sb)).as_guest_ptr(),
+                    std::result::Result::Ok(wasm_result_sb) => return $crate::allocation::AllocationPtr::from($crate::holochain_serialized_bytes::SerializedBytes::from(wasm_result_sb)).as_guest_ptr(),
                     std::result::Result::Err(e) => ret_err!(e),
                 };
             },

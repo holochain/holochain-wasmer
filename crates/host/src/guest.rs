@@ -1,5 +1,4 @@
 use crate::prelude::*;
-use byte_slice_cast::AsSliceOf;
 use holochain_serialized_bytes::prelude::*;
 use wasmer_runtime::Ctx;
 use wasmer_runtime::Instance;
@@ -75,23 +74,19 @@ pub fn read_slice(ctx: &Ctx, guest_ptr: GuestPtr, len: Len) -> Vec<u8> {
         .collect::<Vec<u8>>()
 }
 
-/// read an Allocation out of the guest from a guest pointer
-pub fn allocation_from_guest_ptr(
-    ctx: &Ctx,
-    guest_ptr: GuestPtr,
-) -> Result<allocation::Allocation, WasmError> {
-    let bytes_vec: Vec<u8> = read_slice(ctx, guest_ptr, allocation::ALLOCATION_BYTES_ITEMS as Len);
-    Ok(bytes_vec.as_slice_of::<GuestPtr>()?.try_into()?)
+/// read an WasmFatPtr out of the guest from a guest pointer
+pub fn read_wasm_fat_ptr(ctx: &Ctx, guest_ptr: GuestPtr) -> Result<fat_ptr::WasmFatPtr, WasmError> {
+    Ok(read_slice(ctx, guest_ptr, fat_ptr::WASM_FAT_PTR_BYTES_LEN as Len).try_into()?)
 }
 
 /// read serialized bytes out of the guest from a guest pointer
-pub fn serialized_bytes_from_guest_ptr(
+pub fn read_serialized_bytes(
     ctx: &mut Ctx,
     guest_ptr: GuestPtr,
 ) -> Result<SerializedBytes, WasmError> {
-    let guest_allocation = allocation_from_guest_ptr(ctx, guest_ptr)?;
+    let fat_wasm_ptr = read_wasm_fat_ptr(ctx, guest_ptr)?;
     Ok(SerializedBytes::from(UnsafeBytes::from(
-        read_slice(ctx, guest_allocation[0], guest_allocation[1]).to_vec(),
+        read_slice(ctx, fat_wasm_ptr.ptr_offset(), fat_wasm_ptr.ptr_len()).to_vec(),
     )))
 }
 
@@ -103,7 +98,7 @@ pub fn from_guest_ptr<O: TryFrom<SerializedBytes>>(
 where
     O::Error: Into<String>,
 {
-    let serialized_bytes: SerializedBytes = serialized_bytes_from_guest_ptr(ctx, guest_ptr)?;
+    let serialized_bytes: SerializedBytes = read_serialized_bytes(ctx, guest_ptr)?;
     match serialized_bytes.try_into() {
         Ok(v) => Ok(v),
         Err(e) => Err(WasmError::GuestResultHandling(e.into())),
@@ -122,30 +117,34 @@ fn call_inner(
     let guest_input_ptr: GuestPtr = match instance
         .call(
             "__allocation_ptr_uninitialized",
-            &[Value::I64(payload.bytes().len().try_into()?)],
+            &[Value::I32(payload.bytes().len().try_into()?)],
         )
         .expect("allocation init error")[0]
     {
-        Value::I64(i) => i as u64,
+        Value::I32(i) => i as GuestPtr,
         _ => unreachable!(),
     };
 
-    let guest_allocation = allocation_from_guest_ptr(instance.context(), guest_input_ptr)?;
+    let wasm_fat_ptr = read_wasm_fat_ptr(instance.context(), guest_input_ptr)?;
 
     // write the input payload into the guest at the offset specified by the allocation
-    write_slice(instance.context_mut(), guest_allocation[0], payload.bytes());
+    write_slice(
+        instance.context_mut(),
+        wasm_fat_ptr.ptr_offset(),
+        payload.bytes(),
+    );
 
     // call the guest function with its own pointer to its input
     // collect the guest's pointer to its output
     let guest_return_ptr: GuestPtr = match instance
-        .call(call, &[Value::I64(guest_input_ptr.try_into()?)])
+        .call(call, &[Value::I32(guest_input_ptr.try_into()?)])
         .expect("call error")[0]
     {
-        Value::I64(i) => i as u64,
+        Value::I32(i) => i as GuestPtr,
         _ => unreachable!(),
     };
 
-    let return_value: SerializedBytes = crate::guest::serialized_bytes_from_guest_ptr(
+    let return_value: SerializedBytes = crate::guest::read_serialized_bytes(
         instance.context_mut(),
         guest_return_ptr,
         // this ? might be a bit controversial as it means we return with an error WITHOUT telling the
@@ -164,7 +163,7 @@ fn call_inner(
     instance
         .call(
             "__deallocate_guest_allocation",
-            &[Value::I64(guest_return_ptr.try_into()?)],
+            &[Value::I32(guest_return_ptr.try_into()?)],
         )
         .expect("deallocate return value error");
 

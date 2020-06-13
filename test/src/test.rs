@@ -22,7 +22,7 @@ fn test_process_struct(ctx: &mut Ctx, guest_ptr: GuestPtr) -> Result<Len, WasmEr
     Ok(set_context_data(ctx, sb))
 }
 
-fn debug(_ctx: &mut Ctx, some_number: Ptr) -> Result<Len, WasmError> {
+fn debug(_ctx: &mut Ctx, some_number: WasmSize) -> Result<Len, WasmError> {
     println!("debug {:?}", some_number);
     Ok(0)
 }
