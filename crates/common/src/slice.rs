@@ -5,8 +5,8 @@ use crate::WasmSize;
 use byte_slice_cast::AsSliceOf;
 use std::convert::TryInto;
 
-pub const WASM_SLICE_ITEMS: usize = 2;
-pub const WASM_SLICE_BYTES: usize = std::mem::size_of::<WasmSize>() * WASM_SLICE_ITEMS;
+// pub const WASM_SLICE_ITEMS: usize = 2;
+// pub const WASM_SLICE_BYTES: usize = std::mem::size_of::<WasmSize>() * WASM_SLICE_ITEMS;
 
 /// WasmSlice is a 2 item WasmSize array of offset/length
 /// exists so that the host can co-ordinate linear memory with the guest without over reliance on
@@ -32,18 +32,18 @@ pub const WASM_SLICE_BYTES: usize = std::mem::size_of::<WasmSize>() * WASM_SLICE
 /// using a transparent newtype around an array of known length in bytes allows both the host and
 /// guest to agree that there is a WasmSize offset/length pair located at a specific point in the
 /// wasm guest's memory
-#[repr(transparent)]
-pub struct WasmSlice([WasmSize; WASM_SLICE_ITEMS]);
-
-impl WasmSlice {
-    pub fn ptr(&self) -> GuestPtr {
-        (self.0)[0]
-    }
-
-    pub fn len(&self) -> Len {
-        (self.0)[1]
-    }
-}
+// #[repr(transparent)]
+// pub struct WasmSlice([WasmSize; WASM_SLICE_ITEMS]);
+//
+// impl WasmSlice {
+//     pub fn ptr(&self) -> GuestPtr {
+//         (self.0)[0]
+//     }
+//
+//     pub fn len(&self) -> Len {
+//         (self.0)[1]
+//     }
+// }
 
 /// wraps a naked array in a WasmSlice newtype for type safety
 impl From<[WasmSize; WASM_SLICE_ITEMS]> for WasmSlice {

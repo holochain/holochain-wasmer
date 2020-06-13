@@ -2,13 +2,14 @@ use crate::guest;
 use crate::prelude::*;
 use wasmer_runtime::Ctx;
 
-pub fn __import_data(ctx: &mut Ctx, guest_ptr: GuestPtr) {
+pub fn __import_data(ctx: &mut Ctx, guest_ptr: GuestPtr) -> Result<(), WasmError> {
     if !ctx.data.is_null() {
         let b: Box<SerializedBytes> = unsafe { Box::from_raw(ctx.data as _) };
-        let wasm_fat_ptr = guest::read_wasm_slice(ctx, guest_ptr).unwrap();
-        guest::write_bytes(ctx, wasm_fat_ptr.ptr(), &*b.bytes());
+        // let wasm_fat_ptr = guest::read_wasm_slice(ctx, guest_ptr).unwrap();
+        guest::write_bytes(ctx, guest_ptr, &*b.bytes())?;
     }
     ctx.data = std::ptr::null::<SerializedBytes>() as _;
+    Ok(())
 }
 
 /// always call this before setting and after using a context

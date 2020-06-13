@@ -30,6 +30,12 @@ pub enum WasmError {
     CallError(String),
 }
 
+impl From<WasmError> for String {
+    fn from(e: WasmError) -> Self {
+        format!("{}", e)
+    }
+}
+
 impl From<std::num::TryFromIntError> for WasmError {
     fn from(_: std::num::TryFromIntError) -> Self {
         Self::PointerMap

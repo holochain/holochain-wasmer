@@ -2,6 +2,7 @@ export RUST_BACKTRACE=full
 export WASMER_BACKTRACE=1
 cargo fmt
 ( cd test && cargo fmt )
+( cd crates/guest && cargo fmt )
 
 # tests the root workspace that doesn't include any wasm code
 cargo test -- --nocapture
