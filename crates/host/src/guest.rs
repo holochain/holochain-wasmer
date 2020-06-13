@@ -35,7 +35,7 @@ use wasmer_runtime::Value;
 /// @see https://docs.rs/wasmer-runtime-core/0.17.0/src/wasmer_runtime_core/memory/ptr.rs.html#120
 ///
 /// this is still not completely safe in the face of shared memory and threads, etc.
-pub fn write_slice(ctx: &mut Ctx, guest_ptr: GuestPtr, slice: &[u8]) {
+pub fn write_bytes(ctx: &mut Ctx, guest_ptr: GuestPtr, slice: &[u8]) {
     let ptr: WasmPtr<u8, Array> = WasmPtr::new(guest_ptr as _);
     for (byte, cell) in slice.iter().zip(unsafe {
         ptr.deref_mut(ctx.memory(0), 0, slice.len() as _)
@@ -65,7 +65,7 @@ pub fn write_slice(ctx: &mut Ctx, guest_ptr: GuestPtr, slice: &[u8]) {
 ///
 /// a better approach is to use an immutable deref from a WasmPtr, which checks against memory
 /// bounds for the guest, and map over the whole thing to a Vec<u8>
-pub fn read_slice(ctx: &Ctx, guest_ptr: GuestPtr, len: Len) -> Vec<u8> {
+pub fn read_bytes(ctx: &Ctx, guest_ptr: GuestPtr, len: Len) -> Vec<u8> {
     let ptr: WasmPtr<u8, Array> = WasmPtr::new(guest_ptr as _);
     ptr.deref(ctx.memory(0), 0, len as _)
         .expect("pointer in bounds")
@@ -74,9 +74,9 @@ pub fn read_slice(ctx: &Ctx, guest_ptr: GuestPtr, len: Len) -> Vec<u8> {
         .collect::<Vec<u8>>()
 }
 
-/// read an WasmFatPtr out of the guest from a guest pointer
-pub fn read_wasm_fat_ptr(ctx: &Ctx, guest_ptr: GuestPtr) -> Result<fat_ptr::WasmFatPtr, WasmError> {
-    Ok(read_slice(ctx, guest_ptr, fat_ptr::WASM_FAT_PTR_BYTES_LEN as Len).try_into()?)
+/// read an WasmSlice out of the guest from a guest pointer
+pub fn read_wasm_slice(ctx: &Ctx, guest_ptr: GuestPtr) -> Result<slice::WasmSlice, WasmError> {
+    Ok(read_bytes(ctx, guest_ptr, slice::WASM_SLICE_BYTES as Len).try_into()?)
 }
 
 /// read serialized bytes out of the guest from a guest pointer
@@ -84,9 +84,9 @@ pub fn read_serialized_bytes(
     ctx: &mut Ctx,
     guest_ptr: GuestPtr,
 ) -> Result<SerializedBytes, WasmError> {
-    let fat_wasm_ptr = read_wasm_fat_ptr(ctx, guest_ptr)?;
+    let slice = read_wasm_slice(ctx, guest_ptr)?;
     Ok(SerializedBytes::from(UnsafeBytes::from(
-        read_slice(ctx, fat_wasm_ptr.ptr_offset(), fat_wasm_ptr.ptr_len()).to_vec(),
+        read_bytes(ctx, slice.ptr(), slice.len()).to_vec(),
     )))
 }
 
@@ -119,26 +119,22 @@ fn call_inner(
             "__allocation_ptr_uninitialized",
             &[Value::I32(payload.bytes().len().try_into()?)],
         )
-        .expect("allocation init error")[0]
+        .map_err(|e| WasmError::CallError(format!("{:?}", e)))?[0]
     {
         Value::I32(i) => i as GuestPtr,
         _ => unreachable!(),
     };
 
-    let wasm_fat_ptr = read_wasm_fat_ptr(instance.context(), guest_input_ptr)?;
+    let slice = read_wasm_slice(instance.context(), guest_input_ptr)?;
 
     // write the input payload into the guest at the offset specified by the allocation
-    write_slice(
-        instance.context_mut(),
-        wasm_fat_ptr.ptr_offset(),
-        payload.bytes(),
-    );
+    write_bytes(instance.context_mut(), slice.ptr(), payload.bytes());
 
     // call the guest function with its own pointer to its input
     // collect the guest's pointer to its output
     let guest_return_ptr: GuestPtr = match instance
         .call(call, &[Value::I32(guest_input_ptr.try_into()?)])
-        .expect("call error")[0]
+        .map_err(|e| WasmError::CallError(format!("{:?}", e)))?[0]
     {
         Value::I32(i) => i as GuestPtr,
         _ => unreachable!(),
@@ -165,7 +161,7 @@ fn call_inner(
             "__deallocate_guest_allocation",
             &[Value::I32(guest_return_ptr.try_into()?)],
         )
-        .expect("deallocate return value error");
+        .map_err(|e| WasmError::CallError(format!("{:?}", e)))?;
 
     Ok(return_value)
 }

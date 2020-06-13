@@ -1,18 +1,18 @@
-pub mod fat_ptr;
 pub mod result;
+pub mod slice;
 
 pub use holochain_serialized_bytes::prelude::*;
 pub use result::*;
+pub use slice::*;
 
 /// something like usize for wasm
 /// wasm has a memory limit of 4GB so offsets and lengths fit in u32
 ///
-/// the host needs to directly read and write to the guest's memory so we need a predictable number
-/// of bytes to represent offsets and lengths
-/// we don't want to have to recompile every wasm as u32 and u64 to match different `usize` sizes
-/// on the host, especially considering that u64 offsets/lengths would add no value to wasm
-/// it's much more important that the host can reliably work with the guest memory without breaking
-/// the guest's allocator
+/// when rust compiles to the wasm32-unknown-unknown target this means that usize will be u32 in
+/// wasm but the host could interpret usize as either u32 or u64.
+///
+/// we need the host and the guest to have a shared agreement on the size of an offset/length or
+/// the host will not be able to directly manipulate the host memory as it needs to
 ///
 /// wasmer itself uses u32 in the WasmPtr abstraction etc.
 /// @see https://docs.rs/wasmer-runtime/0.17.0/wasmer_runtime/struct.WasmPtr.html

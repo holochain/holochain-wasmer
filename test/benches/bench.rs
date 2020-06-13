@@ -2,25 +2,10 @@ use criterion::BenchmarkId;
 use criterion::Throughput;
 use criterion::{criterion_group, criterion_main, Criterion};
 use holochain_serialized_bytes::prelude::*;
-use holochain_wasmer_common::allocation::allocate;
-use holochain_wasmer_common::allocation::deallocate;
-use holochain_wasmer_common::AllocationPtr;
+use holochain_wasmer_guest::allocation::allocate;
+use holochain_wasmer_guest::allocation::deallocate;
+use holochain_wasmer_guest::allocation::AllocationPtr;
 use rand::prelude::*;
-
-pub const EMPTY_WASM: &[u8] = include_bytes!(concat!(
-    env!("OUT_DIR"),
-    "/wasm32-unknown-unknown/release/test_wasm_empty.wasm"
-));
-
-const IO_WASM: &[u8] = include_bytes!(concat!(
-    env!("OUT_DIR"),
-    "/wasm32-unknown-unknown/release/test_wasm_io.wasm"
-));
-
-const TEST_WASM: &[u8] = include_bytes!(concat!(
-    env!("OUT_DIR"),
-    "/wasm32-unknown-unknown/release/test_wasm.wasm"
-));
 
 /// allocate and deallocate some bytes
 /// there are several approaches commonly referenced to work with wasm memory, e.g.

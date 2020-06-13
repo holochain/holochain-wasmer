@@ -5,8 +5,8 @@ use wasmer_runtime::Ctx;
 pub fn __import_data(ctx: &mut Ctx, guest_ptr: GuestPtr) {
     if !ctx.data.is_null() {
         let b: Box<SerializedBytes> = unsafe { Box::from_raw(ctx.data as _) };
-        let wasm_fat_ptr = guest::read_wasm_fat_ptr(ctx, guest_ptr).unwrap();
-        guest::write_slice(ctx, wasm_fat_ptr.ptr_offset(), &*b.bytes());
+        let wasm_fat_ptr = guest::read_wasm_slice(ctx, guest_ptr).unwrap();
+        guest::write_bytes(ctx, wasm_fat_ptr.ptr(), &*b.bytes());
     }
     ctx.data = std::ptr::null::<SerializedBytes>() as _;
 }

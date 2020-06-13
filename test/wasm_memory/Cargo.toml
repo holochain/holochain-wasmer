@@ -1,19 +1,17 @@
 [package]
-name = "holochain_wasmer_guest"
-description = "wasm guest code"
-license = "GPL-3.0-only"
+name = "test_wasm_memory"
 version = "0.0.31"
 authors = [ "thedavidmeister", "thedavidmeister@gmail.com" ]
 edition = "2018"
 
-[workspace]
-
 [lib]
-name = "holochain_wasmer_guest"
+name = "test_wasm_memory"
 crate-type = [ "cdylib", "rlib" ]
-path = "src/guest.rs"
+path = "src/wasm.rs"
 
 [dependencies]
-holochain_wasmer_common = { version = "=0.0.31", path = "../common" }
+holochain_wasmer_guest = { path = "../../crates/guest" }
+test_common = { version = "=0.0.31", path = "../common" }
 holochain_serialized_bytes = { git = "https://github.com/holochain/holochain-serialization", branch = "2020-06-06-serde-bytes" }
 serde = "=1.0.104"
+paste = "0.1.16"

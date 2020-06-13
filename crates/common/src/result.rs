@@ -26,6 +26,8 @@ pub enum WasmError {
     Zome(String),
     /// somehow wasmer failed to compile machine code from wasm byte code
     Compile(String),
+
+    CallError(String),
 }
 
 impl From<std::num::TryFromIntError> for WasmError {

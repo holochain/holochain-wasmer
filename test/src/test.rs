@@ -1,5 +1,5 @@
 pub mod import;
-pub mod load_wasm;
+pub mod wasms;
 
 extern crate holochain_serialized_bytes;
 
@@ -31,14 +31,44 @@ fn debug(_ctx: &mut Ctx, some_number: WasmSize) -> Result<Len, WasmError> {
 pub mod tests {
 
     use crate::import::import_object;
-    use crate::load_wasm::load_wasm;
+    use crate::wasms;
     use holochain_wasmer_host::prelude::*;
     use test_common::SomeStruct;
     use test_common::StringType;
 
     #[test]
+    fn allocate_allocation_ptr_test() {
+        let wasm = wasms::MEMORY;
+        let module: Module = module(&wasm, &wasm).unwrap();
+
+        let mut instance = module.instantiate(&import_object()).unwrap();
+
+        let _: () = guest::call(&mut instance, "allocate_allocation_ptr_test", ()).unwrap();
+    }
+
+    #[test]
+    fn dellocate_test() {
+        let wasm = wasms::MEMORY;
+        let module: Module = module(&wasm, &wasm).unwrap();
+
+        let mut instance = module.instantiate(&import_object()).unwrap();
+
+        let _: () = guest::call(&mut instance, "dellocate_test", ()).unwrap();
+    }
+
+    #[test]
+    fn allocation_ptr_round_trip() {
+        let wasm = wasms::MEMORY;
+        let module: Module = module(&wasm, &wasm).unwrap();
+
+        let mut instance = module.instantiate(&import_object()).unwrap();
+
+        let _: () = guest::call(&mut instance, "allocation_ptr_round_trip", ()).unwrap();
+    }
+
+    #[test]
     fn smoke_module() {
-        let wasm = load_wasm();
+        let wasm = wasms::TEST;
         let module: Module = module(&wasm, &wasm).unwrap();
         assert!(module
             .info()
@@ -47,7 +77,7 @@ pub mod tests {
     }
 
     fn test_instance() -> Instance {
-        let wasm = load_wasm();
+        let wasm = wasms::TEST;
         instantiate(&wasm, &wasm, &import_object()).expect("build test instance")
     }
 

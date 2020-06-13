@@ -2,8 +2,8 @@ pub mod allocation;
 
 pub extern crate holochain_serialized_bytes;
 
-use crate::allocation::AllocationPtr;
-pub use holochain_wasmer_common::fat_ptr;
+pub use crate::allocation::AllocationPtr;
+pub use holochain_wasmer_common::slice;
 pub use holochain_wasmer_common::*;
 
 #[no_mangle]
