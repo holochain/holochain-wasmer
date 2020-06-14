@@ -1,15 +1,7 @@
 pub mod allocation;
 
 pub extern crate holochain_serialized_bytes;
-
-// pub use crate::allocation::AllocationPtr;
-// pub use holochain_wasmer_common::slice;
 pub use holochain_wasmer_common::*;
-
-// #[no_mangle]
-// pub extern "C" fn __allocation_ptr_uninitialized(len: Len) -> AllocationPtr {
-//     AllocationPtr::from(SerializedBytes::from(UnsafeBytes::from(vec![0; len as _])))
-// }
 
 #[macro_export]
 macro_rules! memory_externs {
@@ -64,17 +56,6 @@ macro_rules! holochain_externs {
 }
 
 memory_externs!();
-
-// #[no_mangle]
-// /// when we return an AllocationPtr(serialized_bytes).as_guest_ptr() to the host there is still a
-// /// bunch of SerializedBytes sitting in the wasm memory
-// /// the host needs to read these bytes out of memory to get the return value from the guest but
-// /// the host then needs to tell the guest that previously leaked memory can be freed
-// /// this function allows the host to notify the guest that it is finished with a GuestPtr
-// pub extern "C" fn __deallocate_guest_allocation(guest_ptr: GuestPtr) {
-//     // rehydrating and dropping the SerializedBytes is enough for allocations to be cleaned up
-//     let _: SerializedBytes = AllocationPtr::from_guest_ptr(guest_ptr).into();
-// }
 
 #[macro_export]
 /// given a guest allocation pointer and a type that implements TryFrom<SerializedBytes>
@@ -149,6 +130,10 @@ macro_rules! host_call {
                 unsafe {
                     __import_data(guest_ptr);
                 };
+
+                unsafe {
+                    __debug(guest_ptr);
+                }
 
                 match $crate::allocation::read_bytes(guest_ptr) {
                     Ok(result_bytes) => {

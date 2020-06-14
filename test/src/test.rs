@@ -24,6 +24,8 @@ fn test_process_struct(ctx: &mut Ctx, guest_ptr: GuestPtr) -> Result<Len, WasmEr
 }
 
 fn debug(_ctx: &mut Ctx, some_number: WasmSize) -> Result<Len, WasmError> {
+    // let bytes = guest::read_bytes(ctx, some_number).unwrap();
+    // println!("oo {:?}", bytes);
     println!("debug {:?}", some_number);
     Ok(0)
 }
@@ -71,7 +73,7 @@ pub mod tests {
     fn smoke_module() {
         let wasm = wasms::TEST;
         let module: Module = module(&wasm, &wasm).unwrap();
-        assert!(module.info().exports.contains_key("__allocation"));
+        assert!(module.info().exports.contains_key("__allocate"));
     }
 
     fn test_instance() -> Instance {
