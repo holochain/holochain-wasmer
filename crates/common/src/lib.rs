@@ -1,9 +1,7 @@
 pub mod result;
-// pub mod slice;
 
 pub use holochain_serialized_bytes::prelude::*;
 pub use result::*;
-// pub use slice::*;
 
 /// something like usize for wasm
 /// wasm has a memory limit of 4GB so offsets and lengths fit in u32
@@ -18,11 +16,10 @@ pub use result::*;
 /// @see https://docs.rs/wasmer-runtime/0.17.0/wasmer_runtime/struct.WasmPtr.html
 pub type WasmSize = u32;
 
+/// a WasmSize integer that represents the size of bytes to read/write to memory in direct
+/// manipulations
 pub type Len = WasmSize;
 
+/// a WasmSize integer that points to a position in wasm linear memory that the host and guest are
+/// sharing to communicate across function calls
 pub type GuestPtr = WasmSize;
-
-pub fn allocation_length(len: Len) -> Len {
-    // the first bytes are the length of the allocation so we can load from it directly
-    len + std::mem::size_of::<Len>() as Len
-}

@@ -37,17 +37,53 @@ use wasmer_runtime::Value;
 /// @see https://docs.rs/wasmer-runtime-core/0.17.0/src/wasmer_runtime_core/memory/ptr.rs.html#120
 ///
 /// this is still not completely safe in the face of shared memory and threads, etc.
+///
+/// the guest needs to provide a pointer to a pre-allocated (e.g. by forgetting a Vec<u8>) region
+/// of the guest's memory that it is safe for the host to write to.
+///
+/// it is the host's responsibility to tell the guest the length of the allocation that is needed
+/// and the guest's responsibility to correctly reserve an allocation to be written into.
+///
+/// write_bytes() takes a slice of bytes and writes it to the position at the guest pointer
+///
+/// as the byte slice cannot be co-ordinated by the compiler (because the host and guest have
+/// different compilers and allocators) we prefix the allocation with a WasmSize length value.
+///
+/// for example, if we wanted to write the slice &[1, 2, 3] then we'd take the length of the slice,
+/// 3 as a WasmSize, which is u32, i.e. a 3_u32 and convert it to an array of u8 bytes as
+/// [ 0_u8, 0_u8, 0_u8, 3_u8 ] and concatenate it to our original [ 1_u8, 2_u8, 3_u8 ].
+/// this gives the full array of bytes to write as:
+///
+/// ```ignore
+/// [ 0_u8, 0_u8, 0_u8, 3_u8, 1_u8, 2_u8, 3_u8 ]
+/// ```
+///
+/// this allows us to read back the byte slice given only a GuestPtr because the read operation
+/// can do the inverse in a single step by reading the length inline
+///
+/// it also requires the host and the guest to both adopt this convention and read/write the
+/// additional 4 byte prefix in order to read/write the real payload correctly
+///
+/// @see read_bytes()
 pub fn write_bytes(ctx: &mut Ctx, guest_ptr: GuestPtr, slice: &[u8]) -> Result<(), WasmError> {
     let ptr: WasmPtr<u8, Array> = WasmPtr::new(guest_ptr as _);
 
+    // build the length prefix slice
     let len = slice.len() as Len;
     let len_array: [Len; 1] = [len];
     let len_bytes: &[u8] = len_array.as_byte_slice();
 
+    // write the length prefix immediately before the slice at the guest pointer position
     for (byte, cell) in len_bytes.iter().chain(slice.iter()).zip(
-        unsafe { ptr.deref_mut(ctx.memory(0), 0, allocation_length(slice.len() as Len) as _) }
-            .ok_or(WasmError::Memory)?
-            .iter(),
+        unsafe {
+            ptr.deref_mut(
+                ctx.memory(0),
+                0 as GuestPtr,
+                std::mem::size_of::<Len>() as Len + len,
+            )
+        }
+        .ok_or(WasmError::Memory)?
+        .iter(),
     ) {
         cell.set(*byte)
     }
@@ -74,6 +110,25 @@ pub fn write_bytes(ctx: &mut Ctx, guest_ptr: GuestPtr, slice: &[u8]) -> Result<(
 ///
 /// a better approach is to use an immutable deref from a WasmPtr, which checks against memory
 /// bounds for the guest, and map over the whole thing to a Vec<u8>
+///
+/// this does the inverse of write_bytes to read a vector of arbitrary length given only a single
+/// GuestPtr value
+///
+/// it reads the first 4 u8 bytes at the GuestPtr position and interprets them as a single u32
+/// value representing a Len which is the length of the return Vec<u8> to read at position
+/// GuestPtr + 4
+///
+/// using the example in write_bytes(), if we had written
+///
+/// ```ignore
+/// [ 0_u8, 0_u8, 0_u8, 3_u8, 1_u8, 2_u8, 3_u8 ]
+/// ```
+///
+/// and this returned a GuestPtr to `5678` then we would read it back by taking the first 4 bytes
+/// at `5678` which would be `[ 0_u8, 0_u8, 0_u8, 3_u8 ]` which we interpret as the length `3_u32`.
+///
+/// we then read the length 3 bytes from position `5682` (ptr + 4) to get our originally written
+/// bytes of `[ 1_u8, 2_u8, 3_u8 ]`.
 pub fn read_bytes(ctx: &Ctx, guest_ptr: GuestPtr) -> Result<Vec<u8>, WasmError> {
     let ptr: WasmPtr<u8, Array> = WasmPtr::new(guest_ptr as _);
     let len_bytes: Vec<u8> = ptr
@@ -92,11 +147,6 @@ pub fn read_bytes(ctx: &Ctx, guest_ptr: GuestPtr) -> Result<Vec<u8>, WasmError> 
         .map(|cell| cell.get())
         .collect::<Vec<u8>>())
 }
-
-// /// read an WasmSlice out of the guest from a guest pointer
-// pub fn read_wasm_slice(ctx: &Ctx, guest_ptr: GuestPtr) -> Result<slice::WasmSlice, WasmError> {
-//     Ok(read_bytes(ctx, guest_ptr, slice::WASM_SLICE_BYTES as Len).try_into()?)
-// }
 
 /// read serialized bytes out of the guest from a guest pointer
 pub fn read_serialized_bytes(
@@ -144,8 +194,6 @@ fn call_inner(
         _ => unreachable!(),
     };
 
-    // let slice = read_wasm_slice(instance.context(), guest_input_ptr)?;
-
     // write the input payload into the guest at the offset specified by the allocation
     write_bytes(instance.context_mut(), guest_input_ptr, payload.bytes())?;
 
@@ -153,16 +201,11 @@ fn call_inner(
     // collect the guest's pointer to its output
     let guest_return_ptr: GuestPtr = match instance
         .call(call, &[Value::I32(guest_input_ptr.try_into()?)])
-        .map_err(|e| {
-            println!("iii");
-            WasmError::CallError(format!("{:?}", e))
-        })?[0]
+        .map_err(|e| WasmError::CallError(format!("{:?}", e)))?[0]
     {
         Value::I32(i) => i as GuestPtr,
         _ => unreachable!(),
     };
-
-    println!("ii {:?}", guest_return_ptr);
 
     let return_value: SerializedBytes = crate::guest::read_serialized_bytes(
         instance.context_mut(),

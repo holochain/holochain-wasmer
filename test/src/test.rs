@@ -23,10 +23,21 @@ fn test_process_struct(ctx: &mut Ctx, guest_ptr: GuestPtr) -> Result<Len, WasmEr
     Ok(set_context_data(ctx, sb))
 }
 
-fn debug(_ctx: &mut Ctx, some_number: WasmSize) -> Result<Len, WasmError> {
-    // let bytes = guest::read_bytes(ctx, some_number).unwrap();
-    // println!("oo {:?}", bytes);
+fn debug(ctx: &mut Ctx, some_number: WasmSize) -> Result<Len, WasmError> {
     println!("debug {:?}", some_number);
+    if some_number == 1114324 {
+        let len = 22;
+        let ptr: WasmPtr<u8, Array> = WasmPtr::new(some_number as _);
+
+        let bytes = ptr
+            .deref(ctx.memory(0), 0, len as _)
+            .ok_or(WasmError::Memory)?
+            .iter()
+            .map(|cell| cell.get())
+            .collect::<Vec<u8>>();
+        // let bytes = guest::read_bytes(ctx, some_number).unwrap();
+        println!("oo {:?}", bytes);
+    }
     Ok(0)
 }
 

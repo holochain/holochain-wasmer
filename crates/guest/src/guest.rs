@@ -55,7 +55,7 @@ macro_rules! holochain_externs {
     };
 }
 
-memory_externs!();
+holochain_externs!();
 
 #[macro_export]
 /// given a guest allocation pointer and a type that implements TryFrom<SerializedBytes>
@@ -69,8 +69,7 @@ macro_rules! host_args {
     ( $ptr:ident ) => {{
         use core::convert::TryInto;
 
-        // let ptr = $crate::allocation::AllocationPtr::from_guest_ptr($ptr);
-        let bytes = match $crate::allocation::read_bytes($ptr) {
+        let bytes = match $crate::allocation::consume_bytes($ptr) {
             Ok(v) => v,
             Err(e) => {
                 let sb = $crate::holochain_serialized_bytes::SerializedBytes::try_from(
@@ -109,35 +108,20 @@ macro_rules! host_call {
         > = $input.try_into();
         match maybe_sb {
             std::result::Result::Ok(sb) => {
-                // // prepare an input allocation pointer so the host can read sb out of the guest
-                // let input_allocation_ptr: $crate::allocation::AllocationPtr = sb.into();
-
                 // call the host function and receive the length of the serialized result
                 let result_len: $crate::Len =
                     unsafe { $func_name($crate::allocation::write_bytes(sb.bytes()).unwrap()) };
 
-                // drop the input data here on the guest side so it doesn't leak
-                // let _: $crate::holochain_serialized_bytes::SerializedBytes =
-                //     input_allocation_ptr.into();
-
+                // prepare a GuestPtr for the host to write into
                 let guest_ptr: GuestPtr = $crate::allocation::__allocate(result_len);
-
-                // // prepare a new allocation pointer on the guest side to store the result
-                // let result_allocation_ptr: $crate::allocation::AllocationPtr =
-                //     $crate::__allocation_ptr_uninitialized(result_len);
 
                 // ask the host to populate the result allocation pointer with its result
                 unsafe {
                     __import_data(guest_ptr);
                 };
 
-                unsafe {
-                    __debug(guest_ptr);
-                }
-
-                match $crate::allocation::read_bytes(guest_ptr) {
+                match $crate::allocation::consume_bytes(guest_ptr) {
                     Ok(result_bytes) => {
-                        // pull the imported data into SerializedBytes
                         let result_sb = $crate::holochain_serialized_bytes::SerializedBytes::from(
                             $crate::holochain_serialized_bytes::UnsafeBytes::from(result_bytes),
                         );
@@ -165,7 +149,14 @@ macro_rules! ret_err {
             // for example it could be too big for messagepack or include invalid bytes
             std::result::Result::Err(e) => {
                 return $crate::allocation::write_bytes($crate::holochain_serialized_bytes::SerializedBytes::try_from(
-                    $crate::WasmResult::Err($crate::WasmError::Zome(String::from("errored while erroring (this should never happen)")))
+                    $crate::WasmResult::Err(
+                        $crate::WasmError::Zome(
+                            format!(
+                                "errored while erroring (this should never happen): {:?}",
+                                e
+                            )
+                        )
+                    )
                 ).unwrap().bytes()).unwrap();
             }
         };
@@ -183,12 +174,12 @@ macro_rules! ret {
                 match maybe_wasm_result_sb {
                     std::result::Result::Ok(wasm_result_sb) => match $crate::allocation::write_bytes($crate::holochain_serialized_bytes::SerializedBytes::from(wasm_result_sb).bytes()) {
                         Ok(guest_ptr) => return guest_ptr,
-                        Err(e) => ret_err!(e),
+                        Err(e) => $crate::ret_err!(e),
                     },
-                    std::result::Result::Err(e) => ret_err!(e),
+                    std::result::Result::Err(e) => $crate::ret_err!(e),
                 };
             },
-            std::result::Result::Err(e) => ret_err!(e),
+            std::result::Result::Err(e) => $crate::ret_err!(e),
         };
     }};
 }
