@@ -1,6 +1,4 @@
 use crate::prelude::*;
-use byte_slice_cast::AsByteSlice;
-use byte_slice_cast::AsSliceOf;
 use holochain_serialized_bytes::prelude::*;
 use wasmer_runtime::Ctx;
 use wasmer_runtime::Instance;
@@ -51,11 +49,11 @@ use wasmer_runtime::Value;
 ///
 /// for example, if we wanted to write the slice &[1, 2, 3] then we'd take the length of the slice,
 /// 3 as a WasmSize, which is u32, i.e. a 3_u32 and convert it to an array of u8 bytes as
-/// [ 0_u8, 0_u8, 0_u8, 3_u8 ] and concatenate it to our original [ 1_u8, 2_u8, 3_u8 ].
+/// [ 3_u8, 0_u8, 0_u8, 0_u8 ] and concatenate it to our original [ 1_u8, 2_u8, 3_u8 ].
 /// this gives the full array of bytes to write as:
 ///
 /// ```ignore
-/// [ 0_u8, 0_u8, 0_u8, 3_u8, 1_u8, 2_u8, 3_u8 ]
+/// [ 3_u8, 0_u8, 0_u8, 0_u8, 1_u8, 2_u8, 3_u8 ]
 /// ```
 ///
 /// this allows us to read back the byte slice given only a GuestPtr because the read operation
@@ -70,8 +68,7 @@ pub fn write_bytes(ctx: &mut Ctx, guest_ptr: GuestPtr, slice: &[u8]) -> Result<(
 
     // build the length prefix slice
     let len = slice.len() as Len;
-    let len_array: [Len; 1] = [len];
-    let len_bytes: &[u8] = len_array.as_byte_slice();
+    let len_bytes: [u8; 4] = len.to_le_bytes();
 
     // write the length prefix immediately before the slice at the guest pointer position
     for (byte, cell) in len_bytes.iter().chain(slice.iter()).zip(
@@ -121,11 +118,11 @@ pub fn write_bytes(ctx: &mut Ctx, guest_ptr: GuestPtr, slice: &[u8]) -> Result<(
 /// using the example in write_bytes(), if we had written
 ///
 /// ```ignore
-/// [ 0_u8, 0_u8, 0_u8, 3_u8, 1_u8, 2_u8, 3_u8 ]
+/// [ 3_u8, 0_u8, 0_u8, 0_u8, 1_u8, 2_u8, 3_u8 ]
 /// ```
 ///
 /// and this returned a GuestPtr to `5678` then we would read it back by taking the first 4 bytes
-/// at `5678` which would be `[ 0_u8, 0_u8, 0_u8, 3_u8 ]` which we interpret as the length `3_u32`.
+/// at `5678` which would be `[ 3_u8, 0_u8, 0_u8, 0_u8 ]` which we interpret as the length `3_u32`.
 ///
 /// we then read the length 3 bytes from position `5682` (ptr + 4) to get our originally written
 /// bytes of `[ 1_u8, 2_u8, 3_u8 ]`.
@@ -138,7 +135,7 @@ pub fn read_bytes(ctx: &Ctx, guest_ptr: GuestPtr) -> Result<Vec<u8>, WasmError> 
         .map(|cell| cell.get())
         .collect::<Vec<u8>>();
 
-    let len: Len = len_bytes.as_slice_of::<Len>()?[0];
+    let len: Len = u32::from_le_bytes([len_bytes[0], len_bytes[1], len_bytes[2], len_bytes[3]]);
 
     Ok(ptr
         .deref(ctx.memory(0), std::mem::size_of::<Len>() as Len, len as _)

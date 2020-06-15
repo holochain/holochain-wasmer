@@ -613,7 +613,7 @@ bytes.
 For example, if we had the bytes `[ 1, 2, 3 ]` this is length `3` so we prefix
 the allocation with the byte representation of `3_u32`.
 
-It would look like `[ 0, 0, 0, 3, 1, 2, 3 ]` because a `u32` is 4 bytes long.
+It would look like `[ 3, 0, 0, 0, 1, 2, 3 ]` because a `u32` is 4 bytes long.
 
 #### How data round trips the host and the guest (details)
 

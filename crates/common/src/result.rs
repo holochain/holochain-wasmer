@@ -42,12 +42,6 @@ impl From<std::num::TryFromIntError> for WasmError {
     }
 }
 
-impl From<byte_slice_cast::Error> for WasmError {
-    fn from(_: byte_slice_cast::Error) -> Self {
-        Self::Memory
-    }
-}
-
 impl From<std::array::TryFromSliceError> for WasmError {
     fn from(_: std::array::TryFromSliceError) -> Self {
         Self::Memory

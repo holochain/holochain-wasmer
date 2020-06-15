@@ -75,11 +75,6 @@ version = "3.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 
 [[package]]
-name = "byte-slice-cast"
-version = "0.3.5"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-
-[[package]]
 name = "byteorder"
 version = "1.3.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -394,7 +389,6 @@ dependencies = [
 name = "holochain_wasmer_common"
 version = "0.0.31"
 dependencies = [
- "byte-slice-cast 0.3.5 (registry+https://github.com/rust-lang/crates.io-index)",
  "holochain_serialized_bytes 0.0.39 (git+https://github.com/holochain/holochain-serialization?branch=2020-06-06-serde-bytes)",
  "serde 1.0.104 (registry+https://github.com/rust-lang/crates.io-index)",
  "thiserror 1.0.10 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -404,7 +398,6 @@ dependencies = [
 name = "holochain_wasmer_host"
 version = "0.0.31"
 dependencies = [
- "byte-slice-cast 0.3.5 (registry+https://github.com/rust-lang/crates.io-index)",
  "holochain_serialized_bytes 0.0.39 (git+https://github.com/holochain/holochain-serialization?branch=2020-06-06-serde-bytes)",
  "holochain_wasmer_common 0.0.31",
  "lazy_static 1.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -868,7 +861,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 name = "test"
 version = "0.0.31"
 dependencies = [
- "byte-slice-cast 0.3.5 (registry+https://github.com/rust-lang/crates.io-index)",
  "criterion 0.3.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "holochain_serialized_bytes 0.0.39 (git+https://github.com/holochain/holochain-serialization?branch=2020-06-06-serde-bytes)",
  "holochain_wasmer_common 0.0.31",
@@ -1167,7 +1159,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 "checksum blake3 0.1.5 (registry+https://github.com/rust-lang/crates.io-index)" = "46080006c1505f12f64dd2a09264b343381ed3190fa02c8005d5d662ac571c63"
 "checksum bstr 0.2.13 (registry+https://github.com/rust-lang/crates.io-index)" = "31accafdb70df7871592c058eca3985b71104e15ac32f64706022c58867da931"
 "checksum bumpalo 3.4.0 (registry+https://github.com/rust-lang/crates.io-index)" = "2e8c087f005730276d1096a652e92a8bacee2e2472bcc9715a74d2bec38b5820"
-"checksum byte-slice-cast 0.3.5 (registry+https://github.com/rust-lang/crates.io-index)" = "b0a5e3906bcbf133e33c1d4d95afc664ad37fbdb9f6568d8043e7ea8c27d93d3"
 "checksum byteorder 1.3.4 (registry+https://github.com/rust-lang/crates.io-index)" = "08c48aae112d48ed9f069b33538ea9e3e90aa263cfa3d1c24309612b1f7472de"
 "checksum cast 0.2.3 (registry+https://github.com/rust-lang/crates.io-index)" = "4b9434b9a5aa1450faa3f9cb14ea0e8c53bb5d2b3c1bfd1ab4fc03e9f33fbfb0"
 "checksum cc 1.0.50 (registry+https://github.com/rust-lang/crates.io-index)" = "95e28fa049fda1c330bcf9d723be7663a899c4679724b34c81e9f5a326aab8cd"

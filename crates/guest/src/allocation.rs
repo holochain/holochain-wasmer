@@ -1,5 +1,3 @@
-use byte_slice_cast::AsByteSlice;
-use byte_slice_cast::AsSliceOf;
 use holochain_wasmer_common::*;
 use std::mem;
 
@@ -9,7 +7,7 @@ use std::mem;
 pub fn length_prefix_at_guest_ptr(guest_ptr: GuestPtr) -> Result<Len, WasmError> {
     let len_bytes: &[u8] =
         unsafe { std::slice::from_raw_parts(guest_ptr as *const u8, std::mem::size_of::<Len>()) };
-    let len: Len = len_bytes.as_slice_of::<Len>()?[0];
+    let len: Len = u32::from_le_bytes([len_bytes[0], len_bytes[1], len_bytes[2], len_bytes[3]]);
     Ok(len)
 }
 
@@ -106,9 +104,7 @@ pub fn consume_bytes(guest_ptr: GuestPtr) -> Result<Vec<u8>, WasmError> {
 /// a good host will call __deallocate with the GuestPtr produced here once it has read the bytes
 /// out of the guest, otherwise the bytes will be permanently leaked for the lifetime of the guest
 pub fn write_bytes(slice: &[u8]) -> Result<GuestPtr, WasmError> {
-    let len = slice.len() as Len;
-    let len_array: [Len; 1] = [len];
-    let len_bytes: &[u8] = len_array.as_byte_slice();
+    let len_bytes = slice.len().to_le_bytes();
 
     let v: Vec<u8> = len_bytes.iter().chain(slice.iter()).cloned().collect();
     let ptr: GuestPtr = v.as_ptr() as GuestPtr;
