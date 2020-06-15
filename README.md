@@ -342,8 +342,7 @@ pub extern "C" fn foo(guest_ptr: GuestPtr) -> GuestPtr {
 This tells the rust compiler to make `foo` available in the final .wasm file as
 something that can be called by the host as `"foo"`.
 
-As the host is dealing with strings rather than functions, we will likely want to
-implemented a 'hook' style callback system into the HDK.
+As the host is dealing with strings rather than functions, we implemented a 'hook' style callback system into the HDK.
 
 E.g. the guest could implement `validate_MY_THING` and the host can call
 `"validate_MY_THING"` if the function exists in the wasm module or just `validate`
