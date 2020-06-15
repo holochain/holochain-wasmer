@@ -4,23 +4,23 @@ host_externs!(
     __debug
 );
 
-// #[no_mangle]
-// pub extern "C" fn allocate_allocation_ptr_test(_: GuestPtr) -> GuestPtr {
-//     let some_ptr = 50 as GuestPtr;
-//     let some_len = 100 as Len;
-//
-//     let slice = WasmSlice::from([some_ptr, some_len]);
-//     let allocation_ptr = AllocationPtr::from(slice);
-//
-//     let restored_slice: WasmSlice = allocation_ptr.into();
-//
-//     assert_eq!(
-//         [some_ptr, some_len],
-//         [restored_slice.ptr(), restored_slice.len()],
-//     );
-//
-//     ret!(());
-// }
+#[no_mangle]
+pub extern "C" fn bytes_round_trip(_: GuestPtr) -> GuestPtr {
+    let bytes: &[u8] = &[ 1, 2, 3, 4, 5 ];
+    let guest_ptr: GuestPtr = allocation::write_bytes(bytes).unwrap();
+
+    assert_eq!(
+        allocation::length_prefix_at_guest_ptr(guest_ptr).unwrap(),
+        bytes.len() as Len,
+    );
+
+    assert_eq!(
+        bytes.to_vec(),
+        allocation::consume_bytes(guest_ptr).unwrap(),
+    );
+
+    ret!(());
+}
 
 // #[no_mangle]
 // pub extern "C" fn dellocate_test(_: GuestPtr) -> GuestPtr {

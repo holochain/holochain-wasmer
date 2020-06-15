@@ -6,7 +6,7 @@ use std::mem;
 /// attempt to extract the length at the given guest_ptr
 //. note that the guest_ptr could point at garbage and the "length prefix" would be garbage and
 //. then some arbitrary memory would be referenced so not erroring does not imply safety
-fn length_prefix_at_guest_ptr(guest_ptr: GuestPtr) -> Result<Len, WasmError> {
+pub fn length_prefix_at_guest_ptr(guest_ptr: GuestPtr) -> Result<Len, WasmError> {
     let len_bytes: &[u8] =
         unsafe { std::slice::from_raw_parts(guest_ptr as *const u8, std::mem::size_of::<Len>()) };
     let len: Len = len_bytes.as_slice_of::<Len>()?[0];
