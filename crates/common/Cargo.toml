@@ -7,6 +7,6 @@ authors = [ "thedavidmeister", "thedavidmeister@gmail.com" ]
 edition = "2018"
 
 [dependencies]
-holochain_serialized_bytes = { git = "https://github.com/holochain/holochain-serialization", branch = "2020-06-06-serde-bytes" }
+holochain_serialized_bytes = "=0.0.40"
 serde = "=1.0.104"
 thiserror = "1.0.10"
