@@ -5,7 +5,6 @@ use wasmer_runtime::Ctx;
 pub fn __import_data(ctx: &mut Ctx, guest_ptr: GuestPtr) -> Result<(), WasmError> {
     if !ctx.data.is_null() {
         let b: Box<SerializedBytes> = unsafe { Box::from_raw(ctx.data as _) };
-        // let wasm_fat_ptr = guest::read_wasm_slice(ctx, guest_ptr).unwrap();
         guest::write_bytes(ctx, guest_ptr, &*b.bytes())?;
     }
     ctx.data = std::ptr::null::<SerializedBytes>() as _;
@@ -16,7 +15,7 @@ pub fn __import_data(ctx: &mut Ctx, guest_ptr: GuestPtr) -> Result<(), WasmError
 /// it guards against badly behaved host/guest logic by freeing any previously leaked data pointed
 /// at by the context data
 #[allow(unused_assignments)]
-pub fn unleak_context_data(data: *mut std::ffi::c_void) {
+pub fn free_context_data(data: *mut std::ffi::c_void) {
     if !data.is_null() {
         // unleak the old contents on the assumption that it is SerializedBytes
         // this assumption basically assumes that the only thing setting context data is the
@@ -26,7 +25,9 @@ pub fn unleak_context_data(data: *mut std::ffi::c_void) {
 }
 
 pub fn set_context_data(ctx: &mut Ctx, serialized_bytes: SerializedBytes) -> Len {
-    unleak_context_data(ctx.data);
+    // guard against the situation where some bad code sets a new Ctx.data value while some other
+    // data is leaked in memory, free it before setting a new value
+    free_context_data(ctx.data);
 
     // leak the provided serialized bytes into the context data so it can be imported later
     let len = serialized_bytes.bytes().len();

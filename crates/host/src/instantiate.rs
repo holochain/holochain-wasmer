@@ -1,4 +1,4 @@
-use crate::import::unleak_context_data;
+use crate::import::free_context_data;
 use crate::memory_cache::MemoryFallbackFileSystemCache;
 use holochain_wasmer_common::WasmError;
 use wasmer_runtime::cache::Cache;
@@ -34,6 +34,6 @@ pub fn instantiate(
     let mut instance = module(cache_key_bytes, wasm)?
         .instantiate(wasm_imports)
         .map_err(|e| WasmError::Compile(e.to_string()))?;
-    instance.context_mut().data_finalizer = Some(unleak_context_data);
+    instance.context_mut().data_finalizer = Some(free_context_data);
     Ok(instance)
 }

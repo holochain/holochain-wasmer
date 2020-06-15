@@ -109,8 +109,11 @@ macro_rules! host_call {
         match maybe_sb {
             std::result::Result::Ok(sb) => {
                 // call the host function and receive the length of the serialized result
-                let result_len: $crate::Len =
-                    unsafe { $func_name($crate::allocation::write_bytes(sb.bytes()).unwrap()) };
+                let input_guest_ptr = $crate::allocation::write_bytes(sb.bytes()).unwrap();
+                let result_len: $crate::Len = unsafe { $func_name(input_guest_ptr) };
+
+                // free the leaked bytes from the input to the host function
+                $crate::allocation::__deallocate(input_guest_ptr);
 
                 // prepare a GuestPtr for the host to write into
                 let guest_ptr: GuestPtr = $crate::allocation::__allocate(result_len);

@@ -1,74 +1,18 @@
 use criterion::BenchmarkId;
 use criterion::Throughput;
 use criterion::{criterion_group, criterion_main, Criterion};
-use holochain_serialized_bytes::prelude::*;
-use holochain_wasmer_guest::allocation::allocate;
-use holochain_wasmer_guest::allocation::deallocate;
-use holochain_wasmer_guest::allocation::AllocationPtr;
 use rand::prelude::*;
-
-/// allocate and deallocate some bytes
-/// there are several approaches commonly referenced to work with wasm memory, e.g.
-/// - directly using pointers to the wasm memory from the host
-/// - mapping over wasm memory cells per-byte
-/// - using the WasmPtr abstraction
-/// the higher level strategies provide stronger security guarantees but it's worth benchmarking
-/// any implementation to ensure the checks and balances don't slow things down
-pub fn allocate_deallocate(c: &mut Criterion) {
-    let mut group = c.benchmark_group("allocate_deallocate");
-    for n in vec![
-        // 1 byte
-        1,
-        // 1 kb
-        1_000,
-        // 1 mb
-        1_000_000,
-        // 1 gb
-        1_000_000_000,
-    ] {
-        group.throughput(Throughput::Bytes(n as _));
-        group.bench_with_input(BenchmarkId::from_parameter(n), &n, |b, &n| {
-            b.iter(|| {
-                deallocate(allocate(n), n);
-            });
-        });
-    }
-    group.finish();
-}
-
-/// round trip serialized bytes through the AllocationPtr abstractions
-pub fn sb_round_trip(c: &mut Criterion) {
-    let mut group = c.benchmark_group("sb_round_trip");
-
-    for n in vec![
-        // 1 byte
-        1,
-        // 1 kb
-        1_000,
-        // 1 mb
-        1_000_000,
-        // 1 gb
-        1_000_000_000,
-    ] {
-        group.throughput(Throughput::Bytes(n as _));
-        group.bench_with_input(BenchmarkId::from_parameter(n), &n, |b, &n| {
-            b.iter_batched(
-                || SerializedBytes::from(UnsafeBytes::from(vec![0_u8; n])),
-                |sb| {
-                    SerializedBytes::from(AllocationPtr::from(sb));
-                },
-                criterion::BatchSize::PerIteration,
-            );
-        });
-    }
-    group.finish();
-}
+use test::wasms;
 
 /// create an instance
 pub fn wasm_instance(c: &mut Criterion) {
     let mut group = c.benchmark_group("wasm_instance");
 
-    for (name, wasm) in vec![("empty", EMPTY_WASM), ("io", IO_WASM), ("test", TEST_WASM)] {
+    for (name, wasm) in vec![
+        ("empty", wasms::EMPTY),
+        ("io", wasms::IO),
+        ("test", wasms::TEST),
+    ] {
         group.bench_with_input(
             BenchmarkId::new("wasm_instance", name),
             &wasm,
@@ -94,7 +38,7 @@ pub fn wasm_call(c: &mut Criterion) {
 
     let mut instance = holochain_wasmer_host::instantiate::instantiate(
         &vec![1],
-        IO_WASM,
+        wasms::IO,
         &test::import::memory_only(),
     )
     .unwrap();
@@ -129,6 +73,7 @@ pub fn wasm_call(c: &mut Criterion) {
 
     bench_call!(
         vec![
+            "string_input_ignored_empty_ret",
             "string_input_args_empty_ret",
             "string_input_args_echo_ret",
         ];
@@ -139,6 +84,7 @@ pub fn wasm_call(c: &mut Criterion) {
 
     bench_call!(
         vec![
+            "bytes_input_ignored_empty_ret",
             "bytes_input_args_empty_ret",
             "bytes_input_args_echo_ret",
         ];
@@ -156,7 +102,7 @@ pub fn wasm_call_n(c: &mut Criterion) {
 
     let mut instance = holochain_wasmer_host::instantiate::instantiate(
         &vec![1],
-        IO_WASM,
+        wasms::IO,
         &test::import::memory_only(),
     )
     .unwrap();
@@ -203,7 +149,7 @@ pub fn test_process_string(c: &mut Criterion) {
 
     let mut instance = holochain_wasmer_host::instantiate::instantiate(
         &vec![2],
-        TEST_WASM,
+        wasms::TEST,
         &test::import::import_object(),
     )
     .unwrap();
@@ -226,8 +172,6 @@ pub fn test_process_string(c: &mut Criterion) {
 
 criterion_group!(
     benches,
-    allocate_deallocate,
-    sb_round_trip,
     wasm_instance,
     wasm_call,
     wasm_call_n,

@@ -5,18 +5,15 @@ holochain_wasmer_guest::holochain_externs!();
 macro_rules! _s {
     ( $t:tt; $empty:expr; ) => {
         paste::item! {
-            // @TODO - this is dangerous at the moment
-            // if the guest fails to call host_args!() then the host leaks the input indefinitely
-            //
-            // #[no_mangle]
-            // ignore the input completely and return empty data
-            // pub extern "C" fn [< $t:lower _input_ignored_empty_ret >](ptr: RemotePtr) -> RemotePtr {
-            //     ret!(
-            //         paste::expr! {
-            //             test_common::[< $t:camel Type >]::from($empty)
-            //         }
-            //     );
-            // }
+            #[no_mangle]
+            /// ignore the input completely and return empty data
+            pub extern "C" fn [< $t:lower _input_ignored_empty_ret >](_: GuestPtr) -> GuestPtr {
+                ret!(
+                    paste::expr! {
+                        test_common::[< $t:camel Type >]::from($empty)
+                    }
+                );
+            }
 
             #[no_mangle]
             /// load the input args and do nothing with it

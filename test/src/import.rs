@@ -1,4 +1,5 @@
 use crate::debug;
+use crate::pages;
 use crate::test_process_string;
 use crate::test_process_struct;
 use wasmer_runtime::func;
@@ -20,6 +21,7 @@ pub fn import_object() -> ImportObject {
             "__test_process_string" => func!(test_process_string),
             "__test_process_struct" => func!(test_process_struct),
             "__debug" => func!(debug),
+            "__pages" => func!(pages),
         },
     }
 }
