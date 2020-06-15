@@ -77,6 +77,11 @@ but is still too slow to be hitting on every function call.
 Pulling a module from a lazy static and instantiating it takes about `50ns` which is
 very reasonable overhead for the host to build a completely fresh instance.
 
+Calling a function with `holochain_wasmer_host::guest::call()` takes several `ns`
+for small input/output values and some `ms` for ~1mb of input/output data.
+
+To see benchmarks on your system run `nix-shell --run ./bench.sh`.
+
 With low overhead like this, core is relatively free to decide when it wants to
 re-instantiate an already-in-memory module.
 
