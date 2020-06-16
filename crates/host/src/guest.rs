@@ -68,7 +68,7 @@ pub fn write_bytes(ctx: &mut Ctx, guest_ptr: GuestPtr, slice: &[u8]) -> Result<(
 
     // build the length prefix slice
     let len = slice.len() as Len;
-    let len_bytes: [u8; 4] = len.to_le_bytes();
+    let len_bytes: [u8; std::mem::size_of::<Len>()] = len.to_le_bytes();
 
     // write the length prefix immediately before the slice at the guest pointer position
     for (byte, cell) in len_bytes.iter().chain(slice.iter()).zip(
@@ -128,14 +128,16 @@ pub fn write_bytes(ctx: &mut Ctx, guest_ptr: GuestPtr, slice: &[u8]) -> Result<(
 /// bytes of `[ 1_u8, 2_u8, 3_u8 ]`.
 pub fn read_bytes(ctx: &Ctx, guest_ptr: GuestPtr) -> Result<Vec<u8>, WasmError> {
     let ptr: WasmPtr<u8, Array> = WasmPtr::new(guest_ptr as _);
-    let len_bytes: Vec<u8> = ptr
+    let mut len_iter = ptr
         .deref(ctx.memory(0), 0, std::mem::size_of::<Len>() as Len)
         .ok_or(WasmError::Memory)?
-        .iter()
-        .map(|cell| cell.get())
-        .collect::<Vec<u8>>();
+        .iter();
 
-    let len: Len = u32::from_le_bytes([len_bytes[0], len_bytes[1], len_bytes[2], len_bytes[3]]);
+    let mut len_array = [0; std::mem::size_of::<Len>()];
+    for i in 0..std::mem::size_of::<Len>() {
+        len_array[i] = len_iter.next().ok_or(WasmError::Memory)?.get();
+    }
+    let len: Len = u32::from_le_bytes(len_array);
 
     Ok(ptr
         .deref(ctx.memory(0), std::mem::size_of::<Len>() as Len, len as _)
