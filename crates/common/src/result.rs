@@ -2,7 +2,7 @@ use holochain_serialized_bytes::prelude::*;
 use thiserror::Error;
 
 /// Enum of all possible ERROR codes that a Zome API Function could return.
-#[derive(Clone, Debug, PartialEq, Eq, Hash, PartialOrd, Ord, Serialize, Deserialize, Error)]
+#[derive(Clone, Debug, PartialEq, Eq, Hash, PartialOrd, Ord, Serialize, Deserialize, SerializedBytes, Error)]
 #[rustfmt::skip]
 pub enum WasmError {
     /// while converting pointers and lengths between u64 and i64 across the host/guest
@@ -15,7 +15,7 @@ pub enum WasmError {
     /// correctly, which should be impossible for well behaved serialization
     SerializedBytes(SerializedBytesError),
     /// something went wrong while writing or reading bytes to/from wasm memory
-    /// this means something like "reading 16 bytes did not produce 2x u64 ints"
+    /// this means something like "reading 16 bytes did not produce 2x WasmSize ints"
     /// or maybe even "failed to write a byte to some pre-allocated wasm memory"
     /// whatever this is it is very bad and probably not recoverable
     Memory,
@@ -26,17 +26,19 @@ pub enum WasmError {
     Zome(String),
     /// somehow wasmer failed to compile machine code from wasm byte code
     Compile(String),
+
+    CallError(String),
+}
+
+impl From<WasmError> for String {
+    fn from(e: WasmError) -> Self {
+        format!("{}", e)
+    }
 }
 
 impl From<std::num::TryFromIntError> for WasmError {
     fn from(_: std::num::TryFromIntError) -> Self {
         Self::PointerMap
-    }
-}
-
-impl From<byte_slice_cast::Error> for WasmError {
-    fn from(_: byte_slice_cast::Error) -> Self {
-        Self::Memory
     }
 }
 
@@ -58,13 +60,11 @@ impl std::fmt::Display for WasmError {
     }
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, SerializedBytes)]
 pub enum WasmResult {
     Ok(SerializedBytes),
     Err(WasmError),
 }
-
-holochain_serial!(WasmResult, WasmError);
 
 #[cfg(test)]
 pub mod tests {
@@ -73,10 +73,8 @@ pub mod tests {
 
     #[test]
     fn wasm_result_serialized_bytes_round_trip() {
-        #[derive(Clone, PartialEq, Debug, Serialize, Deserialize)]
+        #[derive(Clone, PartialEq, Debug, Serialize, Deserialize, SerializedBytes)]
         struct Foo(String);
-
-        holochain_serial!(Foo);
 
         let foo = Foo(String::from("bar"));
 

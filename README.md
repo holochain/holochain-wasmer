@@ -74,8 +74,13 @@ Loading a serialized module from an NVMe disk and instantiating it still takes a
 The default file system cache is about 2-4x faster than cold compiling a module
 but is still too slow to be hitting on every function call.
 
-Putting a module in a lazy static and instantiating it takes about `1ms` which is
+Pulling a module from a lazy static and instantiating it takes about `50ns` which is
 very reasonable overhead for the host to build a completely fresh instance.
+
+Calling a function with `holochain_wasmer_host::guest::call()` takes several `us`
+for small input/output values and some `ms` for ~1mb of input/output data.
+
+To see benchmarks on your system run `nix-shell --run ./bench.sh`.
 
 With low overhead like this, core is relatively free to decide when it wants to
 re-instantiate an already-in-memory module.
@@ -86,7 +91,7 @@ Re-instantiating modules has several potential benefits:
 - Core can provide fresh references (e.g. `Arc::clone`) to its internals and fresh closures on each function call
 - Potentially simpler core code to simply create a new instance each call vs. trying to manage shared/global/long running things
 
-Note though, that cache key generate for modules in memory (e.g. multiple DNAs in
+Note though, that cache key generation for modules in memory (e.g. multiple DNAs in
  memory) has performance implications too.
 
 The default wasmer handling hashes the wasm bytes passed to it to create a key to
@@ -101,6 +106,9 @@ a few nanoseconds.
 
 To handle all this use `host::instantiate::instantiate()` which is a wrapper around
 the default wasmer instantiate.
+
+__Always use the instantiate function as it adds a guard against a badly behaved
+guest wasm forcing the host to leak memory.__
 
 It takes an additional argument `cache_key_bytes: &[u8]` which can either be the
 raw wasm or something precalculated like the DNA hash.
@@ -186,6 +194,19 @@ Note this is just about sharing the same wasm guest, it doesn't stop us from kee
 a consistent persistence cursor/transaction open across all the related wasm guest
 calls, it just means they can't share the internal instance state.
 
+##### Don't use Ctx.data
+
+We are already using the `Ctx.data` value to facilitate the guest pulling rich
+serialized data back from `host_call!`.
+
+Unfortunately wasmer only supports one pointer to support all custom instance
+data needs.
+
+https://github.com/wasmerio/wasmer/pull/1111
+
+This means we are not compatible with other things that might want to use it,
+e.g. WASI
+
 ##### Always need fresh references in closures
 
 The functions in an `ImportObject` MUST be an `Fn`, e.g. not an `FnOnce` or `FnMut`.
@@ -224,12 +245,11 @@ Use the `holochain_wasmer_host` crate to do as much heavy lifing as possible.
 The `test_process_struct` shows a good minimal example of an import function:
 
 ```rust
-fn test_process_struct(ctx: &mut Ctx, guest_ptr: RemotePtr) -> Result<RemotePtr, WasmError> {
+fn test_process_struct(ctx: &mut Ctx, guest_ptr: GuestPtr) -> Result<Len, WasmError> {
     let mut some_struct: SomeStruct = guest::from_guest_ptr(ctx, guest_ptr)?;
     some_struct.process();
     let sb: SerializedBytes = some_struct.try_into()?;
-    let allocation_ptr: AllocationPtr = sb.into();
-    Ok(allocation_ptr.as_remote_ptr())
+    Ok(set_context_data(ctx, sb))
 }
 ```
 
@@ -243,9 +263,12 @@ And how to build a return value that wasmer understands and the guest can read:
 
 ```rust
 let sb: SerializedBytes = some_struct.try_into()?;
-let allocation_ptr: AllocationPtr = sb.into();
-Ok(allocation_ptr.as_remote_ptr())
+Ok(set_context_data(ctx, sb))
 ```
+
+Note that `set_context_data` uses the `Ctx.data` pointer up (see above) so that
+the guest can safely retrieve it from the host in a one-shot way later. This
+happens inside the `host_call!` macro and so is invisible to wasm developers.
 
 ### Being a good wasm guest
 
@@ -282,6 +305,8 @@ At a high level there isn't much that a guest needs to do:
 
 The tests wasm includes examples for all of these.
 
+There is more documentation for this in the HDK itself.
+
 #### Define externs that will be overwritten by the imported host functions
 
 There are two sets of externs to define:
@@ -293,9 +318,13 @@ The HDK absolutely should handle all of this for the happ developer as the
 memory externs are mandatory and the callable functiosn are all set by holochain
 core.
 
-Use the `memory_externs!()` macro to define the memory externs (call it anywhere).
+Use the `holochain_externs!()` macro to define all the externs that holochain
+needs in both directions (e.g. memory handling and all exposed `host_call!` fns).
 
-Use the `host_externs!(foo, bar, baz, ...)` macro to list all the importable host functions.
+To do this manually:
+
+- Use the `host_externs!(foo, bar, baz, ...)` macro to list all the importable host functions.
+- Use the `memory_externs!()` macro to define the minimal memory logic needed by core
 
 #### Write extern functions that the host will call
 
@@ -305,7 +334,7 @@ All functions that the host can call must look like this to be compatible with o
 
 ```rust
 #[no_mangle]
-pub extern "C" fn foo(remote_ptr: RemotePtr) -> RemotePtr {
+pub extern "C" fn foo(guest_ptr: GuestPtr) -> GuestPtr {
 
 }
 ```
@@ -313,31 +342,31 @@ pub extern "C" fn foo(remote_ptr: RemotePtr) -> RemotePtr {
 This tells the rust compiler to make `foo` available in the final .wasm file as
 something that can be called by the host as `"foo"`.
 
-As the host is dealing with strings rather than functions, we will likely want to
-implement some kind of 'hook' style callback system into the HDK.
+As the host is dealing with strings rather than functions, we implemented a 'hook' style callback system into the HDK.
 
 E.g. the guest could implement `validate_MY_THING` and the host can call
-`"validate_MY_THING"` if the function exists in the wasm module.
+`"validate_MY_THING"` if the function exists in the wasm module or just `validate`
+if the less specfic version exists.
 
-Note that the inputs and outputs are `RemotePtr` which is a single `u64`.
+Note that the inputs and outputs are `GuestPtr` which is a single `u32`.
 
 This means that structured data for input/output and `Result` style return
 values (and therefore also `?`) need to be faked with macros (see below).
 
 #### Use `host_args!` to receive input from the host
 
-This is easy, `host_args!` takes a `RemotePtr` and tries to inject it into `SomeType`:
+This is easy, `host_args!` takes a `GuestPtr` and tries to inject it into `SomeType`:
 
 ```rust
 #[no_mangle]
-pub extern "C" fn foo(remote_ptr: RemotePtr) -> RemotePtr {
+pub extern "C" fn foo(remote_ptr: GuestPtr) -> GuestPtr {
  let bar: SomeType = host_args!(remote_ptr);
 }
 ```
 
-The `host_args!` function internally _returns a `RemotePtr` if it errors_.
+The `host_args!` function internally _returns a `GuestPtr` if it errors_.
 
-It can only be used in a function with `RemotePtr` input and output (e.g. an extern).
+It can only be used in a function with `GuestPtr` input and output (e.g. an extern).
 
 #### Use `host_call!` to call host functions
 
@@ -381,17 +410,17 @@ struct HostFunctionInput {
 
 holochain_serial!(HostFunctionInput);
 
-fn foo() -> RemotePtr {
+fn foo() -> GuestPtr {
  let input = HostFunctionInput { inner: String::from("bar") };
 
- // note the try_result! wrapper to be compatible with RemotePtr return value
+ // note the try_result! wrapper to be compatible with GuestPtr return value
  try_result!(host_call!(__some_host_function, input), "failed to call __some_host_function");
 }
 ```
 
 #### Use return macros
 
-Inside an extern we must return a `RemotePtr`.
+Inside an extern we must return a `GuestPtr`.
 
 The host is expecting a `WasmResult` (see below) and besides we have arbitrary
 `SerializedBytes` to return even if we succeed.
@@ -410,7 +439,7 @@ struct Returnable(());
 holochain_serial!(Returnable);
 
 #[no_mangle]
-pub extern "C" fn foo(remote_ptr: RemotePtr) -> RemotePtr {
+pub extern "C" fn foo(remote_ptr: GuestPtr) -> GuestPtr {
  ret!(Returnable(()));
 }
 ```
@@ -419,7 +448,7 @@ pub extern "C" fn foo(remote_ptr: RemotePtr) -> RemotePtr {
 
 ```rust
 #[no_mangle]
-pub extern "C" fn foo(remote_ptr: RemotePtr) -> RemotePtr {
+pub extern "C" fn foo(remote_ptr: GuestPtr) -> GuestPtr {
  ret_err!("oh no!");
 }
 ```
@@ -430,7 +459,7 @@ This works similarly to `?`:
 
 ```rust
 #[no_mangle]
-pub extern "C" fn foo(remote_ptr: RemotePtr) -> RemotePtr {
+pub extern "C" fn foo(remote_ptr: GuestPtr) -> GuestPtr {
  let all_good: () = try_result!(Ok(()), "oh no!");
 
  // we're all good...
@@ -454,11 +483,14 @@ primitives. This basically means that integers are just chunks of binary data
 that allow contextual math operations. For example, nothing in wasm prevents
 us from performing signed and unsigned math operations on the same number. The
 number itself is not signed, it's just that certain math requires the developer
-to adopt consistent _conventions_ in order to write correct code.
+to adopt consistent _conventions_ in order to write correct code. This is a poor
+fit for the Rust mentality that demands _proofs_ at the compiler level, not mere
+conventions.
 
 By contrast, Rust doesn't even let us represent `i64` and `u64` in the same part
 of our codebase, we must always be completely unambiguous about which type every
-value is.
+value is. Moving between `i64` and `u64` requires explicit error handling every
+time.
 
 Wasm floats show some [non-deterministic behaviour](https://webassembly.org/docs/nondeterminism/) in the case of `NaN` values.
 
@@ -509,6 +541,10 @@ the guest (although the host can create a new, separate wasm instance and call
 that). The host must wait for guest calls to complete before calling again and
 the guest must wait for the host to complete before it can continue.
 
+The host _can_ set a single pointer to data in the wasmer `Ctx` context. We use
+this to point to serialized bytes for the return value of a `host_call!()` so
+that the guest can request that the host copy it into a guest-allocated space.
+
 WASM has a hard limit in the spec of 4GB total memory, with 64kb pages.
 Some WASM implementations, notably in some web browsers, limit this further.
 Pages can be added at initialization or dynamically at runtime, but cannot be
@@ -551,63 +587,33 @@ All the following assumes:
 - There is some crate containing all shared rust data types common to both the host and the guest
 
 The fundamental constraint in both direction is that the _sender_ of data knows
-the _length_ of the data and the _recipient_ is managing the memory that data
-will be copied into.
+the _length_ of the data and the _recipient_ can allocate and generate a pointer
+to where the data should be copied to.
 
-Here is a simplified explanation of how we navigate all the limitations above:
+As we will be executing untrusted, potentially malicious, wasm code as a guest
+we also have to require:
 
-- The sender converts `SomeDataType` into `SerializedBytes` of length `len`
-- The sender requests that an allocation of length `len` be made
-- The receiver returns a pointer `ptr` where `len` has been safely allocated (won't be automatically dropped and re-used by Rust)
-- The sender copies `SerializedBytes` to the receiver, notifies the receiver
-- The receiver does an `unsafe` read of `SerializedBytes` out of `ptr` and converts it to `SomeDataType`
-- The receiver notifies the sender that it has a native type with ownership of the bytes
-- The sender drops its copy of the data to free up memory
+- The guest can never force the host to leak data beyond the lifetime of the guest
+- The guest can never force the host to hand it back data outside the guest's own memory
+- The guest can never force the host to write the guest's data outside the guest's own memory
+- If the guest leaks or corrupts memory the leak/corruption is sandboxed to it's own memory
 
-Note though, that the above is _not possible in wasm_ exactly as written as the
-guest has no ability to copy bytes to the host.
+There are 4 basic scenarios that require data negotiation:
 
-What we have instead is a multi-tiered set of data structures that move closer
-to something that can be sent/received in a wasm function in one direction
-(i.e. a wasm `i64`) but are also moving further away from the actual bytes and
-data structures.
+- Input data from the host to the guest
+- Input data from the guest to the host
+- Output data from the host to the guest
+- Output data from the guest to the host
 
-`SomeDataType` > `SerializedBytes` > `Allocation` > `AllocationPtr` > `RemotePtr`
+To handle all of these in each direction without allowing the guest to request
+data on the host at a specific pointer on the host system, or overcomplicating
+the protocol, we embed the length of data inline as a prefix to the allocated
+bytes.
 
-`SomeDataType` represents any shared rust data type in the crate common to both
-the host and the guest, that has a canonical `SerializedBytes` round-trip.
+For example, if we had the bytes `[ 1, 2, 3 ]` this is length `3` so we prefix
+the allocation with the byte representation of `3_u32`.
 
-`SerializedBytes` comes from the `holochain_serialized_bytes` crate and is a
-zero cost wrapper around a `Vec<u8>` that we can copy byte-by-byte in a
-deterministic way.
-
-`Allocation` is a `[u64; 2]` fixed-length slice as `[offset, length]`. This is
-a slice rather than e.g. some kind of encoding scheme in a single `u64` as we
-need the `offset` to be a `u64` to support 64 bit _hosts_. We need something of
-a known, fixed length to move between host/guest in a 'preflight' to co-ordinate
-the copying of bytes of arbitrary length.
-
-`AllocationPtr` is a new type that wraps a single `u64` which is a pointer to
-an `Allocation`. It exists so that we can implement `From` round-trips through
-`SerializedBytes` such that the compiler can give us guide rails around calling
-`mem::ManuallyDrop` and `unsafe { Vec::from_raw_parts() }` symmetrically.
-
-Moving `From<SerializedBytes>` to `AllocationPtr` leaves both the bytes and an
-`Allocation` leaked in memory to be read and manually dropped later.
-
-Moving `From<AllocationPtr>` to `SerializedBytes` drops both the `AllocationPtr`
-and intermediate `Allocation` and gives ownership of the bytes to `SerializedBytes`.
-
-`AllocationPtr` does NOT implement `Clone` _by design_ so that functions are
-forced to take ownership, including `From`. This means the compiler helps us
-achieve 1:1 round-trips everywhere and not read or write to the wrong place.
-
-`RemotePtr` is just a type alias to `u64`. It represents something that can be
-passed across the wasm host/guest boundary either as function inputs or outputs.
-As a Rust primitive we have little ability to extend or control its behaviour
-(e.g. forcing it to not be copied/cloned/reused) so we hide it behind
-`allocation_ptr.as_remote_ptr()` and `AllocationPtr::from_remote_ptr()` methods
-to try and make it as clear as possible when we move to it.
+It would look like `[ 3, 0, 0, 0, 1, 2, 3 ]` because a `u32` is 4 bytes long.
 
 #### How data round trips the host and the guest (details)
 
@@ -616,22 +622,24 @@ returning data from an imported function.
 
 ##### Host calling guest
 
+When the host is calling into the guest it first asks the guest to provide a
+pointer to freshly allocated memory, then copies length prefixed bytes straight
+to this location. The host can then pass the
+
 This is handled via. `host::guest::call()` on the host side and the `host_args!`
 macro on the guest side.
 
 - The host moves `SomeDataType` into `SerializedBytes` on the host using the host allocator
-- The host moves `SerializedBytes` into `AllocationPtr`, leaving the bytes and an `Allocation` leaked on the host
-- The host passes a `RemotePtr` to a guest function
-- The guest receives the `RemotePtr` from the host and calls the `host_args!` macro
-- Internally the guest calls `guest::map_bytes()` with the `RemotePtr`
-- `map_bytes` creates a fake `Allocation` on the guest and passes the `AllocationPtr` for it back to the host
-- The host writes the host `Allocation` (including the host ptr/len) directly over the fake guest `Allocation`
-- The guest allocates `len` bytes based on the host's allocation and now has a guest ptr
-- The guest asks the host to copy `len` bytes from the host's ptr to the guest ptr
-- The host drops its copy of the bytes and the `Allocation` that were leaked, after writing them to the guest
-- The guest can now build a meaningful `Allocation` and `AllocationPtr` from the `len` and guest ptr
-- The guest uses the populated `AllocationPtr` to build `SerializedBytes`
-- The guest attempts to build `SomeDataType` from the `SerializedBytes`
+- The host calculates the `u32` length of the serialized data
+- The host asks the guest to `__allocate` the length
+- The guest (inside `__allocate`) allocates length + 4 bytes and returns a `GuestPtr` to the host
+- The host checks that the `GuestPtr` + data + 4 bytes fits in the guest's memory bounds
+- The host writes the length as 4 bytes at `GuestPtr` then writes the rest of the data into the guest memory
+- The host calls the function it wants to call in the guest, passing in the `GuestPtr`
+- The guest receives the `GuestPtr` and passes it to the `host_args!` macro
+- The `host_args!` macro inside the guest reads the length prefix out of the guest's memory at `GuestPtr`
+- The guest deserializes `length` bytes from `guest_ptr + 4` into whatever input type it was expecting
+- The deserialization process takes ownership of the bytes inside the guest so rust will handle cleanup from here
 
 ##### Guest returning to host
 
@@ -649,11 +657,11 @@ host only needs to line up `SomeDataType` of the guest inner return value with
 the `host::guest::call()` return value.
 
 - The guest calls one of the `ret!` style macros with `SomeDataType`
-- Internal to `ret!` et. al. a `WasmResult` is built out of (maybe) `SerializedBytes` or just an error, leaving data leaked on the guest
-- The macro returns a `RemotePtr` to the host
-- The host reads `Allocation` and `SerializedBytes` directly from the host shared memory (see below)
-- The host calls the `__deallocate_return_value` function inside the guest with the same guest `RemotePtr`
-- The guest frees the data leaked earlier
+- Internal to `ret!` et. al. a `WasmResult` is built out of (maybe) `SerializedBytes` or just an error
+- The `WasmResult` bytes are length-prefixed and leaked into the guest
+- The guest returns a `GuestPtr` to the host to the prefixed+leaked bytes
+- The host copies the length prefix from the `GuestPtr` and deserializes the `WasmResult`
+- The host calls `__deallocate` so that the guest can cleanup the leaked data
 - The host does a `try_into()` from the _inner_ `SerializedBytes` _if_ the return was a `WasmResult::Ok<SerializedBytes>`
 
 ##### Guest calling host
@@ -661,18 +669,18 @@ the `host::guest::call()` return value.
 On the guest side this is the first half of the `host_call!` macro.
 
 The host side uses the `host::guest::from_guest_ptr()` function that reads bytes
-straight from the shared memory based on a `RemotePtr` the guest passes to the
+straight from the shared memory based on a `GuestPtr` the guest passes to the
 host.
 
 - The guest moves `SomeDataType` into `SerializedBytes`
-- The guest moves `SerializedBytes` into an `AllocationPtr` with leaked bytes and `Allocation` on the guest
-- The guest calls the host with `RemotePtr` from its `AllocationPtr`
-- The host reads `Allocation` directly from the guest memory using `RemotePtr`, it can do this because `Allocation` is of known length (2x `u64`)
-- The host reads the bytes directly from the guest memory using the offset/length it read from the guest `Allocation`
-- The host builds `SerializedBytes` from the bytes it read from the guest
-- The host builds `SomeDataType` from `SerializedBytes` and treats it as the input to the imported host function
-- Note: due to a limitation in wasmer it is not possible for the host to call back into the host during an imported function call, so at this point bytes and `Allocation` are still leaked on the guest with no way to free them
-- After the host call returns, the `host_call!` macro frees the previously leaked bytes and `Allocation`
+- The guest length-prefixes and leaks the `SerializedBytes` to get a `GuestPtr`
+- The guest calls the host function with the `GuestPtr`
+- The host reads the length from the guest pointer and deserializes `SomeDataType` from the guest's memory
+- Note: due to a limitation in wasmer it is not possible for the host to call
+  back into the guest during an imported function call, so at this point the
+  input is still leaked on the guest
+- After the host call returns, the `host_call!` macro frees the previously
+  leaked bytes on the guest side
 
 ##### Host returning data from imported function to guest
 
@@ -686,8 +694,50 @@ this alongside the HDK and internal workflow implementations.
 - The host function does whatever it does as native rust
 - The host function return value is `SomeDataType`
 - The host converts the return value to `SerializedBytes`
-- The host converts the `SerializedBytes` to an `AllocationPtr` with leaked bytes and `Allocation`
-- The host returns a `RemotePtr` to the guest
-- The guest, as part of the `host_call!` macro, calls `map_bytes`
-- `map_bytes` functions as explained above, freeing the bytes and `Allocation` from the host and giving `SerializedBytes` to the guest
-- The guest converts `SerializedBytes` into `SomeDataType` and does a `try_into()` straight out of `host_call!`
+- The host wraps the `SerializedBytes` in a `Box`
+- The host leaks the `Box` with `Box::into_raw()` to get a host-side pointer
+- The host stores the pointer to the serialized bytes in `Ctx.data`
+- The host returns the _length_ of the serialized data to the guest
+- The guest allocates length prefix + length bytes based on the return of the host call
+- Note at this point a malicious guest could leave data leaked on the host, see
+  below for how this is mitigated
+- An honest guest will then call `__import_data` on the host with the `GuestPtr`
+  the guest just allocated based on the length the host returned from the host call
+- The host, inside `__import_data` restores the `Box` with `Box::from_raw()`
+- The host copies the serialized data from inside the `Box` into the guest, with a length prefix
+- The host resets `Ctx.data` to the null pointer and rust drops the `Box` to cleanup the leak
+- The guest now uses the `GuestPtr` it passed to the host to read the bytes copied
+  in from the `Box` and deserializes it to `SomeDataType`
+
+###### Mitigating leaked data on the host side
+
+There is a `crate::import::free_context_data` function that guards against
+a malicious or poorly coded guest calling a host function and never requesting
+the result.
+
+This is very simple, if `Ctx.data` is not a null pointer it will attempt to
+restore a `Box<SerializedBytes>::from_raw()` from whatever is there, which will
+take ownership and drop it as per normal Rust.
+
+This is called interally to `crate::import::set_context_data` as well, to guard
+against bad code setting new context data without first freeing some previously
+leaked data that hasn't been consumed.
+
+Wasmer instances support a `data_finalizer` which can cleanup leaked data.
+
+From the wasmer docs:
+
+> If there's a function set in this field, it gets called when the context is
+> destructed, e.g. when an Instance is dropped.
+
+This means that if `free_context_data` is set as the `data_finalizer` it
+enforces that data leaked by a guest cannot outlive the guest itself.
+
+Setting the `data_finalizer` looks like this:
+
+```rust
+instance.context_mut().data_finalizer = Some(free_context_data);
+```
+
+Generally though, you should just use `holochain_wasmer_host::instantiate::instantiate()`
+to build wasmer instances as it includes the `data_finalizer` logic for safety.

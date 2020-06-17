@@ -6,6 +6,8 @@ version = "0.0.31"
 authors = [ "thedavidmeister", "thedavidmeister@gmail.com" ]
 edition = "2018"
 
+[workspace]
+
 [lib]
 name = "holochain_wasmer_guest"
 crate-type = [ "cdylib", "rlib" ]
@@ -13,5 +15,5 @@ path = "src/guest.rs"
 
 [dependencies]
 holochain_wasmer_common = { version = "=0.0.31", path = "../common" }
-holochain_serialized_bytes = { git = "https://github.com/holochain/holochain-serialization", branch = "2020-06-06-serde-bytes" }
+holochain_serialized_bytes = "=0.0.40"
 serde = "=1.0.104"

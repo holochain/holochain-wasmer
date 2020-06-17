@@ -1,54 +1,64 @@
 pub mod import;
-pub mod load_wasm;
+pub mod wasms;
 
 extern crate holochain_serialized_bytes;
 
+use holochain_wasmer_host::import::set_context_data;
 use holochain_wasmer_host::prelude::*;
 use test_common::SomeStruct;
 use test_common::StringType;
 
-fn test_process_string(ctx: &mut Ctx, guest_ptr: RemotePtr) -> Result<RemotePtr, WasmError> {
+fn test_process_string(ctx: &mut Ctx, guest_ptr: GuestPtr) -> Result<Len, WasmError> {
     let processed_string: StringType = guest::from_guest_ptr(ctx, guest_ptr)?;
     let processed_string = format!("host: {}", String::from(processed_string));
     let sb: SerializedBytes = StringType::from(processed_string).try_into()?;
-    let allocation_pointer: AllocationPtr = sb.into();
-    Ok(allocation_pointer.as_remote_ptr())
+    Ok(set_context_data(ctx, sb))
 }
 
-fn test_process_struct(ctx: &mut Ctx, guest_ptr: RemotePtr) -> Result<RemotePtr, WasmError> {
+fn test_process_struct(ctx: &mut Ctx, guest_ptr: GuestPtr) -> Result<Len, WasmError> {
     let mut some_struct: SomeStruct = guest::from_guest_ptr(ctx, guest_ptr)?;
     some_struct.process();
     let sb: SerializedBytes = some_struct.try_into()?;
-    let allocation_ptr: AllocationPtr = sb.into();
-    Ok(allocation_ptr.as_remote_ptr())
+    Ok(set_context_data(ctx, sb))
 }
 
-fn debug(_ctx: &mut Ctx, some_number: Ptr) -> Result<RemotePtr, WasmError> {
+fn debug(_ctx: &mut Ctx, some_number: WasmSize) -> Result<Len, WasmError> {
     println!("debug {:?}", some_number);
     Ok(0)
+}
+
+fn pages(ctx: &mut Ctx, _: WasmSize) -> Result<WasmSize, WasmError> {
+    Ok(ctx.memory(0).size().0)
 }
 
 #[cfg(test)]
 pub mod tests {
 
     use crate::import::import_object;
-    use crate::load_wasm::load_wasm;
+    use crate::wasms;
     use holochain_wasmer_host::prelude::*;
     use test_common::SomeStruct;
     use test_common::StringType;
 
     #[test]
-    fn smoke_module() {
-        let wasm = load_wasm();
+    fn bytes_round_trip() {
+        let wasm = wasms::MEMORY;
         let module: Module = module(&wasm, &wasm).unwrap();
-        assert!(module
-            .info()
-            .exports
-            .contains_key("__deallocate_return_value"));
+
+        let mut instance = module.instantiate(&import_object()).unwrap();
+
+        let _: () = guest::call(&mut instance, "bytes_round_trip", ()).unwrap();
+    }
+
+    #[test]
+    fn smoke_module() {
+        let wasm = wasms::TEST;
+        let module: Module = module(&wasm, &wasm).unwrap();
+        assert!(module.info().exports.contains_key("__allocate"));
     }
 
     fn test_instance() -> Instance {
-        let wasm = load_wasm();
+        let wasm = wasms::TEST;
         instantiate(&wasm, &wasm, &import_object()).expect("build test instance")
     }
 
