@@ -1,16 +1,16 @@
 [package]
-name = "test_common"
+name = "test_wasm"
 version = "0.0.31"
 authors = [ "thedavidmeister", "thedavidmeister@gmail.com" ]
 edition = "2018"
 
 [lib]
-name = "test_common"
+name = "test_wasm"
 crate-type = [ "cdylib", "rlib" ]
-path = "src/common.rs"
+path = "src/wasm.rs"
 
 [dependencies]
-holochain_wasmer_common = { path = "../../crates/common" }
+holochain_wasmer_guest = { path = "../../crates/guest" }
+test_common = { version = "=0.0.31", path = "../common" }
 holochain_serialized_bytes = "=0.0.40"
 serde = "=1.0.104"
-serde_bytes = "0.11"

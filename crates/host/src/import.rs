@@ -1,42 +1,37 @@
 use crate::guest;
 use crate::prelude::*;
-use byte_slice_cast::AsByteSlice;
-use std::io::Read;
 use wasmer_runtime::Ctx;
 
-/// import an allocation from the host to the guest
-/// - the guest allocation pointer must be preallocated
-/// - the host allocation pointer must point to a valid allocation
-pub fn __import_allocation(
-    ctx: &mut Ctx,
-    guest_allocation_ptr: RemotePtr,
-    host_allocation_ptr: RemotePtr,
-) {
-    // we do NOT want to deallocate the Allocation for the AllocationPtr so we peek instead of into
-    // this is because __import_bytes needs to use the exact same Allocation in memory
-    let host_allocation: allocation::Allocation =
-        AllocationPtr::from_remote_ptr(host_allocation_ptr).peek_allocation();
+pub fn __import_data(ctx: &mut Ctx, guest_ptr: GuestPtr) -> Result<(), WasmError> {
+    if !ctx.data.is_null() {
+        let b: Box<SerializedBytes> = unsafe { Box::from_raw(ctx.data as _) };
+        guest::write_bytes(ctx, guest_ptr, &*b.bytes())?;
+    }
+    ctx.data = std::ptr::null::<SerializedBytes>() as _;
+    Ok(())
+}
 
-    let memory = ctx.memory(0);
-
-    for (byte, cell) in host_allocation.as_byte_slice().bytes().zip(
-        memory.view()[guest_allocation_ptr as _
-            ..(guest_allocation_ptr + allocation::ALLOCATION_BYTES_ITEMS as Ptr) as _]
-            .iter(),
-    ) {
-        // expect here because:
-        // - on the host side rust backtraces work properly
-        // - failing to write to pre-allocated memory should never happen
-        // - results are not FFI safe so not compatible with wasm imports
-        cell.set(byte.expect("a byte did not exist while writing to guest"));
+/// always call this before setting and after using a context
+/// it guards against badly behaved host/guest logic by freeing any previously leaked data pointed
+/// at by the context data
+#[allow(unused_assignments)]
+pub fn free_context_data(data: *mut std::ffi::c_void) {
+    if !data.is_null() {
+        // unleak the old contents on the assumption that it is SerializedBytes
+        // this assumption basically assumes that the only thing setting context data is the
+        // set_context_data function below
+        let _: Box<SerializedBytes> = unsafe { Box::from_raw(data as _) };
     }
 }
 
-/// import bytes from the host allocation pointer to the guest bytes pointer
-/// - the host allocation pointer must point to the allocation for the bytes to copy
-/// - the guest bytes pointer must point to preallocated space with the correct length
-pub fn __import_bytes(ctx: &mut Ctx, host_allocation_ptr: RemotePtr, guest_bytes_ptr: RemotePtr) {
-    let serialized_bytes: SerializedBytes =
-        AllocationPtr::from_remote_ptr(host_allocation_ptr).into();
-    guest::write_bytes(ctx, guest_bytes_ptr, serialized_bytes);
+pub fn set_context_data(ctx: &mut Ctx, serialized_bytes: SerializedBytes) -> Len {
+    // guard against the situation where some bad code sets a new Ctx.data value while some other
+    // data is leaked in memory, free it before setting a new value
+    free_context_data(ctx.data);
+
+    // leak the provided serialized bytes into the context data so it can be imported later
+    let len = serialized_bytes.bytes().len();
+    let b = Box::new(serialized_bytes);
+    ctx.data = Box::into_raw(b) as _;
+    len as Len
 }
