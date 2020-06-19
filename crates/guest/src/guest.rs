@@ -37,7 +37,6 @@ macro_rules! holochain_externs {
             __property,
             __query,
             __remove_link,
-            __send,
             __sign,
             __schedule,
             __update_entry,
