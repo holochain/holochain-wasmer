@@ -47,7 +47,7 @@ macro_rules! holochain_externs {
             __get_links,
             __get_entry,
             __entry_type_properties,
-            __entry_address,
+            __entry_hash,
             __sys_time,
             __debug
         );
