@@ -14,7 +14,6 @@ pub fn module<P: Into<PathBuf>>(
     wasm: &[u8],
     cache_path: Option<P>,
 ) -> Result<Module, WasmError> {
-    // @TODO figure out how best to use the file system
     let mut cache = MemoryFallbackFileSystemCache::new(cache_path)
         .map_err(|e| WasmError::Compile(e.to_string()))?;
     let key = WasmHash::generate(cache_key_bytes);
