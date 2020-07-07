@@ -13,7 +13,7 @@ use std::sync::Mutex;
 
 lazy_static! {
     static ref HASHCACHE: Mutex<HashMap<String, HashMap<WasmHash, Module>>> =
-        { Mutex::new(HashMap::new()) };
+        Mutex::new(HashMap::new());
 }
 
 pub struct MemoryFallbackFileSystemCache {

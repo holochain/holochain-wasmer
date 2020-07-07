@@ -43,7 +43,7 @@ pub mod tests {
     #[test]
     fn bytes_round_trip() {
         let wasm = wasms::MEMORY;
-        let module: Module = module(&wasm, &wasm).unwrap();
+        let module: Module = module::<String>(&wasm, &wasm, None).unwrap();
 
         let mut instance = module.instantiate(&import_object()).unwrap();
 
@@ -53,13 +53,13 @@ pub mod tests {
     #[test]
     fn smoke_module() {
         let wasm = wasms::TEST;
-        let module: Module = module(&wasm, &wasm).unwrap();
+        let module: Module = module::<String>(&wasm, &wasm, None).unwrap();
         assert!(module.info().exports.contains_key("__allocate"));
     }
 
     fn test_instance() -> Instance {
         let wasm = wasms::TEST;
-        instantiate(&wasm, &wasm, &import_object()).expect("build test instance")
+        instantiate::<String>(&wasm, &wasm, &import_object(), None).expect("build test instance")
     }
 
     #[test]
