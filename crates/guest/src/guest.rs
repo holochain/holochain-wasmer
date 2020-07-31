@@ -27,7 +27,7 @@ macro_rules! holochain_externs {
     () => {
         $crate::memory_externs!();
         $crate::host_externs!(
-            __globals,
+            __agent_info,
             __call,
             __capability,
             __commit_entry,
@@ -49,7 +49,8 @@ macro_rules! holochain_externs {
             __entry_type_properties,
             __entry_hash,
             __sys_time,
-            __debug
+            __debug,
+            __zome_info
         );
     };
 }
