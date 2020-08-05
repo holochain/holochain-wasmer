@@ -146,7 +146,7 @@ pub mod tests {
             guest::call(&mut test_instance(), "try_result_fails_fast", ());
         match fail_result {
             Err(wasm_error) => {
-                assert_eq!(WasmError::Zome("it fails!".into()), wasm_error,);
+                assert_eq!(WasmError::Zome("it fails!: ()".into()), wasm_error,);
             }
             Ok(_) => unreachable!(),
         };
