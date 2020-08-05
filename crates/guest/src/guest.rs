@@ -28,6 +28,7 @@ macro_rules! holochain_externs {
         $crate::memory_externs!();
         $crate::host_externs!(
             __agent_info,
+            __call_remote,
             __call,
             __capability,
             __commit_entry,
