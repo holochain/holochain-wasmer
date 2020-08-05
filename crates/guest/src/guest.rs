@@ -192,7 +192,6 @@ macro_rules! try_result {
     ( $e:expr, $fail:expr ) => {{
         match $e {
             Ok(v) => v,
-            Err(()) => $crate::ret_err!($fail),
             Err(e) => $crate::ret_err!(format!("{}: {:?}", $fail, e)),
         }
     }};
