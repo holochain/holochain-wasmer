@@ -18,10 +18,11 @@ pub fn wasm_instance(c: &mut Criterion) {
             &wasm,
             |b, &wasm| {
                 b.iter(|| {
-                    holochain_wasmer_host::instantiate::instantiate(
+                    holochain_wasmer_host::instantiate::instantiate::<String>(
                         &vec![0],
                         wasm,
                         &wasmer_runtime::imports!(),
+                        None
                     )
                     .unwrap();
                 });
@@ -36,10 +37,11 @@ pub fn wasm_instance(c: &mut Criterion) {
 pub fn wasm_call(c: &mut Criterion) {
     let mut group = c.benchmark_group("wasm_call");
 
-    let mut instance = holochain_wasmer_host::instantiate::instantiate(
+    let mut instance = holochain_wasmer_host::instantiate::instantiate::<String>(
         &vec![1],
         wasms::IO,
         &test::import::memory_only(),
+        None
     )
     .unwrap();
 
@@ -100,10 +102,11 @@ pub fn wasm_call(c: &mut Criterion) {
 pub fn wasm_call_n(c: &mut Criterion) {
     let mut group = c.benchmark_group("wasm_call_n");
 
-    let mut instance = holochain_wasmer_host::instantiate::instantiate(
+    let mut instance = holochain_wasmer_host::instantiate::instantiate::<String>(
         &vec![1],
         wasms::IO,
         &test::import::memory_only(),
+        None
     )
     .unwrap();
 
@@ -147,10 +150,11 @@ pub fn wasm_call_n(c: &mut Criterion) {
 pub fn test_process_string(c: &mut Criterion) {
     let mut group = c.benchmark_group("test_process_string");
 
-    let mut instance = holochain_wasmer_host::instantiate::instantiate(
+    let mut instance = holochain_wasmer_host::instantiate::instantiate::<String>(
         &vec![2],
         wasms::TEST,
         &test::import::import_object(),
+        None
     )
     .unwrap();
 
