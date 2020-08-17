@@ -34,6 +34,7 @@ macro_rules! holochain_externs {
             __commit_entry,
             __decrypt,
             __encrypt,
+            __random_bytes,
             __show_env,
             __property,
             __query,
@@ -52,7 +53,8 @@ macro_rules! holochain_externs {
             __entry_hash,
             __sys_time,
             __debug,
-            __zome_info
+            __zome_info,
+            __unreachable
         );
     };
 }
