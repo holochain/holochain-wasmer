@@ -22,7 +22,7 @@ pub fn wasm_instance(c: &mut Criterion) {
                         &vec![0],
                         wasm,
                         &wasmer_runtime::imports!(),
-                        None
+                        None,
                     )
                     .unwrap();
                 });
@@ -41,7 +41,7 @@ pub fn wasm_call(c: &mut Criterion) {
         &vec![1],
         wasms::IO,
         &test::import::memory_only(),
-        None
+        None,
     )
     .unwrap();
 
@@ -106,7 +106,7 @@ pub fn wasm_call_n(c: &mut Criterion) {
         &vec![1],
         wasms::IO,
         &test::import::memory_only(),
-        None
+        None,
     )
     .unwrap();
 
@@ -154,7 +154,7 @@ pub fn test_process_string(c: &mut Criterion) {
         &vec![2],
         wasms::TEST,
         &test::import::import_object(),
-        None
+        None,
     )
     .unwrap();
 
