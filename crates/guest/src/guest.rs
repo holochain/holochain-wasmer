@@ -43,7 +43,7 @@ macro_rules! holochain_externs {
             __schedule,
             __update_entry,
             __emit_signal,
-            __remove_entry,
+            __delete_entry,
             __link_entries,
             __keystore,
             __get_links,
