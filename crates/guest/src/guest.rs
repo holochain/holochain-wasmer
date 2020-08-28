@@ -33,8 +33,6 @@ macro_rules! holochain_externs {
             __capability_claims,
             __capability_grants,
             __capability_info,
-            __commit_capability_claim,
-            __commit_capability_grant,
             __commit_entry,
             __decrypt,
             __encrypt,
