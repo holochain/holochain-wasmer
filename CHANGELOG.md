@@ -30,7 +30,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Security
 
-## [0.0.43] - 2020-08-26
+## [0.0.45] - 2020-08-26
 
 ### Added
 
