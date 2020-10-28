@@ -50,6 +50,7 @@ macro_rules! holochain_externs {
             __keystore,
             __get_links,
             __get_link_details,
+            __get_agent_activity,
             __get,
             __get_details,
             __entry_type_properties,
