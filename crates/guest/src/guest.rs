@@ -57,7 +57,7 @@ macro_rules! holochain_externs {
             __delete_link,
             __update,
             __delete,
-            __schedule,
+            __schedule
         );
     };
 }
