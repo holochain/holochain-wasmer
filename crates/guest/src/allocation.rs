@@ -1,7 +1,7 @@
 use holochain_wasmer_common::*;
 use std::mem;
 
-/// attempt to extract the length at the given guest_ptr
+/// Attempt to extract the length at the given guest_ptr.
 //. note that the guest_ptr could point at garbage and the "length prefix" would be garbage and
 //. then some arbitrary memory would be referenced so not erroring does not imply safety
 pub fn length_prefix_at_guest_ptr(guest_ptr: GuestPtr) -> Result<Len, WasmError> {

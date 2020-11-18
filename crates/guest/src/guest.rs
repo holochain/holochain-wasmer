@@ -105,44 +105,33 @@ macro_rules! host_args {
     }};
 }
 
-#[macro_export]
-macro_rules! host_call {
-    ( $func_name:ident, $input:expr ) => {{
-        use std::convert::TryInto;
-        let maybe_sb: std::result::Result<
-            $crate::holochain_serialized_bytes::SerializedBytes,
-            $crate::holochain_serialized_bytes::SerializedBytesError,
-        > = $input.try_into();
-        match maybe_sb {
-            std::result::Result::Ok(sb) => {
-                // call the host function and receive the length of the serialized result
-                let input_guest_ptr = $crate::allocation::write_bytes(sb.bytes()).unwrap();
-                let result_len: $crate::Len = unsafe { $func_name(input_guest_ptr) };
+pub fn host_call<'a, I: 'a, O>(
+    f: unsafe extern "C" fn(GuestPtr) -> Len,
+    payload: &'a I,
+) -> Result<O, crate::WasmError>
+where
+    SerializedBytes: TryFrom<&'a I, Error = SerializedBytesError>,
+    O: TryFrom<SerializedBytes, Error = holochain_serialized_bytes::SerializedBytesError>,
+{
+    let sb = SerializedBytes::try_from(payload)?;
 
-                // free the leaked bytes from the input to the host function
-                $crate::allocation::__deallocate(input_guest_ptr);
+    // Call the host function and receive the length of the serialized result.
+    let input_guest_ptr = crate::allocation::write_bytes(sb.bytes())?;
+    let result_len: Len = unsafe { f(input_guest_ptr) };
 
-                // prepare a GuestPtr for the host to write into
-                let guest_ptr: GuestPtr = $crate::allocation::__allocate(result_len);
+    // Free the leaked bytes from the input to the host function.
+    crate::allocation::__deallocate(input_guest_ptr);
 
-                // ask the host to populate the result allocation pointer with its result
-                unsafe {
-                    __import_data(guest_ptr);
-                };
+    // Prepare a GuestPtr for the host to write into.
+    let output_guest_ptr: GuestPtr = crate::allocation::__allocate(result_len);
 
-                match $crate::allocation::consume_bytes(guest_ptr) {
-                    Ok(result_bytes) => {
-                        let result_sb = $crate::holochain_serialized_bytes::SerializedBytes::from(
-                            $crate::holochain_serialized_bytes::UnsafeBytes::from(result_bytes),
-                        );
-                        result_sb.try_into()
-                    }
-                    Err(e) => unimplemented!(),
-                }
-            }
-            std::result::Result::Err(e) => Err(e),
-        }
-    }};
+    // Ask the host to populate the result allocation pointer with its result.
+    unsafe { __import_data(output_guest_ptr) };
+
+    // Deserialize the host bytes into the output type.
+    Ok(O::try_from(SerializedBytes::from(UnsafeBytes::from(
+        crate::allocation::consume_bytes(output_guest_ptr)?,
+    )))?)
 }
 
 #[macro_export]

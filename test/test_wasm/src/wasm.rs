@@ -21,7 +21,7 @@ pub fn result_support() -> Result<(), WasmError> {
     // want to show here that host_call!() supports the ? operator
     // this is needed if we are to call host functions outside the externed functions that can only
     // return AllocationPtrs
-    let _: SomeStruct = host_call!(__noop, ())?;
+    let _: SomeStruct = host_call(__noop, &())?;
 
     Ok(())
 }
@@ -44,7 +44,7 @@ pub extern "C" fn process_string(guest_ptr: GuestPtr) -> GuestPtr {
 
     let s = StringType::from(format!("guest: {}", String::from(s)));
     let s: StringType = try_result!(
-        host_call!(__test_process_string, s),
+        host_call(__test_process_string, &s),
         "could not __test_process_string"
     );
     ret!(s);
@@ -54,7 +54,7 @@ pub extern "C" fn process_string(guest_ptr: GuestPtr) -> GuestPtr {
 pub extern "C" fn process_native(guest_ptr: GuestPtr) -> GuestPtr {
     let input: SomeStruct = host_args!(guest_ptr);
     let processed: SomeStruct = try_result!(
-        host_call!(__test_process_struct, input),
+        host_call(__test_process_struct, &input),
         "could not deserialize SomeStruct in process_native"
     );
     ret!(processed);
