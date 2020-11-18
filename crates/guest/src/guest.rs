@@ -7,7 +7,7 @@ pub use holochain_wasmer_common::*;
 macro_rules! memory_externs {
     () => {
         extern "C" {
-            // memory stuff
+            // Memory stuff.
             fn __import_data(guest_allocation_ptr: $crate::GuestPtr);
         }
     };
@@ -65,13 +65,14 @@ macro_rules! holochain_externs {
 holochain_externs!();
 
 #[macro_export]
-/// given a guest allocation pointer and a type that implements TryFrom<SerializedBytes>
+/// Given a guest allocation pointer and a type that implements TryFrom<SerializedBytes>
 /// - restore SerializedBytes from the guest pointer
 /// - try to deserialize the given type from the restored SerializedBytes
 /// - if the deserialization fails, short circuit (return early) with a WasmError
 /// - if everything is Ok, return the restored data as a native rust type inside the guest
-/// this works by assuming the host as already populated the guest pointer with the correct data
-/// ahead of time
+///
+/// This works by assuming the host as already populated the guest pointer with the correct data
+/// ahead of time.
 macro_rules! host_args {
     ( $ptr:ident ) => {{
         use core::convert::TryInto;
@@ -97,7 +98,7 @@ macro_rules! host_args {
                 let sb = $crate::holochain_serialized_bytes::SerializedBytes::try_from(
                     $crate::result::WasmResult::Err($crate::result::WasmError::SerializedBytes(e)),
                 )
-                // should be impossible to fail to serialize a simple enum variant
+                // Should be impossible to fail to serialize a simple enum variant.
                 .unwrap();
                 return $crate::allocation::write_bytes(sb.bytes()).unwrap();
             }
