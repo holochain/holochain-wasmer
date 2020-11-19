@@ -35,7 +35,7 @@ dependencies = [
 
 [[package]]
 name = "holochain_wasmer_common"
-version = "0.0.48"
+version = "0.0.49"
 dependencies = [
  "holochain_serialized_bytes 0.0.45 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde 1.0.104 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -44,10 +44,10 @@ dependencies = [
 
 [[package]]
 name = "holochain_wasmer_guest"
-version = "0.0.48"
+version = "0.0.49"
 dependencies = [
  "holochain_serialized_bytes 0.0.45 (registry+https://github.com/rust-lang/crates.io-index)",
- "holochain_wasmer_common 0.0.48",
+ "holochain_wasmer_common 0.0.49",
  "serde 1.0.104 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
@@ -220,23 +220,23 @@ dependencies = [
 
 [[package]]
 name = "test_common"
-version = "0.0.48"
+version = "0.0.49"
 dependencies = [
  "holochain_serialized_bytes 0.0.45 (registry+https://github.com/rust-lang/crates.io-index)",
- "holochain_wasmer_common 0.0.48",
+ "holochain_wasmer_common 0.0.49",
  "serde 1.0.104 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde_bytes 0.11.5 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]
 name = "test_wasm_memory"
-version = "0.0.48"
+version = "0.0.49"
 dependencies = [
  "holochain_serialized_bytes 0.0.45 (registry+https://github.com/rust-lang/crates.io-index)",
- "holochain_wasmer_guest 0.0.48",
+ "holochain_wasmer_guest 0.0.49",
  "paste 0.1.16 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde 1.0.104 (registry+https://github.com/rust-lang/crates.io-index)",
- "test_common 0.0.48",
+ "test_common 0.0.49",
 ]
 
 [[package]]
