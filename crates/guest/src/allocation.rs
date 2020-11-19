@@ -1,9 +1,9 @@
 use holochain_wasmer_common::*;
 use std::mem;
 
-/// attempt to extract the length at the given guest_ptr
-//. note that the guest_ptr could point at garbage and the "length prefix" would be garbage and
-//. then some arbitrary memory would be referenced so not erroring does not imply safety
+/// Attempt to extract the length at the given guest_ptr.
+//. Note that the guest_ptr could point at garbage and the "length prefix" would be garbage and
+//. then some arbitrary memory would be referenced so not erroring does not imply safety.
 pub fn length_prefix_at_guest_ptr(guest_ptr: GuestPtr) -> Result<Len, WasmError> {
     let len_bytes: &[u8] =
         unsafe { std::slice::from_raw_parts(guest_ptr as *const u8, std::mem::size_of::<Len>()) };
@@ -12,8 +12,8 @@ pub fn length_prefix_at_guest_ptr(guest_ptr: GuestPtr) -> Result<Len, WasmError>
 }
 
 #[no_mangle]
-/// allocate a length __plus a length prefix__ in bytes that won't be dropped by the allocator
-/// return the pointer to it so a length prefix + bytes can be written to the allocation
+/// Allocate a length __plus a length prefix__ in bytes that won't be dropped by the allocator.
+/// Return the pointer to it so a length prefix + bytes can be written to the allocation.
 pub extern "C" fn __allocate(len: Len) -> GuestPtr {
     let dummy: Vec<u8> = Vec::with_capacity((len + std::mem::size_of::<Len>() as Len) as usize);
     let ptr = dummy.as_ptr() as GuestPtr;
@@ -21,24 +21,24 @@ pub extern "C" fn __allocate(len: Len) -> GuestPtr {
     ptr
 }
 
-/// free a length-prefixed allocation
-/// needed because we leak memory every time we call __allocate and write_bytes
+/// Free a length-prefixed allocation.
+/// Needed because we leak memory every time we call `__allocate` and `write_bytes`.
 #[no_mangle]
 pub extern "C" fn __deallocate(guest_ptr: GuestPtr) {
-    // failing to deallocate when requested is unrecoverable
+    // Failing to deallocate when requested is unrecoverable.
     let len = length_prefix_at_guest_ptr(guest_ptr).unwrap() + std::mem::size_of::<Len>() as Len;
     let _: Vec<u8> =
         unsafe { Vec::from_raw_parts(guest_ptr as *mut u8, len as usize, len as usize) };
 }
 
-/// attempt to consume bytes out of a length-prefixed allocation at the given pointer position
+/// Attempt to consume bytes out of a length-prefixed allocation at the given pointer position.
 ///
-/// consume in this context means take ownership of previously forgotten data
+/// Consume in this context means take ownership of previously forgotten data.
 ///
-/// this needs to work for bytes written into the guest from the host and for bytes written with
-/// the write_bytes() function within the guest
+/// This needs to work for bytes written into the guest from the host and for bytes written with
+/// the write_bytes() function within the guest.
 pub fn consume_bytes(guest_ptr: GuestPtr) -> Result<Vec<u8>, WasmError> {
-    // the Vec safety requirements are much stricter than a simple slice:
+    // The Vec safety requirements are much stricter than a simple slice:
     //
     // - the pointer must have been generated with Vec/String on the same allocator
     //   - yes: the guest always creates its own GuestPtr for vector allocations, note that if we
@@ -54,14 +54,14 @@ pub fn consume_bytes(guest_ptr: GuestPtr) -> Result<Vec<u8>, WasmError> {
     //     prefix directly then we end up with MemoryOutOfBounds exceptions down the line
     // - @see https://doc.rust-lang.org/std/vec/struct.Vec.html#safety
     //
-    // for example, this did _not_ work and leads to memory related panics down the line:
+    // For example, this did _not_ work and leads to memory related panics down the line:
     // let v: Vec<u8> = Vec::from_raw_parts(
     //     (guest_ptr + std::mem::size_of::<Len>() as Len) as *mut u8,
     //     len as usize,
     //     (len + std::mem::size_of::<Len>() as Len) as usize,
     // );
 
-    // we need the same length used to allocate the vector originally, so it includes the prefix
+    // We need the same length used to allocate the vector originally, so it includes the prefix
     let len = length_prefix_at_guest_ptr(guest_ptr)? + std::mem::size_of::<Len>() as Len;
     let mut v: Vec<u8> = unsafe {
         Vec::from_raw_parts(
@@ -74,35 +74,35 @@ pub fn consume_bytes(guest_ptr: GuestPtr) -> Result<Vec<u8>, WasmError> {
         )
     };
     Ok(
-        // this leads to an additional allocation for a new vector starting after the length prefix
+        // This leads to an additional allocation for a new vector starting after the length prefix
         // the old vector will be dropped and cleaned up by the allocator after this call
-        // the split off bytes will take ownership moving forward
+        // the split off bytes will take ownership moving forward.
         //
-        // note that we could have tried to do something with std::slice::from_raw_parts() in this
+        // Note that we could have tried to do something with std::slice::from_raw_parts() in this
         // function but we'd still need a new allocation at the point of slice.to_vec() and then
-        // we'd need to manually free whatever the slice was pointing at
+        // we'd need to manually free whatever the slice was pointing at.
         v.split_off(std::mem::size_of::<Len>()),
     )
 }
 
-/// attempt to write a slice of bytes into a length prefixed allocation
+/// Attempt to write a slice of bytes into a length prefixed allocation.
 ///
-/// this is identical to the following:
+/// This is identical to the following:
 /// - host has some slice of bytes
 /// - host calls __allocate with the slice length
 /// - guest returns GuestPtr to the host
 /// - host writes a length prefix and the slice bytes into the guest at GuestPtr location
 /// - host hands the GuestPtr back to the guest
 ///
-/// in this case everything happens within the guest and a GuestPtr is returned if successful
+/// In this case everything happens within the guest and a GuestPtr is returned if successful.
 ///
-/// this also leaks the written bytes, exactly like the above process
+/// This also leaks the written bytes, exactly like the above process.
 ///
-/// this facilitates the guest handing a GuestPtr back to the host as the _return_ value of guest
-/// functions so that the host can read the _output_ of guest logic from a length-prefixed pointer
+/// This facilitates the guest handing a GuestPtr back to the host as the _return_ value of guest
+/// functions so that the host can read the _output_ of guest logic from a length-prefixed pointer.
 ///
-/// a good host will call __deallocate with the GuestPtr produced here once it has read the bytes
-/// out of the guest, otherwise the bytes will be permanently leaked for the lifetime of the guest
+/// A good host will call __deallocate with the GuestPtr produced here once it has read the bytes
+/// out of the guest, otherwise the bytes will be permanently leaked for the lifetime of the guest.
 pub fn write_bytes(slice: &[u8]) -> Result<GuestPtr, WasmError> {
     let len_bytes = slice.len().to_le_bytes();
 
