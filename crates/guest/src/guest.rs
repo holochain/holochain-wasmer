@@ -106,6 +106,15 @@ macro_rules! host_args {
     }};
 }
 
+/// Given an extern that we expect the host to provide, that takes a GuestPtr and returns a Len:
+/// - Serialize the payload by reference, according to its SerializedBytes implementation
+/// - Write the bytes into a new allocation
+/// - Call the host function and pass it the pointer to our allocation full of serialized data
+/// - Deallocate the serialized bytes when the host function completes
+/// - Allocate empty bytes of the length that the host tells us the result is
+/// - Ask the host to write the result into the allocated empty bytes
+/// - Deserialize and deallocate whatever bytes the host has written into the result allocation
+/// - Return a Result of the deserialized output type O
 pub fn host_call<'a, I: 'a, O>(
     f: unsafe extern "C" fn(GuestPtr) -> Len,
     payload: &'a I,
@@ -118,6 +127,8 @@ where
 
     // Call the host function and receive the length of the serialized result.
     let input_guest_ptr = crate::allocation::write_bytes(sb.bytes())?;
+
+    // This is unsafe because all host function calls in wasm are unsafe.
     let result_len: Len = unsafe { f(input_guest_ptr) };
 
     // Free the leaked bytes from the input to the host function.
