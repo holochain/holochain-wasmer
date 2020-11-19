@@ -17,7 +17,7 @@ macro_rules! memory_externs {
 macro_rules! host_externs {
     ( $( $func_name:ident ),* ) => {
         extern "C" {
-            $( fn $func_name(guest_allocation_ptr: $crate::GuestPtr) -> $crate::Len; )*
+            $( pub fn $func_name(guest_allocation_ptr: $crate::GuestPtr) -> $crate::Len; )*
         }
     };
 }
