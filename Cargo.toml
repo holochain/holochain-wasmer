@@ -1,3 +1,6 @@
 [workspace]
 members = ["crates/host", "crates/common"]
 exclude = ["test"]
+
+[patch.crates-io]
+holochain_serialized_bytes = { git = "https://github.com/pjkundert/holochain-serialization", branch = "update-syn" }
