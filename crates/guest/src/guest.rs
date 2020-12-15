@@ -53,6 +53,7 @@ macro_rules! holochain_externs {
             __call,
             __create,
             __emit_signal,
+            __remote_signal,
             __create_link,
             __delete_link,
             __update,
