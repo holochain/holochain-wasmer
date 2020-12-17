@@ -1,6 +1,6 @@
 [package]
 name = "test_wasm_io"
-version = "0.0.51"
+version = "0.0.52"
 authors = [ "thedavidmeister", "thedavidmeister@gmail.com" ]
 edition = "2018"
 
@@ -11,7 +11,7 @@ path = "src/wasm.rs"
 
 [dependencies]
 holochain_wasmer_guest = { path = "../../crates/guest" }
-test_common = { version = "=0.0.51", path = "../common" }
+test_common = { version = "=0.0.52", path = "../common" }
 holochain_serialized_bytes = "=0.0.46"
 serde = "=1.0.104"
 paste = "0.1.16"
