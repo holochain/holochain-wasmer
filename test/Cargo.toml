@@ -1,6 +1,6 @@
 [package]
 name = "test"
-version = "0.0.52"
+version = "0.0.53"
 authors = [ "thedavidmeister", "thedavidmeister@gmail.com" ]
 edition = "2018"
 
@@ -10,7 +10,7 @@ holochain_wasmer_common = { path = "../crates/common" }
 holochain_wasmer_host = { path = "../crates/host" }
 holochain_serialized_bytes = "=0.0.47"
 serde = "=1.0.104"
-test_common = { version = "=0.0.52", path = "./common" }
+test_common = { version = "=0.0.53", path = "./common" }
 criterion = "0.3"
 rand = "0.7"
 serde_bytes = "0.11"
