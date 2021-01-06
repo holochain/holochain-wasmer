@@ -232,19 +232,13 @@ fn call_inner(
 /// - is commonly defined in both the host and guest (e.g. shared in a common crate)
 /// - implements standard JsonString round-tripping (e.g. DefaultJson)
 pub fn call<
-    I: TryInto<SerializedBytes, Error = IE>,
-    IE,
-    O: TryFrom<SerializedBytes, Error = OE>,
-    OE,
+    I: TryInto<SerializedBytes, Error = SerializedBytesError>,
+    O: TryFrom<SerializedBytes, Error = SerializedBytesError>,
 >(
     instance: &mut Instance,
     call: &str,
     serializable: I,
-) -> Result<O, WasmError>
-where
-    String: From<IE>,
-    String: From<OE>,
-{
+) -> Result<O, WasmError> {
     let serialized_bytes: SerializedBytes = match serializable.try_into() {
         Ok(v) => v,
         Err(e) => return Err(WasmError::GuestResultHandling(e.into())),

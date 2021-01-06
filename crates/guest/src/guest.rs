@@ -116,15 +116,13 @@ macro_rules! host_args {
 /// - Ask the host to write the result into the allocated empty bytes
 /// - Deserialize and deallocate whatever bytes the host has written into the result allocation
 /// - Return a Result of the deserialized output type O
-pub fn host_call<I, IE, O, OE>(
+pub fn host_call<I, O>(
     f: unsafe extern "C" fn(GuestPtr) -> Len,
     payload: I,
 ) -> Result<O, crate::WasmError>
 where
-    SerializedBytes: TryFrom<I, Error = IE>,
-    crate::WasmError: From<IE>,
-    O: TryFrom<SerializedBytes, Error = OE>,
-    crate::WasmError: From<OE>,
+    SerializedBytes: TryFrom<I, Error = SerializedBytesError>,
+    O: TryFrom<SerializedBytes, Error = SerializedBytesError>,
 {
     let sb = SerializedBytes::try_from(payload)?;
 
