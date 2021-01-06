@@ -134,8 +134,11 @@ pub fn read_bytes(ctx: &Ctx, guest_ptr: GuestPtr) -> Result<Vec<u8>, WasmError> 
         .iter();
 
     let mut len_array = [0; std::mem::size_of::<Len>()];
-    for i in 0..std::mem::size_of::<Len>() {
-        len_array[i] = len_iter.next().ok_or(WasmError::Memory)?.get();
+    // for i in 0..std::mem::size_of::<Len>() {
+    //     len_array[i] = len_iter.next().ok_or(WasmError::Memory)?.get();
+    // }
+    for item in len_array.iter_mut().take(std::mem::size_of::<Len>()) {
+        *item = len_iter.next().ok_or(WasmError::Memory)?.get();
     }
     let len: Len = u32::from_le_bytes(len_array);
 
@@ -253,6 +256,6 @@ pub fn call<
             Ok(v) => Ok(v),
             Err(e) => Err(WasmError::GuestResultHandling(e.into())),
         },
-        WasmResult::Err(wasm_error) => return Err(wasm_error),
+        WasmResult::Err(wasm_error) => Err(wasm_error),
     }
 }

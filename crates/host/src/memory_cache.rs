@@ -63,8 +63,8 @@ impl MemoryFallbackFileSystemCache {
     fn store_mem(&self, key: WasmHash, module: Module) -> Result<(), CacheError> {
         let mut cache = HASHCACHE.lock().unwrap();
         let backend_key = module.info().backend.to_string();
-        let backend_map = cache.entry(backend_key).or_insert(HashMap::new());
-        backend_map.entry(key).or_insert(module.clone());
+        let backend_map = cache.entry(backend_key).or_insert_with(HashMap::new);
+        backend_map.entry(key).or_insert(module);
         Ok(())
     }
 
