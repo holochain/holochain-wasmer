@@ -152,7 +152,6 @@ pub fn read_serialized_bytes(
     ctx: &mut Ctx,
     guest_ptr: GuestPtr,
 ) -> Result<SerializedBytes, WasmError> {
-    // let slice = read_wasm_slice(ctx, guest_ptr)?;
     Ok(SerializedBytes::from(UnsafeBytes::from(read_bytes(
         ctx, guest_ptr,
     )?)))
@@ -233,13 +232,19 @@ fn call_inner(
 /// - is commonly defined in both the host and guest (e.g. shared in a common crate)
 /// - implements standard JsonString round-tripping (e.g. DefaultJson)
 pub fn call<
-    I: TryInto<SerializedBytes, Error = SerializedBytesError>,
-    O: TryFrom<SerializedBytes, Error = SerializedBytesError>,
+    I: TryInto<SerializedBytes, Error = IE>,
+    IE,
+    O: TryFrom<SerializedBytes, Error = OE>,
+    OE,
 >(
     instance: &mut Instance,
     call: &str,
     serializable: I,
-) -> Result<O, WasmError> {
+) -> Result<O, WasmError>
+where
+    String: From<IE>,
+    String: From<OE>,
+{
     let serialized_bytes: SerializedBytes = match serializable.try_into() {
         Ok(v) => v,
         Err(e) => return Err(WasmError::GuestResultHandling(e.into())),
