@@ -79,7 +79,8 @@ pub mod tests {
         let result: StringType = guest::call(
             &mut test_instance(),
             "process_string",
-            StringType::from(starter_string.clone()),
+            // This is by reference just to show that it can be done as borrowed or owned.
+            &StringType::from(starter_string.clone()),
         )
         .expect("process string call");
 

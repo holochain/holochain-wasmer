@@ -66,6 +66,12 @@ pub enum WasmResult {
     Err(WasmError),
 }
 
+impl From<core::convert::Infallible> for WasmError {
+    fn from(_: core::convert::Infallible) -> WasmError {
+        unreachable!()
+    }
+}
+
 #[cfg(test)]
 pub mod tests {
 
