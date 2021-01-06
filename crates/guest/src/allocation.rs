@@ -17,7 +17,7 @@ pub fn length_prefix_at_guest_ptr(guest_ptr: GuestPtr) -> Result<Len, WasmError>
 pub extern "C" fn __allocate(len: Len) -> GuestPtr {
     let dummy: Vec<u8> = Vec::with_capacity((len + std::mem::size_of::<Len>() as Len) as usize);
     let ptr = dummy.as_ptr() as GuestPtr;
-    mem::ManuallyDrop::new(dummy);
+    let _ = mem::ManuallyDrop::new(dummy);
     ptr
 }
 
@@ -108,6 +108,6 @@ pub fn write_bytes(slice: &[u8]) -> Result<GuestPtr, WasmError> {
 
     let v: Vec<u8> = len_bytes.iter().chain(slice.iter()).cloned().collect();
     let ptr: GuestPtr = v.as_ptr() as GuestPtr;
-    mem::ManuallyDrop::new(v);
+    let _ = mem::ManuallyDrop::new(v);
     Ok(ptr)
 }
