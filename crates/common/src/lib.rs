@@ -23,3 +23,32 @@ pub type Len = WasmSize;
 /// a WasmSize integer that points to a position in wasm linear memory that the host and guest are
 /// sharing to communicate across function calls
 pub type GuestPtr = WasmSize;
+
+// Use cases:
+// - Any serializable thing including Vec<u8> gets canonically encoded
+// - A Vec<u8> is literally used, e.g. signing and encrypting specific data
+pub enum Payload<S: Serialize + Sized> {
+    Serializable(S),
+    Bytes(Vec<u8>),
+}
+
+impl<S> From<S> for Payload<S>
+where
+    S: Serialize,
+{
+    fn from(s: S) -> Self {
+        Self::Serializable(s)
+    }
+}
+
+impl<S> Payload<S>
+where
+    S: Serialize,
+{
+    pub fn try_to_bytes(self) -> Result<Vec<u8>, WasmError> {
+        Ok(match self {
+            Payload::Serializable(s) => holochain_serialized_bytes::encode(&s)?,
+            Payload::Bytes(b) => b,
+        })
+    }
+}

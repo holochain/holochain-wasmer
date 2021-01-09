@@ -118,16 +118,15 @@ macro_rules! host_args {
 /// - Return a Result of the deserialized output type O
 pub fn host_call<I, O>(
     f: unsafe extern "C" fn(GuestPtr) -> Len,
-    payload: I,
+    input: I,
 ) -> Result<O, crate::WasmError>
 where
-    SerializedBytes: TryFrom<I, Error = SerializedBytesError>,
-    O: TryFrom<SerializedBytes, Error = SerializedBytesError>,
+    Payload<I>: From<I>,
+    I: Serialize,
+    O: serde::de::DeserializeOwned,
 {
-    let sb = SerializedBytes::try_from(payload)?;
-
     // Call the host function and receive the length of the serialized result.
-    let input_guest_ptr = crate::allocation::write_bytes(sb.bytes())?;
+    let input_guest_ptr = crate::allocation::write_bytes(&Payload::from(input).try_to_bytes()?)?;
 
     // This is unsafe because all host function calls in wasm are unsafe.
     let result_len: Len = unsafe { f(input_guest_ptr) };
@@ -142,9 +141,9 @@ where
     unsafe { __import_data(output_guest_ptr) };
 
     // Deserialize the host bytes into the output type.
-    Ok(O::try_from(SerializedBytes::from(UnsafeBytes::from(
-        crate::allocation::consume_bytes(output_guest_ptr)?,
-    )))?)
+    Ok(holochain_serialized_bytes::decode(
+        &crate::allocation::consume_bytes(output_guest_ptr)?,
+    )?)
 }
 
 #[macro_export]

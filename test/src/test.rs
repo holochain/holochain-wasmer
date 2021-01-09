@@ -9,8 +9,8 @@ use test_common::SomeStruct;
 use test_common::StringType;
 
 fn test_process_string(ctx: &mut Ctx, guest_ptr: GuestPtr) -> Result<Len, WasmError> {
-    let processed_string: StringType = guest::from_guest_ptr(ctx, guest_ptr)?;
-    let processed_string = format!("host: {}", String::from(processed_string));
+    let string: String = guest::from_guest_ptr(ctx, guest_ptr)?;
+    let processed_string = format!("host: {}", string);
     let sb: SerializedBytes = StringType::from(processed_string).try_into()?;
     Ok(set_context_data(ctx, sb))
 }

@@ -42,9 +42,9 @@ pub extern "C" fn process_string(guest_ptr: GuestPtr) -> GuestPtr {
     // the ptr and cap line up with what was previously allocated with pre_alloc_string
     let s: StringType = host_args!(guest_ptr);
 
-    let s = StringType::from(format!("guest: {}", String::from(s)));
+    let s: String = format!("guest: {}", String::from(s));
     let s: StringType = try_result!(
-        host_call(__test_process_string, &s),
+        host_call::<&String, StringType>(__test_process_string, &s),
         "could not __test_process_string"
     );
     ret!(s);

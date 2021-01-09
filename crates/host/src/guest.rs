@@ -157,19 +157,14 @@ pub fn read_serialized_bytes(
     )?)))
 }
 
-/// deserialize any SerializeBytes type out of the guest from a guest pointer
-pub fn from_guest_ptr<O: TryFrom<SerializedBytes>>(
+/// deserialize any DeserializeOwned type out of the guest from a guest pointer
+pub fn from_guest_ptr<O: serde::de::DeserializeOwned>(
     ctx: &mut Ctx,
     guest_ptr: GuestPtr,
-) -> Result<O, WasmError>
-where
-    O::Error: Into<String>,
-{
-    let serialized_bytes: SerializedBytes = read_serialized_bytes(ctx, guest_ptr)?;
-    match serialized_bytes.try_into() {
-        Ok(v) => Ok(v),
-        Err(e) => Err(WasmError::GuestResultHandling(e.into())),
-    }
+) -> Result<O, WasmError> {
+    Ok(holochain_serialized_bytes::decode(&read_bytes(
+        ctx, guest_ptr,
+    )?)?)
 }
 
 /// host calling guest for the function named `call` with the given `payload` in a vector of bytes
