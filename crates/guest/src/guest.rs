@@ -121,12 +121,12 @@ pub fn host_call<I, O>(
     input: I,
 ) -> Result<O, crate::WasmError>
 where
-    Payload<I>: From<I>,
+    WasmIO<I>: From<I>,
     I: Serialize,
     O: serde::de::DeserializeOwned,
 {
     // Call the host function and receive the length of the serialized result.
-    let input_guest_ptr = crate::allocation::write_bytes(&Payload::from(input).try_to_bytes()?)?;
+    let input_guest_ptr = crate::allocation::write_bytes(&WasmIO::from(input).try_to_bytes()?)?;
 
     // This is unsafe because all host function calls in wasm are unsafe.
     let result_len: Len = unsafe { f(input_guest_ptr) };
