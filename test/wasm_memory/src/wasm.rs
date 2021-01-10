@@ -45,5 +45,5 @@ pub extern "C" fn bytes_round_trip(_: GuestPtr) -> GuestPtr {
         }
     }
 
-    ret!(());
+    return_ptr(())
 }

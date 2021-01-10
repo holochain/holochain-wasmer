@@ -3,6 +3,9 @@ pub mod allocation;
 pub extern crate holochain_serialized_bytes;
 pub use holochain_wasmer_common::*;
 
+use crate::allocation::consume_bytes;
+use crate::allocation::write_bytes;
+
 #[macro_export]
 macro_rules! memory_externs {
     () => {
@@ -65,46 +68,29 @@ macro_rules! holochain_externs {
 
 holochain_externs!();
 
-#[macro_export]
-/// Given a guest allocation pointer and a type that implements TryFrom<SerializedBytes>
-/// - restore SerializedBytes from the guest pointer
-/// - try to deserialize the given type from the restored SerializedBytes
-/// - if the deserialization fails, short circuit (return early) with a WasmError
-/// - if everything is Ok, return the restored data as a native rust type inside the guest
-///
-/// This works by assuming the host as already populated the guest pointer with the correct data
-/// ahead of time.
-macro_rules! host_args {
-    ( $ptr:ident ) => {{
-        use core::convert::TryInto;
-
-        let bytes = match $crate::allocation::consume_bytes($ptr) {
-            Ok(v) => v,
-            Err(e) => {
-                let sb = $crate::holochain_serialized_bytes::SerializedBytes::try_from(
-                    $crate::result::WasmResult::Err($crate::result::WasmError::Memory),
-                )
-                .unwrap();
-                return $crate::allocation::write_bytes(sb.bytes()).unwrap();
-            }
-        };
-
-        match $crate::holochain_serialized_bytes::SerializedBytes::from(
-            $crate::holochain_serialized_bytes::UnsafeBytes::from(bytes),
-        )
-        .try_into()
-        {
-            Ok(v) => v,
-            Err(e) => {
-                let sb = $crate::holochain_serialized_bytes::SerializedBytes::try_from(
-                    $crate::result::WasmResult::Err($crate::result::WasmError::SerializedBytes(e)),
-                )
-                // Should be impossible to fail to serialize a simple enum variant.
-                .unwrap();
-                return $crate::allocation::write_bytes(sb.bytes()).unwrap();
-            }
+pub fn host_args<O>(ptr: GuestPtr) -> Result<O, GuestPtr>
+where
+    O: serde::de::DeserializeOwned,
+{
+    let bytes = match consume_bytes(ptr) {
+        Ok(v) => v,
+        Err(_) => {
+            let memory_error: Result<(), WasmError> = Err(WasmError::Memory);
+            return Err(return_ptr(memory_error));
         }
-    }};
+    };
+
+    match holochain_serialized_bytes::decode(&bytes) {
+        Ok(v) => Ok(v),
+        Err(e) => {
+            let deserialize_error: Result<(), WasmError> = Err(WasmError::Serialization(format!(
+                "{}, {:?}",
+                e.to_string(),
+                &bytes
+            )));
+            return Err(return_ptr(deserialize_error));
+        }
+    }
 }
 
 /// Given an extern that we expect the host to provide, that takes a GuestPtr and returns a Len:
@@ -146,53 +132,33 @@ where
     )?)
 }
 
-#[macro_export]
-macro_rules! ret_err {
-    ( $fail:expr ) => {{
-        use std::convert::TryInto;
-        let maybe_wasm_result_sb: std::result::Result<$crate::holochain_serialized_bytes::SerializedBytes, $crate::holochain_serialized_bytes::SerializedBytesError> =
-            $crate::WasmResult::Err($crate::WasmError::Zome(String::from($fail))).try_into();
-        match maybe_wasm_result_sb {
-            std::result::Result::Ok(wasm_result_sb) => {
-                return $crate::allocation::write_bytes(wasm_result_sb.bytes()).unwrap();
-            },
-            // we could end up down here if the fail string somehow fails to convert to SerializedBytes
-            // for example it could be too big for messagepack or include invalid bytes
-            std::result::Result::Err(e) => {
-                return $crate::allocation::write_bytes($crate::holochain_serialized_bytes::SerializedBytes::try_from(
-                    $crate::WasmResult::Err(
-                        $crate::WasmError::Zome(
-                            format!(
-                                "errored while erroring (this should never happen): {:?}",
-                                e
-                            )
-                        )
-                    )
-                ).unwrap().bytes()).unwrap();
+pub fn return_ptr<R>(return_value: R) -> GuestPtr
+where
+    WasmIO<Result<R, ()>>: From<Result<R, ()>>,
+    R: Serialize,
+{
+    match WasmIO::from(Ok(return_value)).try_to_bytes() {
+        Ok(bytes) => match write_bytes(&bytes) {
+            Ok(guest_ptr) => guest_ptr,
+            Err(_) => {
+                let bytes_error: Result<(), WasmError> = Err(WasmError::Memory);
+                return_ptr::<Result<(), WasmError>>(bytes_error)
             }
-        };
-    }};
+        },
+        Err(e) => {
+            let serialization_error: Result<(), WasmError> =
+                Err(WasmError::Serialization(e.to_string()));
+            return_ptr::<Result<(), WasmError>>(serialization_error)
+        }
+    }
 }
 
-#[macro_export]
-macro_rules! ret {
-    ( $e:expr) => {{
-        use std::convert::TryInto;
-        let maybe_sb: std::result::Result<$crate::holochain_serialized_bytes::SerializedBytes, $crate::holochain_serialized_bytes::SerializedBytesError> = ($e).try_into();
-        match maybe_sb {
-            Ok(sb) => {
-                let maybe_wasm_result_sb: std::result::Result<$crate::holochain_serialized_bytes::SerializedBytes, $crate::holochain_serialized_bytes::SerializedBytesError> = $crate::WasmResult::Ok(sb).try_into();
-                match maybe_wasm_result_sb {
-                    std::result::Result::Ok(wasm_result_sb) => match $crate::allocation::write_bytes($crate::holochain_serialized_bytes::SerializedBytes::from(wasm_result_sb).bytes()) {
-                        Ok(guest_ptr) => return guest_ptr,
-                        Err(e) => $crate::ret_err!(e),
-                    },
-                    std::result::Result::Err(e) => $crate::ret_err!(e),
-                };
-            },
-            std::result::Result::Err(e) => $crate::ret_err!(e),
-        };
-    }};
+pub fn return_err_ptr<S>(error_message: S) -> GuestPtr
+where
+    String: From<S>,
+{
+    let error: Result<(), WasmError> = Err(WasmError::Zome(error_message.into()));
+    return_ptr(error)
 }
 
 #[macro_export]
@@ -200,7 +166,7 @@ macro_rules! try_result {
     ( $e:expr, $fail:expr ) => {{
         match $e {
             Ok(v) => v,
-            Err(e) => $crate::ret_err!(format!("{}: {:?}", $fail, e)),
+            Err(e) => return return_err_ptr(format!("{}: {:?}", $fail, e)),
         }
     }};
 }

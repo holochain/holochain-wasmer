@@ -1,25 +1,20 @@
 pub mod import;
 pub mod wasms;
 
-extern crate holochain_serialized_bytes;
-
 use holochain_wasmer_host::import::set_context_data;
 use holochain_wasmer_host::prelude::*;
 use test_common::SomeStruct;
-use test_common::StringType;
 
 fn test_process_string(ctx: &mut Ctx, guest_ptr: GuestPtr) -> Result<Len, WasmError> {
     let string: String = guest::from_guest_ptr(ctx, guest_ptr)?;
     let processed_string = format!("host: {}", string);
-    let sb: SerializedBytes = StringType::from(processed_string).try_into()?;
-    Ok(set_context_data(ctx, sb))
+    Ok(set_context_data(ctx, processed_string)?)
 }
 
 fn test_process_struct(ctx: &mut Ctx, guest_ptr: GuestPtr) -> Result<Len, WasmError> {
     let mut some_struct: SomeStruct = guest::from_guest_ptr(ctx, guest_ptr)?;
     some_struct.process();
-    let sb: SerializedBytes = some_struct.try_into()?;
-    Ok(set_context_data(ctx, sb))
+    Ok(set_context_data(ctx, some_struct)?)
 }
 
 fn debug(_ctx: &mut Ctx, some_number: WasmSize) -> Result<Len, WasmError> {
@@ -64,10 +59,10 @@ pub mod tests {
 
     #[test]
     fn stacked_test() {
-        let result: StringType =
+        let result: String =
             guest::call(&mut test_instance(), "stacked_strings", ()).expect("stacked strings call");
 
-        assert_eq!("first", &String::from(result));
+        assert_eq!("first", &result);
     }
 
     #[test]
@@ -134,17 +129,13 @@ pub mod tests {
 
     #[test]
     fn try_result_test() {
-        let success_result: Result<SomeStruct, WasmError> =
-            guest::call(&mut test_instance(), "try_result_succeeds", ());
-        match success_result {
-            Ok(some_struct) => {
-                assert_eq!(SomeStruct::new("foo".into()), some_struct,);
-            }
-            Err(_) => unreachable!(),
-        };
+        let success_result: Result<SomeStruct, ()> =
+            guest::call(&mut test_instance(), "try_result_succeeds", ()).unwrap();
+        assert_eq!(SomeStruct::new("foo".into()), success_result.unwrap());
 
         let fail_result: Result<(), WasmError> =
             guest::call(&mut test_instance(), "try_result_fails_fast", ());
+        dbg!(&fail_result);
         match fail_result {
             Err(wasm_error) => {
                 assert_eq!(WasmError::Zome("it fails!: ()".into()), wasm_error,);

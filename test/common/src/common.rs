@@ -1,4 +1,4 @@
-use holochain_serialized_bytes::prelude::*;
+use holochain_wasmer_common::*;
 
 #[derive(PartialEq, Clone, Deserialize, Serialize, SerializedBytes, Debug)]
 pub struct SomeStruct {
