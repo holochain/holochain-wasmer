@@ -49,7 +49,7 @@ pub extern "C" fn process_string(guest_ptr: GuestPtr) -> GuestPtr {
     };
 
     let s: String = format!("guest: {}", String::from(s));
-    let s: StringType = try_result!(
+    let s: StringType = try_ptr!(
         host_call::<&String, StringType>(__test_process_string, &s),
         "could not __test_process_string"
     );
@@ -62,7 +62,7 @@ pub extern "C" fn process_native(guest_ptr: GuestPtr) -> GuestPtr {
         Ok(v) => v,
         Err(err_ptr) => return err_ptr,
     };
-    let processed: SomeStruct = try_result!(
+    let processed: SomeStruct = try_ptr!(
         host_call(__test_process_struct, &input),
         "could not deserialize SomeStruct in process_native"
     );
@@ -111,22 +111,22 @@ pub extern "C" fn native_type(guest_ptr: GuestPtr) -> GuestPtr {
 }
 
 #[no_mangle]
-pub extern "C" fn try_result_succeeds(guest_ptr: GuestPtr) -> GuestPtr {
+pub extern "C" fn try_ptr_succeeds(guest_ptr: GuestPtr) -> GuestPtr {
     let _: () = match host_args(guest_ptr) {
         Ok(v) => v,
         Err(err_ptr) => return err_ptr,
     };
     let ok: Result<SomeStruct, ()> = Ok(SomeStruct::new("foo".into()));
-    let result: Result<SomeStruct, ()> = Ok(try_result!(ok, "this can't fail"));
+    let result: Result<SomeStruct, ()> = Ok(try_ptr!(ok, "this can't fail"));
     return_ptr(result)
 }
 
 #[no_mangle]
-pub extern "C" fn try_result_fails_fast(guest_ptr: GuestPtr) -> GuestPtr {
+pub extern "C" fn try_ptr_fails_fast(guest_ptr: GuestPtr) -> GuestPtr {
     let _: () = match host_args(guest_ptr) {
         Ok(v) => v,
         Err(err_ptr) => return err_ptr,
     };
-    let result: Result<(), WasmError> = Ok(try_result!(Err(()), "it fails!"));
+    let result: Result<(), WasmError> = Ok(try_ptr!(Err(()), "it fails!"));
     return_ptr(result)
 }

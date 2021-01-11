@@ -162,7 +162,7 @@ where
 }
 
 #[macro_export]
-macro_rules! try_result {
+macro_rules! try_ptr {
     ( $e:expr, $fail:expr ) => {{
         match $e {
             Ok(v) => v,

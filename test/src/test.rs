@@ -122,13 +122,13 @@ pub mod tests {
     }
 
     #[test]
-    fn try_result_test() {
+    fn try_ptr_test() {
         let success_result: Result<SomeStruct, ()> =
-            guest::call(&mut test_instance(), "try_result_succeeds", ()).unwrap();
+            guest::call(&mut test_instance(), "try_ptr_succeeds", ()).unwrap();
         assert_eq!(SomeStruct::new("foo".into()), success_result.unwrap());
 
         let fail_result: Result<(), WasmError> =
-            guest::call(&mut test_instance(), "try_result_fails_fast", ()).unwrap();
+            guest::call(&mut test_instance(), "try_ptr_fails_fast", ()).unwrap();
 
         match fail_result {
             Err(wasm_error) => {

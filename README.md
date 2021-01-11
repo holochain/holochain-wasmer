@@ -301,7 +301,7 @@ At a high level there isn't much that a guest needs to do:
 - Use `host_call!` to call a host function
 - Use `ret!` to return a value to the host
 - Use `ret_err!` to return an error to the host
-- Use `try_result!` to emulate a `?` in a function that returns to the host
+- Use `try_ptr!` to emulate a `?` in a function that returns to the host
 
 The tests wasm includes examples for all of these.
 
@@ -398,7 +398,7 @@ fn foo() -> Result<SomeStruct, WasmError> {
 }
 ```
 
-In a guest extern you will likely want to wrap the `host_call!` in a `try_result!` (see below):
+In a guest extern you will likely want to wrap the `host_call!` in a `try_ptr!` (see below):
 
 ```rust
 host_externs!(__some_host_function);
@@ -413,8 +413,8 @@ holochain_serial!(HostFunctionInput);
 fn foo() -> GuestPtr {
  let input = HostFunctionInput { inner: String::from("bar") };
 
- // note the try_result! wrapper to be compatible with GuestPtr return value
- try_result!(host_call!(__some_host_function, input), "failed to call __some_host_function");
+ // note the try_ptr! wrapper to be compatible with GuestPtr return value
+ try_ptr!(host_call!(__some_host_function, input), "failed to call __some_host_function");
 }
 ```
 
@@ -453,14 +453,14 @@ pub extern "C" fn foo(remote_ptr: GuestPtr) -> GuestPtr {
 }
 ```
 
-`try_result!` takes an expression to try and unwrap and an expression to `ret_err!` if the thing to try fails.
+`try_ptr!` takes an expression to try and unwrap and an expression to `ret_err!` if the thing to try fails.
 
 This works similarly to `?`:
 
 ```rust
 #[no_mangle]
 pub extern "C" fn foo(remote_ptr: GuestPtr) -> GuestPtr {
- let all_good: () = try_result!(Ok(()), "oh no!");
+ let all_good: () = try_ptr!(Ok(()), "oh no!");
 
  // we're all good...
 }
@@ -643,7 +643,7 @@ macro on the guest side.
 
 ##### Guest returning to host
 
-On the guest this is handled by the `ret!`, `ret_err!` and `try_result!` macros.
+On the guest this is handled by the `ret!`, `ret_err!` and `try_ptr!` macros.
 
 There is a shared `WasmResult` enum that can either be `WasmResult::Ok<SerializedBytes>`
 or `WasmResult::Err<WasmError>` where `WasmError` is another enum including some
