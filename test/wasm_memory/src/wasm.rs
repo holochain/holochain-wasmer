@@ -20,20 +20,20 @@ pub extern "C" fn bytes_round_trip(_: GuestPtr) -> GuestPtr {
         let bytes: Vec<[u8; 5]> = std::iter::repeat([ 1, 2, 3, 4, 5 ]).take(100).collect();
 
         let ptrs: Vec<GuestPtr> = bytes.iter().map(|b| {
-            allocation::write_bytes(b).unwrap()
+            allocation::write_bytes(b)
         }).collect();
 
         for i in 0..ptrs.len() {
             // the length prefix needs to be correct
             assert_eq!(
-                allocation::length_prefix_at_guest_ptr(ptrs[i]).unwrap(),
+                allocation::length_prefix_at_guest_ptr(ptrs[i]),
                 bytes[i].len() as Len,
             );
 
             // consuming the bytes should give a vector of the same bytes as the original bytes
             assert_eq!(
                 bytes[i].to_vec(),
-                allocation::consume_bytes(ptrs[i]).unwrap(),
+                allocation::consume_bytes(ptrs[i]),
             );
         };
 

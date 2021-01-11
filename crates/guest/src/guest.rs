@@ -72,13 +72,7 @@ pub fn host_args<O>(ptr: GuestPtr) -> Result<O, GuestPtr>
 where
     O: serde::de::DeserializeOwned,
 {
-    let bytes = match consume_bytes(ptr) {
-        Ok(v) => v,
-        Err(_) => {
-            let memory_error: Result<(), WasmError> = Err(WasmError::Memory);
-            return Err(return_ptr(memory_error));
-        }
-    };
+    let bytes = consume_bytes(ptr);
 
     match holochain_serialized_bytes::decode(&bytes) {
         Ok(v) => Ok(v),
@@ -112,7 +106,7 @@ where
     O: serde::de::DeserializeOwned,
 {
     // Call the host function and receive the length of the serialized result.
-    let input_guest_ptr = crate::allocation::write_bytes(&WasmIO::from(input).try_to_bytes()?)?;
+    let input_guest_ptr = crate::allocation::write_bytes(&WasmIO::from(input).try_to_bytes()?);
 
     // This is unsafe because all host function calls in wasm are unsafe.
     let result_len: Len = unsafe { f(input_guest_ptr) };
@@ -128,7 +122,7 @@ where
 
     // Deserialize the host bytes into the output type.
     Ok(holochain_serialized_bytes::decode(
-        &crate::allocation::consume_bytes(output_guest_ptr)?,
+        &crate::allocation::consume_bytes(output_guest_ptr),
     )?)
 }
 
@@ -138,13 +132,7 @@ where
     R: Serialize,
 {
     match WasmIO::from(Ok(return_value)).try_to_bytes() {
-        Ok(bytes) => match write_bytes(&bytes) {
-            Ok(guest_ptr) => guest_ptr,
-            Err(_) => {
-                let bytes_error: Result<(), WasmError> = Err(WasmError::Memory);
-                return_ptr::<Result<(), WasmError>>(bytes_error)
-            }
-        },
+        Ok(bytes) => write_bytes(&bytes),
         Err(e) => {
             let serialization_error: Result<(), WasmError> =
                 Err(WasmError::Serialization(e.to_string()));

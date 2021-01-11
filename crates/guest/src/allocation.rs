@@ -4,11 +4,10 @@ use std::mem;
 /// Attempt to extract the length at the given guest_ptr.
 //. Note that the guest_ptr could point at garbage and the "length prefix" would be garbage and
 //. then some arbitrary memory would be referenced so not erroring does not imply safety.
-pub fn length_prefix_at_guest_ptr(guest_ptr: GuestPtr) -> Result<Len, WasmError> {
+pub fn length_prefix_at_guest_ptr(guest_ptr: GuestPtr) -> Len {
     let len_bytes: &[u8] =
         unsafe { std::slice::from_raw_parts(guest_ptr as *const u8, std::mem::size_of::<Len>()) };
-    let len: Len = u32::from_le_bytes([len_bytes[0], len_bytes[1], len_bytes[2], len_bytes[3]]);
-    Ok(len)
+    u32::from_le_bytes([len_bytes[0], len_bytes[1], len_bytes[2], len_bytes[3]])
 }
 
 #[no_mangle]
@@ -26,7 +25,7 @@ pub extern "C" fn __allocate(len: Len) -> GuestPtr {
 #[no_mangle]
 pub extern "C" fn __deallocate(guest_ptr: GuestPtr) {
     // Failing to deallocate when requested is unrecoverable.
-    let len = length_prefix_at_guest_ptr(guest_ptr).unwrap() + std::mem::size_of::<Len>() as Len;
+    let len = length_prefix_at_guest_ptr(guest_ptr) + std::mem::size_of::<Len>() as Len;
     let _: Vec<u8> =
         unsafe { Vec::from_raw_parts(guest_ptr as *mut u8, len as usize, len as usize) };
 }
@@ -37,7 +36,7 @@ pub extern "C" fn __deallocate(guest_ptr: GuestPtr) {
 ///
 /// This needs to work for bytes written into the guest from the host and for bytes written with
 /// the write_bytes() function within the guest.
-pub fn consume_bytes(guest_ptr: GuestPtr) -> Result<Vec<u8>, WasmError> {
+pub fn consume_bytes(guest_ptr: GuestPtr) -> Vec<u8> {
     // The Vec safety requirements are much stricter than a simple slice:
     //
     // - the pointer must have been generated with Vec/String on the same allocator
@@ -62,7 +61,7 @@ pub fn consume_bytes(guest_ptr: GuestPtr) -> Result<Vec<u8>, WasmError> {
     // );
 
     // We need the same length used to allocate the vector originally, so it includes the prefix
-    let len = length_prefix_at_guest_ptr(guest_ptr)? + std::mem::size_of::<Len>() as Len;
+    let len = length_prefix_at_guest_ptr(guest_ptr) + std::mem::size_of::<Len>() as Len;
     let mut v: Vec<u8> = unsafe {
         Vec::from_raw_parts(
             // must match the pointer produced by the original allocation exactly
@@ -73,16 +72,15 @@ pub fn consume_bytes(guest_ptr: GuestPtr) -> Result<Vec<u8>, WasmError> {
             len as usize,
         )
     };
-    Ok(
-        // This leads to an additional allocation for a new vector starting after the length prefix
-        // the old vector will be dropped and cleaned up by the allocator after this call
-        // the split off bytes will take ownership moving forward.
-        //
-        // Note that we could have tried to do something with std::slice::from_raw_parts() in this
-        // function but we'd still need a new allocation at the point of slice.to_vec() and then
-        // we'd need to manually free whatever the slice was pointing at.
-        v.split_off(std::mem::size_of::<Len>()),
-    )
+
+    // This leads to an additional allocation for a new vector starting after the length prefix
+    // the old vector will be dropped and cleaned up by the allocator after this call
+    // the split off bytes will take ownership moving forward.
+    //
+    // Note that we could have tried to do something with std::slice::from_raw_parts() in this
+    // function but we'd still need a new allocation at the point of slice.to_vec() and then
+    // we'd need to manually free whatever the slice was pointing at.
+    v.split_off(std::mem::size_of::<Len>())
 }
 
 /// Attempt to write a slice of bytes into a length prefixed allocation.
@@ -103,11 +101,11 @@ pub fn consume_bytes(guest_ptr: GuestPtr) -> Result<Vec<u8>, WasmError> {
 ///
 /// A good host will call __deallocate with the GuestPtr produced here once it has read the bytes
 /// out of the guest, otherwise the bytes will be permanently leaked for the lifetime of the guest.
-pub fn write_bytes(slice: &[u8]) -> Result<GuestPtr, WasmError> {
+pub fn write_bytes(slice: &[u8]) -> GuestPtr {
     let len_bytes = slice.len().to_le_bytes();
 
     let v: Vec<u8> = len_bytes.iter().chain(slice.iter()).cloned().collect();
     let ptr: GuestPtr = v.as_ptr() as GuestPtr;
     let _ = mem::ManuallyDrop::new(v);
-    Ok(ptr)
+    ptr
 }
