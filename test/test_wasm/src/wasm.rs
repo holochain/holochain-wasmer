@@ -27,6 +27,16 @@ pub fn result_support() -> Result<(), WasmError> {
 }
 
 #[no_mangle]
+pub extern "C" fn literal_bytes(guest_ptr: GuestPtr) -> GuestPtr {
+    let bytes: Vec<u8> = match host_args(guest_ptr) {
+        Ok(v) => v,
+        Err(err_ptr) => return err_ptr,
+    };
+    assert_eq!(bytes, vec![1, 2, 3]);
+    return_ptr(bytes)
+}
+
+#[no_mangle]
 pub extern "C" fn process_bytes(guest_ptr: GuestPtr) -> GuestPtr {
     let b: BytesType = match host_args(guest_ptr) {
         Ok(v) => v,

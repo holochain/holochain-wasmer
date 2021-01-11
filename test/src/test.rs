@@ -66,6 +66,14 @@ pub mod tests {
     }
 
     #[test]
+    fn literal_bytes() {
+        let input: Vec<u8> = vec![1, 2, 3];
+        let result: Vec<u8> = guest::call(&mut test_instance(), "literal_bytes", input.clone())
+            .expect("literal_bytes call");
+        assert_eq!(input, result);
+    }
+
+    #[test]
     fn process_string_test() {
         // use a "crazy" string that is much longer than a single wasm page to show that pagination
         // and utf-8 are both working OK

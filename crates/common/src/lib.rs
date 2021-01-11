@@ -27,17 +27,14 @@ pub type GuestPtr = WasmSize;
 // Use cases:
 // - Any serializable thing including Vec<u8> gets canonically encoded
 // - A Vec<u8> is literally used, e.g. signing and encrypting specific data
-pub enum WasmIO<S: Serialize + Sized> {
-    Serializable(S),
-    Bytes(Vec<u8>),
-}
+pub struct WasmIO<S: Serialize + Sized>(pub S);
 
 impl<S> From<S> for WasmIO<S>
 where
     S: Serialize,
 {
     fn from(s: S) -> Self {
-        Self::Serializable(s)
+        Self(s)
     }
 }
 
@@ -46,9 +43,6 @@ where
     S: Serialize,
 {
     pub fn try_to_bytes(self) -> Result<Vec<u8>, WasmError> {
-        Ok(match self {
-            WasmIO::Serializable(s) => holochain_serialized_bytes::encode(&s)?,
-            WasmIO::Bytes(b) => b,
-        })
+        Ok(holochain_serialized_bytes::encode(&self.0)?)
     }
 }
