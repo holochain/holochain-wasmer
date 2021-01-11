@@ -163,7 +163,7 @@ pub fn from_guest_ptr<O: serde::de::DeserializeOwned>(
 pub fn call<I, O>(instance: &mut Instance, f: &str, input: I) -> Result<O, WasmError>
 where
     WasmIO<I>: From<I>,
-    I: Serialize,
+    I: serde::Serialize,
     O: serde::de::DeserializeOwned,
 {
     let payload: Vec<u8> = WasmIO::from(input).try_to_bytes()?;
@@ -212,28 +212,3 @@ where
 
     return_value
 }
-
-// /// convenience wrapper around call_bytes to handling input and output of any struct that:
-// /// - is commonly defined in both the host and guest (e.g. shared in a common crate)
-// /// - implements standard JsonString round-tripping (e.g. DefaultJson)
-// pub fn call<I, O>(instance: &mut Instance, f: &str, input: I) -> Result<O, WasmError>
-// where
-//     WasmIO<I>: From<I>,
-//     I: Serialize,
-//     O: serde::de::DeserializeOwned,
-// {
-//     let wasm_result: WasmResult = call_inner(instance, f, input)?;
-//     // let wasm_result: WasmResult = match result_serialized_bytes.try_into() {
-//     //     Ok(v) => v,
-//     //     Err(e) => return Err(WasmError::GuestResultHandling(e.into())),
-//     // };
-//     match wasm_result {
-//         WasmResult::Ok(inner_io) => {
-//             match holochain_serialized_bytes::decode(inner_io.try_to_bytes()?) {
-//                 Ok(v) => Ok(v),
-//                 Err(e) => Err(WasmError::GuestResultHandling(e.into())),
-//             }
-//         }
-//         WasmResult::Err(wasm_error) => Err(wasm_error),
-//     }
-// }

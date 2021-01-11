@@ -127,6 +127,6 @@ pub extern "C" fn try_result_fails_fast(guest_ptr: GuestPtr) -> GuestPtr {
         Ok(v) => v,
         Err(err_ptr) => return err_ptr,
     };
-    let result: Result<(), ()> = Ok(try_result!(Err(()), "it fails!"));
+    let result: Result<(), WasmError> = Ok(try_result!(Err(()), "it fails!"));
     return_ptr(result)
 }

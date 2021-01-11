@@ -108,7 +108,7 @@ pub fn host_call<I, O>(
 ) -> Result<O, crate::WasmError>
 where
     WasmIO<I>: From<I>,
-    I: Serialize,
+    I: serde::Serialize,
     O: serde::de::DeserializeOwned,
 {
     // Call the host function and receive the length of the serialized result.
@@ -134,7 +134,7 @@ where
 
 pub fn return_ptr<R>(return_value: R) -> GuestPtr
 where
-    WasmIO<Result<R, ()>>: From<Result<R, ()>>,
+    WasmIO<Result<R, WasmError>>: From<Result<R, WasmError>>,
     R: Serialize,
 {
     match WasmIO::from(Ok(return_value)).try_to_bytes() {
@@ -158,7 +158,7 @@ where
     String: From<S>,
 {
     let error: Result<(), WasmError> = Err(WasmError::Zome(error_message.into()));
-    return_ptr(error)
+    return_ptr::<Result<(), WasmError>>(error)
 }
 
 #[macro_export]

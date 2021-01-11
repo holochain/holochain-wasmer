@@ -110,17 +110,11 @@ pub mod tests {
 
     #[test]
     fn ret_test() {
-        let result: Result<SomeStruct, WasmError> =
-            guest::call(&mut test_instance(), "some_ret", ());
-        match result {
-            Ok(some_struct) => {
-                assert_eq!(SomeStruct::new("foo".into()), some_struct,);
-            }
-            Err(_) => unreachable!(),
-        };
+        let some_struct: SomeStruct = guest::call(&mut test_instance(), "some_ret", ()).unwrap();
+        assert_eq!(SomeStruct::new("foo".into()), some_struct,);
 
         let err: Result<SomeStruct, WasmError> =
-            guest::call(&mut test_instance(), "some_ret_err", ());
+            guest::call(&mut test_instance(), "some_ret_err", ()).unwrap();
         match err {
             Err(wasm_error) => assert_eq!(WasmError::Zome("oh no!".into()), wasm_error,),
             Ok(_) => unreachable!(),
@@ -134,8 +128,8 @@ pub mod tests {
         assert_eq!(SomeStruct::new("foo".into()), success_result.unwrap());
 
         let fail_result: Result<(), WasmError> =
-            guest::call(&mut test_instance(), "try_result_fails_fast", ());
-        dbg!(&fail_result);
+            guest::call(&mut test_instance(), "try_result_fails_fast", ()).unwrap();
+
         match fail_result {
             Err(wasm_error) => {
                 assert_eq!(WasmError::Zome("it fails!: ()".into()), wasm_error,);

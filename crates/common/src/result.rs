@@ -61,12 +61,6 @@ impl std::fmt::Display for WasmError {
     }
 }
 
-// #[derive(Debug, Serialize, Deserialize, SerializedBytes)]
-// pub enum WasmResult<S: Serialize + Sized> {
-//     Ok(crate::WasmIO<S>),
-//     Err(WasmError),
-// }
-
 impl From<core::convert::Infallible> for WasmError {
     fn from(_: core::convert::Infallible) -> WasmError {
         unreachable!()
