@@ -69,32 +69,3 @@ impl From<core::convert::Infallible> for WasmError {
         unreachable!()
     }
 }
-
-// #[cfg(test)]
-// pub mod tests {
-//
-//     use super::*;
-//
-//     #[test]
-//     fn wasm_result_serialized_bytes_round_trip() {
-//         #[derive(Clone, PartialEq, Debug, Serialize, Deserialize, SerializedBytes)]
-//         struct Foo(String);
-//
-//         let foo = Foo(String::from("bar"));
-//
-//         let wasm_result = WasmResult::Ok(foo.clone().try_into().unwrap());
-//
-//         let wasm_result_sb = SerializedBytes::try_from(wasm_result).unwrap();
-//
-//         let wasm_result_recover =
-//             WasmResult::try_from(wasm_result_sb).expect("could not restore wasm result");
-//
-//         match wasm_result_recover {
-//             WasmResult::Ok(sb) => {
-//                 let foo_recover = Foo::try_from(sb).expect("could not restore foo result");
-//                 assert_eq!(foo, foo_recover);
-//             }
-//             _ => unreachable!(),
-//         };
-//     }
-// }

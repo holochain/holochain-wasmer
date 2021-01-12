@@ -162,11 +162,10 @@ pub fn from_guest_ptr<O: serde::de::DeserializeOwned>(
 /// allocation pointer or a wasm error
 pub fn call<I, O>(instance: &mut Instance, f: &str, input: I) -> Result<O, WasmError>
 where
-    WasmIO<I>: From<I>,
     I: serde::Serialize,
     O: serde::de::DeserializeOwned,
 {
-    let payload: Vec<u8> = WasmIO::from(input).try_to_bytes()?;
+    let payload: Vec<u8> = holochain_serialized_bytes::encode(&input)?;
 
     // get a pre-allocated guest pointer to write the input into
     let guest_input_ptr: GuestPtr = match instance

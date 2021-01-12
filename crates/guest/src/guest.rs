@@ -16,6 +16,8 @@ macro_rules! memory_externs {
     };
 }
 
+memory_externs!();
+
 #[macro_export]
 macro_rules! host_externs {
     ( $( $func_name:ident ),* ) => {
@@ -24,49 +26,6 @@ macro_rules! host_externs {
         }
     };
 }
-
-#[macro_export]
-macro_rules! holochain_externs {
-    () => {
-        $crate::memory_externs!();
-        $crate::host_externs!(
-            __debug,
-            __hash_entry,
-            __unreachable,
-            __verify_signature,
-            __sign,
-            __decrypt,
-            __encrypt,
-            __zome_info,
-            __property,
-            __random_bytes,
-            __show_env,
-            __sys_time,
-            __agent_info,
-            __capability_claims,
-            __capability_grants,
-            __capability_info,
-            __get,
-            __get_details,
-            __get_links,
-            __get_link_details,
-            __get_agent_activity,
-            __query,
-            __call_remote,
-            __call,
-            __create,
-            __emit_signal,
-            __remote_signal,
-            __create_link,
-            __delete_link,
-            __update,
-            __delete,
-            __schedule
-        );
-    };
-}
-
-holochain_externs!();
 
 pub fn host_args<O>(ptr: GuestPtr) -> Result<O, GuestPtr>
 where
@@ -98,12 +57,12 @@ pub fn host_call<I, O>(
     input: I,
 ) -> Result<O, crate::WasmError>
 where
-    WasmIO<I>: From<I>,
     I: serde::Serialize,
     O: serde::de::DeserializeOwned,
 {
     // Call the host function and receive the length of the serialized result.
-    let input_guest_ptr = crate::allocation::write_bytes(&WasmIO::from(input).try_to_bytes()?);
+    let input_guest_ptr =
+        crate::allocation::write_bytes(&holochain_serialized_bytes::encode(&input)?);
 
     // This is unsafe because all host function calls in wasm are unsafe.
     let result_len: Len = unsafe { f(input_guest_ptr) };
@@ -125,10 +84,9 @@ where
 
 pub fn return_ptr<R>(return_value: R) -> GuestPtr
 where
-    WasmIO<Result<R, WasmError>>: From<Result<R, WasmError>>,
     R: Serialize,
 {
-    match WasmIO::from(Ok(return_value)).try_to_bytes() {
+    match holochain_serialized_bytes::encode::<Result<R, WasmError>>(&Ok(return_value)) {
         Ok(bytes) => write_bytes(&bytes),
         Err(e) => return_ptr::<Result<(), WasmError>>(Err(WasmError::Serialize(e))),
     }

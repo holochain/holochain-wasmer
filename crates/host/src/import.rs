@@ -26,7 +26,6 @@ pub fn free_context_data(data: *mut std::ffi::c_void) {
 
 pub fn set_context_data<I>(ctx: &mut Ctx, input: I) -> Result<Len, WasmError>
 where
-    WasmIO<I>: From<I>,
     I: serde::Serialize,
 {
     // guard against the situation where some bad code sets a new Ctx.data value while some other
@@ -34,7 +33,7 @@ where
     free_context_data(ctx.data);
 
     // leak the provided serialized bytes into the context data so it can be imported later
-    let data: Vec<u8> = WasmIO::from(input).try_to_bytes()?;
+    let data: Vec<u8> = holochain_serialized_bytes::encode(&input)?;
     let len = data.len();
     let b = Box::new(data);
     ctx.data = Box::into_raw(b) as _;

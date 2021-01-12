@@ -1,6 +1,6 @@
 use holochain_wasmer_guest::*;
 
-holochain_wasmer_guest::holochain_externs!();
+memory_externs!();
 
 macro_rules! _s {
     ( $t:tt; $empty:expr; ) => {
