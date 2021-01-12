@@ -76,13 +76,10 @@ where
 
     match holochain_serialized_bytes::decode(&bytes) {
         Ok(v) => Ok(v),
-        Err(e) => {
-            let deserialize_error: Result<(), WasmError> = Err(WasmError::Serialization(format!(
-                "{}, {:?}",
-                e.to_string(),
-                &bytes
-            )));
-            return Err(return_ptr(deserialize_error));
+        Err(_) => {
+            return Err(return_ptr::<Result<(), WasmError>>(Err(
+                WasmError::Deserialize(bytes),
+            )))
         }
     }
 }
@@ -133,11 +130,7 @@ where
 {
     match WasmIO::from(Ok(return_value)).try_to_bytes() {
         Ok(bytes) => write_bytes(&bytes),
-        Err(e) => {
-            let serialization_error: Result<(), WasmError> =
-                Err(WasmError::Serialization(e.to_string()));
-            return_ptr::<Result<(), WasmError>>(serialization_error)
-        }
+        Err(e) => return_ptr::<Result<(), WasmError>>(Err(WasmError::Serialize(e))),
     }
 }
 
@@ -145,8 +138,7 @@ pub fn return_err_ptr<S>(error_message: S) -> GuestPtr
 where
     String: From<S>,
 {
-    let error: Result<(), WasmError> = Err(WasmError::Zome(error_message.into()));
-    return_ptr::<Result<(), WasmError>>(error)
+    return_ptr::<Result<(), WasmError>>(Err(WasmError::Zome(error_message.into())))
 }
 
 #[macro_export]

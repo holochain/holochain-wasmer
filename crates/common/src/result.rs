@@ -11,10 +11,13 @@ pub enum WasmError {
     /// max i64 represents about 9.2 exabytes so should keep us going long enough to patch wasmer
     /// if commercial hardware ever threatens to overstep this limit
     PointerMap,
-    /// similar to Utf8 we have somehow hit a struct that isn't round-tripping through SerializedBytes
-    /// correctly, which should be impossible for well behaved serialization
-    SerializedBytes(SerializedBytesError),
-    Serialization(String),
+    /// These bytes failed to deserialize.
+    /// The host should provide nice debug info and context that the wasm guest won't have.
+    #[serde(with = "serde_bytes")]
+    Deserialize(Vec<u8>),
+    /// Something failed to serialize.
+    /// This should be rare or impossible for basically everything that implements Serialize.
+    Serialize(SerializedBytesError),
     /// something went wrong while writing or reading bytes to/from wasm memory
     /// this means something like "reading 16 bytes did not produce 2x WasmSize ints"
     /// or maybe even "failed to write a byte to some pre-allocated wasm memory"
@@ -51,7 +54,7 @@ impl From<std::array::TryFromSliceError> for WasmError {
 
 impl From<SerializedBytesError> for WasmError {
     fn from(error: SerializedBytesError) -> Self {
-        Self::SerializedBytes(error)
+        Self::Serialize(error)
     }
 }
 

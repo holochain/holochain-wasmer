@@ -42,7 +42,7 @@ impl<S> WasmIO<S>
 where
     S: Serialize,
 {
-    pub fn try_to_bytes(self) -> Result<Vec<u8>, WasmError> {
+    pub fn try_to_bytes(self) -> Result<Vec<u8>, SerializedBytesError> {
         Ok(holochain_serialized_bytes::encode(&self.0)?)
     }
 }
