@@ -64,6 +64,7 @@ impl std::fmt::Display for WasmError {
     }
 }
 
+/// Allows ? in a TryFrom context downstream.
 impl From<core::convert::Infallible> for WasmError {
     fn from(_: core::convert::Infallible) -> WasmError {
         unreachable!()

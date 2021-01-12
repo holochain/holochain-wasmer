@@ -147,7 +147,7 @@ pub fn read_bytes(ctx: &Ctx, guest_ptr: GuestPtr) -> Result<Vec<u8>, WasmError> 
         .collect::<Vec<u8>>())
 }
 
-/// deserialize any DeserializeOwned type out of the guest from a guest pointer
+/// Deserialize any DeserializeOwned type out of the guest from a guest pointer.
 pub fn from_guest_ptr<O: serde::de::DeserializeOwned>(
     ctx: &mut Ctx,
     guest_ptr: GuestPtr,
@@ -157,17 +157,18 @@ pub fn from_guest_ptr<O: serde::de::DeserializeOwned>(
     )?)?)
 }
 
-/// host calling guest for the function named `call` with the given `payload` in a vector of bytes
+/// Host calling guest for the function named `call` with the given `payload` in a vector of bytes
 /// result is either a vector of bytes from the guest found at the location of the returned guest
-/// allocation pointer or a wasm error
+/// allocation pointer or a `WasmError`.
 pub fn call<I, O>(instance: &mut Instance, f: &str, input: I) -> Result<O, WasmError>
 where
     I: serde::Serialize,
     O: serde::de::DeserializeOwned,
 {
+    // The guest will use the same crate for decoding if it uses the wasm common crate.
     let payload: Vec<u8> = holochain_serialized_bytes::encode(&input)?;
 
-    // get a pre-allocated guest pointer to write the input into
+    // Get a pre-allocated guest pointer to write the input into.
     let guest_input_ptr: GuestPtr = match instance
         .call("__allocate", &[Value::I32(payload.len().try_into()?)])
         .map_err(|e| WasmError::CallError(format!("{:?}", e)))?[0]
@@ -176,11 +177,11 @@ where
         _ => unreachable!(),
     };
 
-    // write the input payload into the guest at the offset specified by the allocation
+    // Write the input payload into the guest at the offset specified by the allocation.
     write_bytes(instance.context_mut(), guest_input_ptr, &payload)?;
 
-    // call the guest function with its own pointer to its input
-    // collect the guest's pointer to its output
+    // Call the guest function with its own pointer to its input.
+    // Collect the guest's pointer to its output.
     let guest_return_ptr: GuestPtr = match instance
         .call(f, &[Value::I32(guest_input_ptr.try_into()?)])
         .map_err(|e| WasmError::CallError(format!("{:?}", e)))?[0]
@@ -192,7 +193,7 @@ where
     let return_value: Result<O, WasmError> = crate::guest::from_guest_ptr(
         instance.context_mut(),
         guest_return_ptr,
-        // this ? might be a bit controversial as it means we return with an error WITHOUT telling the
+        // This ? might be a bit controversial as it means we return with an error WITHOUT telling the
         // guest that it can deallocate the return value
         // PROS:
         // - it's possible that we actually can't safely deallocate the return value here
@@ -204,7 +205,7 @@ where
         //   (NOTE: all WASM memory is dropped when the instance is dropped anyway)
     )?;
 
-    // tell the guest we are finished with the return pointer's data
+    // Tell the guest we are finished with the return pointer's data.
     instance
         .call("__deallocate", &[Value::I32(guest_return_ptr.try_into()?)])
         .map_err(|e| WasmError::CallError(format!("{:?}", e)))?;

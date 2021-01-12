@@ -27,6 +27,12 @@ macro_rules! host_externs {
     };
 }
 
+/// Receive arguments from the host.
+/// The guest sets the type O that the host needs to match.
+/// If deserialization fails then a `GuestPtr` to a `WasmError::Deserialize` is returned.
+/// The guest should __immediately__ return an `Err` back to the host.
+/// The `WasmError::Deserialize` enum contains the bytes that failed to deserialize so the host can
+/// unambiguously provide debug information.
 pub fn host_args<O>(ptr: GuestPtr) -> Result<O, GuestPtr>
 where
     O: serde::de::DeserializeOwned,
@@ -43,8 +49,8 @@ where
     }
 }
 
-/// Given an extern that we expect the host to provide, that takes a GuestPtr and returns a Len:
-/// - Serialize the payload by reference, according to its SerializedBytes implementation
+/// Given an `GuestPtr` -> `Len` extern that we expect the host to provide:
+/// - Serialize the payload by reference
 /// - Write the bytes into a new allocation
 /// - Call the host function and pass it the pointer to our allocation full of serialized data
 /// - Deallocate the serialized bytes when the host function completes
@@ -77,11 +83,15 @@ where
     unsafe { __import_data(output_guest_ptr) };
 
     // Deserialize the host bytes into the output type.
-    Ok(holochain_serialized_bytes::decode(
-        &crate::allocation::consume_bytes(output_guest_ptr),
-    )?)
+    let bytes: Vec<u8> = crate::allocation::consume_bytes(output_guest_ptr);
+    match holochain_serialized_bytes::decode(&bytes) {
+        Ok(output) => Ok(output),
+        Err(_) => Err(WasmError::Deserialize(bytes)),
+    }
 }
 
+/// Convert any serializable value into a GuestPtr that can be returned to the host.
+/// The host is expected to know how to consume and deserialize it.
 pub fn return_ptr<R>(return_value: R) -> GuestPtr
 where
     R: Serialize,
@@ -92,6 +102,7 @@ where
     }
 }
 
+/// Convert an Into<String> into a generic `Err(WasmError::Zome)` as a `GuestPtr` returned.
 pub fn return_err_ptr<S>(error_message: S) -> GuestPtr
 where
     String: From<S>,
@@ -100,6 +111,7 @@ where
 }
 
 #[macro_export]
+/// A simple macro to wrap return_err_ptr in an analogy to the native rust `?`.
 macro_rules! try_ptr {
     ( $e:expr, $fail:expr ) => {{
         match $e {
