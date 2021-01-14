@@ -41,11 +41,7 @@ where
 
     match holochain_serialized_bytes::decode(&bytes) {
         Ok(v) => Ok(v),
-        Err(_) => {
-            return Err(return_ptr::<Result<(), WasmError>>(Err(
-                WasmError::Deserialize(bytes),
-            )))
-        }
+        Err(_) => Err(return_err_ptr(WasmError::Deserialize(bytes))),
     }
 }
 
@@ -98,16 +94,28 @@ where
 {
     match holochain_serialized_bytes::encode::<Result<R, WasmError>>(&Ok(return_value)) {
         Ok(bytes) => write_bytes(&bytes),
-        Err(e) => return_ptr::<Result<(), WasmError>>(Err(WasmError::Serialize(e))),
+        Err(e) => return_err_ptr(WasmError::Serialize(e)),
     }
 }
 
 /// Convert an Into<String> into a generic `Err(WasmError::Zome)` as a `GuestPtr` returned.
-pub fn return_err_ptr<S>(error_message: S) -> GuestPtr
-where
-    String: From<S>,
-{
-    return_ptr::<Result<(), WasmError>>(Err(WasmError::Zome(error_message.into())))
+pub fn return_err_ptr(wasm_error: WasmError) -> GuestPtr {
+    match holochain_serialized_bytes::encode::<Result<(), WasmError>>(&Err(wasm_error)) {
+        Ok(bytes) => write_bytes(&bytes),
+        Err(e) => match holochain_serialized_bytes::encode::<Result<(), WasmError>>(&Err(
+            WasmError::Serialize(e),
+        )) {
+            Ok(bytes) => write_bytes(&bytes),
+            // At this point we've errored while erroring
+            Err(_) => match holochain_serialized_bytes::encode::<Result<(), WasmError>>(&Err(
+                WasmError::ErrorWhileError,
+            )) {
+                Ok(bytes) => write_bytes(&bytes),
+                // At this point we failed to serialize a unit struct so IDK ¯\_(ツ)_/¯
+                Err(_) => unreachable!(),
+            },
+        },
+    }
 }
 
 #[macro_export]
@@ -116,7 +124,7 @@ macro_rules! try_ptr {
     ( $e:expr, $fail:expr ) => {{
         match $e {
             Ok(v) => v,
-            Err(e) => return return_err_ptr(format!("{}: {:?}", $fail, e)),
+            Err(e) => return return_err_ptr(WasmError::Zome(format!("{}: {:?}", $fail, e))),
         }
     }};
 }

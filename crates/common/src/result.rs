@@ -18,6 +18,9 @@ pub enum WasmError {
     /// Something failed to serialize.
     /// This should be rare or impossible for basically everything that implements Serialize.
     Serialize(SerializedBytesError),
+    /// Somehow we errored while erroring.
+    /// For example, maybe we failed to serialize an error while attempting to serialize an error.
+    ErrorWhileError,
     /// something went wrong while writing or reading bytes to/from wasm memory
     /// this means something like "reading 16 bytes did not produce 2x WasmSize ints"
     /// or maybe even "failed to write a byte to some pre-allocated wasm memory"
