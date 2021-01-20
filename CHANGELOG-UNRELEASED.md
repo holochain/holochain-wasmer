@@ -8,14 +8,11 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Changed
 
-- Changed `SerializedBytes` to `holochain_serialized_bytes::encode()` globally
-
 ### Deprecated
 
 ### Removed
 
-- Removed the `Cargo.lock` file
-
 ### Fixed
 
 ### Security
+
