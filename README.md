@@ -687,7 +687,7 @@ a malicious or poorly coded guest calling a host function and never requesting
 the result.
 
 This is very simple, if `Ctx.data` is not a null pointer it will attempt to
-restore a `Box<SerializedBytes>::from_raw()` from whatever is there, which will
+restore a `Box<Vec<u8>>::from_raw()` from whatever is there, which will
 take ownership and drop it as per normal Rust.
 
 This is called interally to `crate::import::set_context_data` as well, to guard

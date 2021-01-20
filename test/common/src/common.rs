@@ -1,6 +1,6 @@
 use holochain_wasmer_common::*;
 
-#[derive(PartialEq, Clone, Deserialize, Serialize, SerializedBytes, Debug)]
+#[derive(PartialEq, Clone, Deserialize, Serialize, Debug)]
 pub struct SomeStruct {
     inner: String,
 }
@@ -15,7 +15,7 @@ impl SomeStruct {
     }
 }
 
-#[derive(Serialize, Deserialize, SerializedBytes, Clone)]
+#[derive(Serialize, Deserialize, Clone)]
 pub struct StringType(String);
 
 impl From<String> for StringType {
@@ -30,7 +30,7 @@ impl From<StringType> for String {
     }
 }
 
-#[derive(Debug, Serialize, Deserialize, SerializedBytes, Clone)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct BytesType(#[serde(with = "serde_bytes")] Vec<u8>);
 
 impl From<Vec<u8>> for BytesType {
@@ -45,7 +45,7 @@ impl BytesType {
     }
 }
 
-#[derive(Serialize, Deserialize, SerializedBytes)]
+#[derive(Serialize, Deserialize)]
 pub struct IntegerType(u32);
 
 impl From<u32> for IntegerType {

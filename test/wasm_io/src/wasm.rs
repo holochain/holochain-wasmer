@@ -61,7 +61,7 @@ macro_rules! _n {
                     test_common::[< $t:camel Type >]::from($inner)
                 };
                 // serialize it
-                let _: SerializedBytes = s.try_into().unwrap();
+                let _: Vec<u8> = holochain_serialized_bytes::encode(&s).unwrap();
                 // return nothing
                 return_ptr(
                     paste::expr! {
