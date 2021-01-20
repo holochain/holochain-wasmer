@@ -312,16 +312,17 @@ dependencies = [
 
 [[package]]
 name = "holochain_wasmer_common"
-version = "0.0.53"
+version = "0.0.54"
 dependencies = [
  "holochain_serialized_bytes",
  "serde",
+ "serde_bytes",
  "thiserror",
 ]
 
 [[package]]
 name = "holochain_wasmer_host"
-version = "0.0.53"
+version = "0.0.54"
 dependencies = [
  "holochain_serialized_bytes",
  "holochain_wasmer_common",

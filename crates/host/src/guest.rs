@@ -134,8 +134,8 @@ pub fn read_bytes(ctx: &Ctx, guest_ptr: GuestPtr) -> Result<Vec<u8>, WasmError> 
         .iter();
 
     let mut len_array = [0; std::mem::size_of::<Len>()];
-    for i in 0..std::mem::size_of::<Len>() {
-        len_array[i] = len_iter.next().ok_or(WasmError::Memory)?.get();
+    for item in len_array.iter_mut().take(std::mem::size_of::<Len>()) {
+        *item = len_iter.next().ok_or(WasmError::Memory)?.get();
     }
     let len: Len = u32::from_le_bytes(len_array);
 
@@ -147,68 +147,53 @@ pub fn read_bytes(ctx: &Ctx, guest_ptr: GuestPtr) -> Result<Vec<u8>, WasmError> 
         .collect::<Vec<u8>>())
 }
 
-/// read serialized bytes out of the guest from a guest pointer
-pub fn read_serialized_bytes(
+/// Deserialize any DeserializeOwned type out of the guest from a guest pointer.
+pub fn from_guest_ptr<O: serde::de::DeserializeOwned>(
     ctx: &mut Ctx,
     guest_ptr: GuestPtr,
-) -> Result<SerializedBytes, WasmError> {
-    Ok(SerializedBytes::from(UnsafeBytes::from(read_bytes(
+) -> Result<O, WasmError> {
+    Ok(holochain_serialized_bytes::decode(&read_bytes(
         ctx, guest_ptr,
-    )?)))
+    )?)?)
 }
 
-/// deserialize any SerializeBytes type out of the guest from a guest pointer
-pub fn from_guest_ptr<O: TryFrom<SerializedBytes>>(
-    ctx: &mut Ctx,
-    guest_ptr: GuestPtr,
-) -> Result<O, WasmError>
-where
-    O::Error: Into<String>,
-{
-    let serialized_bytes: SerializedBytes = read_serialized_bytes(ctx, guest_ptr)?;
-    match serialized_bytes.try_into() {
-        Ok(v) => Ok(v),
-        Err(e) => Err(WasmError::GuestResultHandling(e.into())),
-    }
-}
-
-/// host calling guest for the function named `call` with the given `payload` in a vector of bytes
+/// Host calling guest for the function named `call` with the given `payload` in a vector of bytes
 /// result is either a vector of bytes from the guest found at the location of the returned guest
-/// allocation pointer or a wasm error
-fn call_inner(
-    instance: &mut Instance,
-    call: &str,
-    payload: SerializedBytes,
-) -> Result<SerializedBytes, WasmError> {
-    // get a pre-allocated guest pointer to write the input into
+/// allocation pointer or a `WasmError`.
+pub fn call<I, O>(instance: &mut Instance, f: &str, input: I) -> Result<O, WasmError>
+where
+    I: serde::Serialize,
+    O: serde::de::DeserializeOwned,
+{
+    // The guest will use the same crate for decoding if it uses the wasm common crate.
+    let payload: Vec<u8> = holochain_serialized_bytes::encode(&input)?;
+
+    // Get a pre-allocated guest pointer to write the input into.
     let guest_input_ptr: GuestPtr = match instance
-        .call(
-            "__allocate",
-            &[Value::I32(payload.bytes().len().try_into()?)],
-        )
+        .call("__allocate", &[Value::I32(payload.len().try_into()?)])
         .map_err(|e| WasmError::CallError(format!("{:?}", e)))?[0]
     {
         Value::I32(i) => i as GuestPtr,
         _ => unreachable!(),
     };
 
-    // write the input payload into the guest at the offset specified by the allocation
-    write_bytes(instance.context_mut(), guest_input_ptr, payload.bytes())?;
+    // Write the input payload into the guest at the offset specified by the allocation.
+    write_bytes(instance.context_mut(), guest_input_ptr, &payload)?;
 
-    // call the guest function with its own pointer to its input
-    // collect the guest's pointer to its output
+    // Call the guest function with its own pointer to its input.
+    // Collect the guest's pointer to its output.
     let guest_return_ptr: GuestPtr = match instance
-        .call(call, &[Value::I32(guest_input_ptr.try_into()?)])
+        .call(f, &[Value::I32(guest_input_ptr.try_into()?)])
         .map_err(|e| WasmError::CallError(format!("{:?}", e)))?[0]
     {
         Value::I32(i) => i as GuestPtr,
         _ => unreachable!(),
     };
 
-    let return_value: SerializedBytes = crate::guest::read_serialized_bytes(
+    let return_value: Result<O, WasmError> = crate::guest::from_guest_ptr(
         instance.context_mut(),
         guest_return_ptr,
-        // this ? might be a bit controversial as it means we return with an error WITHOUT telling the
+        // This ? might be a bit controversial as it means we return with an error WITHOUT telling the
         // guest that it can deallocate the return value
         // PROS:
         // - it's possible that we actually can't safely deallocate the return value here
@@ -220,45 +205,10 @@ fn call_inner(
         //   (NOTE: all WASM memory is dropped when the instance is dropped anyway)
     )?;
 
-    // tell the guest we are finished with the return pointer's data
+    // Tell the guest we are finished with the return pointer's data.
     instance
         .call("__deallocate", &[Value::I32(guest_return_ptr.try_into()?)])
         .map_err(|e| WasmError::CallError(format!("{:?}", e)))?;
 
-    Ok(return_value)
-}
-
-/// convenience wrapper around call_bytes to handling input and output of any struct that:
-/// - is commonly defined in both the host and guest (e.g. shared in a common crate)
-/// - implements standard JsonString round-tripping (e.g. DefaultJson)
-pub fn call<
-    I: TryInto<SerializedBytes, Error = IE>,
-    IE,
-    O: TryFrom<SerializedBytes, Error = OE>,
-    OE,
->(
-    instance: &mut Instance,
-    call: &str,
-    serializable: I,
-) -> Result<O, WasmError>
-where
-    String: From<IE>,
-    String: From<OE>,
-{
-    let serialized_bytes: SerializedBytes = match serializable.try_into() {
-        Ok(v) => v,
-        Err(e) => return Err(WasmError::GuestResultHandling(e.into())),
-    };
-    let result_serialized_bytes: SerializedBytes = call_inner(instance, call, serialized_bytes)?;
-    let wasm_result: WasmResult = match result_serialized_bytes.try_into() {
-        Ok(v) => v,
-        Err(e) => return Err(WasmError::GuestResultHandling(e.into())),
-    };
-    match wasm_result {
-        WasmResult::Ok(inner_serialized_bytes) => match inner_serialized_bytes.try_into() {
-            Ok(v) => Ok(v),
-            Err(e) => Err(WasmError::GuestResultHandling(e.into())),
-        },
-        WasmResult::Err(wasm_error) => return Err(wasm_error),
-    }
+    return_value
 }

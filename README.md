@@ -47,8 +47,8 @@ There are several places we need to implement things:
 
 - Holochain core needs to [act as a wasm host](https://docs.wasmer.io/integrations/rust/examples/hello-world) to build modules and instances to run wasm functions
 - Holochain core [needs to provide](https://docs.wasmer.io/integrations/rust/examples/host-functions) 'imported functions' as an `ImportObject`
-- Holochain HDK needs to use the holochain_wasmer_guest macros to wrap the imported functions in something ergonomic for happ developers
-- Happ developers need to be broadly aware of how to get their data into `SerializedBytes` from the `holochain_serialized_bytes` crate
+- Holochain HDK needs to use the holochain_wasmer_guest functions to wrap externs in something ergonomic for happ developers
+- Happ developers need to be broadly aware of how to send cleanly serializable inputs and work with serde
 
 ### Holochain core
 
@@ -227,18 +227,10 @@ Having an `Arc` to `self` which has access to wasm bytes allows us to create new
 modules/instances inside imported function closures, which will probably be needed
 e.g. for nice callback handling.
 
-##### Use the host crate and write macros
-
-See [the example PR](https://github.com/holochain/holochain-rust/pull/2079/files#diff-f066dcca6e836742cae1afd74341a72aR169) for examples of macros.
+##### Use the host crate
 
 It's really easy to make a mistake in the data handling (see below) and end up
 with memory leaks or serialization mistakes, missing tracing or whatever else.
-
-The previous implementation was plagued with a thousand paper cuts of inconsistencies
-that made the work of this upgrade significantly harder than it had to be.
-
-Spend the time to get it right and then turn it into a macro and use this for as
-many imported functions as possible.
 
 Use the `holochain_wasmer_host` crate to do as much heavy lifing as possible.
 
@@ -248,8 +240,7 @@ The `test_process_struct` shows a good minimal example of an import function:
 fn test_process_struct(ctx: &mut Ctx, guest_ptr: GuestPtr) -> Result<Len, WasmError> {
     let mut some_struct: SomeStruct = guest::from_guest_ptr(ctx, guest_ptr)?;
     some_struct.process();
-    let sb: SerializedBytes = some_struct.try_into()?;
-    Ok(set_context_data(ctx, sb))
+    Ok(set_context_data(ctx, some_struct)?)
 }
 ```
 
@@ -262,13 +253,12 @@ let mut some_struct: SomeStruct = guest::from_guest_ptr(ctx, guest_ptr)?;
 And how to build a return value that wasmer understands and the guest can read:
 
 ```rust
-let sb: SerializedBytes = some_struct.try_into()?;
 Ok(set_context_data(ctx, sb))
 ```
 
 Note that `set_context_data` uses the `Ctx.data` pointer up (see above) so that
 the guest can safely retrieve it from the host in a one-shot way later. This
-happens inside the `host_call!` macro and so is invisible to wasm developers.
+happens inside the `host_call` function and so is invisible to wasm developers.
 
 ### Being a good wasm guest
 
@@ -279,29 +269,35 @@ binary as possible.
 
 That said, there are some details that won't be able to be hidden completely.
 
-Devs will need to (likely with the help of macros and RAD tooling):
+Devs will need to learn how to use the HDK macros and make sure their data
+cleanly serializes and deserializes as messagepack between any external
+interface. For example it is the happ dev's responsiblity to make sure a number
+serialized by JavaScript deserializes e.g. to a `u32` Rust input to an extern.
 
-- round trip inputs and outputs through `SerializedBytes` (i.e. not accept/return rust primitives other than structs/enums)
+Specifically:
+
 - use the same version of `holochain_serialized_bytes` as HDK/core
-- define functions that can be exposed to a wasm host
+- define functions that can be exposed to a wasm host (e.g. using HDK macros)
+- implement `serde` correctly using the same version as core
+- Serialize inputs in a compatible format, i.e. MessagePack with named fields
 
 Generally we want the HDK/tooling to hide/smooth at least the following details:
 
 - Keeping a small .wasm file (e.g. optimisation tooling)
-- All memory management (other than moving in/out of `SerializedBytes`)
+- All memory management
 - Implementing sane wrappers around imported holochain functions to be ergonomic
-- Needing to call the correct `ret!` style macro or interacting with `WasmResult`
+- Needing to interact directly with the 'outer' `Result`
 - Lots of other things...
 
 At a high level there isn't much that a guest needs to do:
 
 - Define externs that will be overwritten by the imported host functions
 - Write extern functions that the host will call
-- Use `host_args!` to receive the input arguments from the host
-- Use `host_call!` to call a host function
-- Use `ret!` to return a value to the host
-- Use `ret_err!` to return an error to the host
-- Use `try_result!` to emulate a `?` in a function that returns to the host
+- Use `host_args` to receive the input arguments from the host
+- Use `host_call` to call a host function
+- Use `return_ptr` to return a value to the host
+- Use `return_err_ptr` to return an error to the host
+- Use `try_ptr!` to emulate a `?` in a function that returns to the host
 
 The tests wasm includes examples for all of these.
 
@@ -315,11 +311,8 @@ There are two sets of externs to define:
 - The externs that represent callable functions on the host
 
 The HDK absolutely should handle all of this for the happ developer as the
-memory externs are mandatory and the callable functiosn are all set by holochain
+memory externs are mandatory and the callable functions are all set by holochain
 core.
-
-Use the `holochain_externs!()` macro to define all the externs that holochain
-needs in both directions (e.g. memory handling and all exposed `host_call!` fns).
 
 To do this manually:
 
@@ -328,7 +321,7 @@ To do this manually:
 
 #### Write extern functions that the host will call
 
-The HDK could probably macrotize this to make it more beginner friendly.
+The HDK makes this mostly invisible to the happ developer.
 
 All functions that the host can call must look like this to be compatible with our setup:
 
@@ -351,120 +344,100 @@ if the less specfic version exists.
 Note that the inputs and outputs are `GuestPtr` which is a single `u32`.
 
 This means that structured data for input/output and `Result` style return
-values (and therefore also `?`) need to be faked with macros (see below).
+values (and therefore also `?`) need to be handled through serialization and
+direct manipulation of bytes.
 
-#### Use `host_args!` to receive input from the host
+#### Use `host_args` to receive input from the host
 
-This is easy, `host_args!` takes a `GuestPtr` and tries to inject it into `SomeType`:
+This is easy, `host_args` takes a `GuestPtr` and tries to inject it into `SomeType`:
 
 ```rust
 #[no_mangle]
 pub extern "C" fn foo(remote_ptr: GuestPtr) -> GuestPtr {
- let bar: SomeType = host_args!(remote_ptr);
+ let bar: SomeType = match host_args(remote_ptr) {
+  Ok(v) => v,
+  Err(guest_ptr) => return guest_ptr,
+ }
 }
 ```
 
-The `host_args!` function internally _returns a `GuestPtr` if it errors_.
+The `host_args` function _returns an `Err(GuestPtr)` if it errors_.
 
-It can only be used in a function with `GuestPtr` input and output (e.g. an extern).
+Notably it errors if deserialization fails.
 
-#### Use `host_call!` to call host functions
+If it errors the guest MUST __immediately__ return the `GuestPtr` to the host.
 
-This works a bit different to `host_args!` as it _returns a native Rust `Result`_.
+The guest MUST call `host_args` before attempting to call any host functions or
+the guest memory will likely be corrupted and unrecoverable.
 
-This allows it to be used anywhere in a wasm (e.g. outside of an extern).
+The host memory will not be permanently effected if it correctly implements
+guest handling, so a malicious guest cannot damage the host in this way.
 
-Pass the extern defined in `host_externs!` along with something that can round-trip
-through `SerializedBytes` and give it a type hint for the return value.
+#### Use `host_call` to call host functions
+
+This works a bit different to `host_args` as it _returns a native Rust `Result`_.
+
+This allows it to be used anywhere in a wasm (e.g. even outside of an extern).
+
+Pass the extern defined in `host_externs` along with anything serializable.
+The types must be provided by the guest.
 
 ```rust
 host_externs!(__some_host_function);
-
-#[derive(Serialize, Deserialize)]
-struct HostFunctionInput {
- inner: String,
-}
-
-holochain_serial!(HostFunctionInput);
 
 fn foo() -> Result<SomeStruct, WasmError> {
- let input = HostFunctionInput { inner: String::from("bar") };
+ let input = String::from("bar");
 
- // host_call! returns the Result as per the function return value
- // it also respects ? (see test wasm for examples)
- // it knows to pull the return from the host back into a SomeStruct based on
- // the Ok arm of the Result
- host_call!(__some_host_function, input)
+ // host_call returns the `Result` as per the host function return value
+ // it also respects `?` (see test wasm for examples)
+ // it knows to pull the return from the host back into a String based on
+ // the Ok arm of the Result.
+ // Note there is an 'outer' `Result` that needs to propagate back to the host
+ // as a `GuestPtr` if there is an `Err`, the guest should unwind in that case.
+ let output = host_call::<&String, HostFunctionOutput>(__some_host_function, &input)?;
 }
 ```
 
-In a guest extern you will likely want to wrap the `host_call!` in a `try_result!` (see below):
+In a guest extern you will likely want to wrap the `host_call` in a `try_ptr!` (see below):
 
 ```rust
 host_externs!(__some_host_function);
 
-#[derive(Serialize, Deserialize)]
-struct HostFunctionInput {
- inner: String,
-}
+extern "C" fn foo(_: GuestPtr) -> GuestPtr {
+ let input = String::from("bar");
 
-holochain_serial!(HostFunctionInput);
-
-fn foo() -> GuestPtr {
- let input = HostFunctionInput { inner: String::from("bar") };
-
- // note the try_result! wrapper to be compatible with GuestPtr return value
- try_result!(host_call!(__some_host_function, input), "failed to call __some_host_function");
+ // note the try_ptr! wrapper to be compatible with GuestPtr return value
+ let output = try_ptr!(
+  host_call::<&String, HostFunctionOutput>(__some_host_function, &input),
+  "failed to call __some_host_function"
+ );
 }
 ```
 
-#### Use return macros
+#### Return any Err(GuestPtr) values immediately
 
 Inside an extern we must return a `GuestPtr`.
 
-The host is expecting a `WasmResult` (see below) and besides we have arbitrary
-`SerializedBytes` to return even if we succeed.
+The host is expecting a serialized `Result` (see below) whether we succeed or
+fail. This is the 'outer' `Result` that needs to communicate to the host whether
+or not the guest needed to stop and unwind due to a problem with the host/guest
+interface itself. For example, if the host passes data that cannot be
+deserialized by the guest, the guest needs to immediately stop and return these
+bad bytes back to the host as a pointer to an `Err`.
 
-Rather than returning from an extern directly, there are three macros to make
-the most common situations easier.
+This is true regardless of how deeply nested or complicated logic is within an
+extern.
 
-All three macros hide the internal `WasmResult` handling.
+Any failure to interact with the host must immediately unwind with an `Err`.
 
-`ret!` accepts anything that goes to `SerializedBytes`:
+Returning an `Ok(_)` tells the host that the guest managed to execute the extern
+completely without any issues with the host.
 
-```rust
-#[derive(Serialize, Deserialize)]
-struct Returnable(());
+The contents of the outer result can be anything that serializes, including
+other results.
 
-holochain_serial!(Returnable);
-
-#[no_mangle]
-pub extern "C" fn foo(remote_ptr: GuestPtr) -> GuestPtr {
- ret!(Returnable(()));
-}
-```
-
-`ret_err!` accepts any expression that fits into `String::from` (it will be wrapped in `WasmError::Zome`):
-
-```rust
-#[no_mangle]
-pub extern "C" fn foo(remote_ptr: GuestPtr) -> GuestPtr {
- ret_err!("oh no!");
-}
-```
-
-`try_result!` takes an expression to try and unwrap and an expression to `ret_err!` if the thing to try fails.
-
-This works similarly to `?`:
-
-```rust
-#[no_mangle]
-pub extern "C" fn foo(remote_ptr: GuestPtr) -> GuestPtr {
- let all_good: () = try_result!(Ok(()), "oh no!");
-
- // we're all good...
-}
-```
+`Ok(Ok(_))` implies the guest succeeded to complete _and_ whatever called the
+extern is expecting a `Result` for whatever domain specific logic was executed.
 
 ## Background information
 
@@ -542,7 +515,7 @@ that). The host must wait for guest calls to complete before calling again and
 the guest must wait for the host to complete before it can continue.
 
 The host _can_ set a single pointer to data in the wasmer `Ctx` context. We use
-this to point to serialized bytes for the return value of a `host_call!()` so
+this to point to serialized bytes for the return value of a `host_call()` so
 that the guest can request that the host copy it into a guest-allocated space.
 
 WASM has a hard limit in the spec of 4GB total memory, with 64kb pages.
@@ -582,7 +555,7 @@ and guest boundary.
 
 All the following assumes:
 
-- We have some canonical `SerializedBytes` for our data, as per `holochain_serialized_bytes`
+- We have some canonical serialization for our data, as per `encode` and `decode` in `holochain_serialized_bytes`
 - We have a running host and guest
 - There is some crate containing all shared rust data types common to both the host and the guest
 
@@ -626,10 +599,10 @@ When the host is calling into the guest it first asks the guest to provide a
 pointer to freshly allocated memory, then copies length prefixed bytes straight
 to this location. The host can then pass the
 
-This is handled via. `host::guest::call()` on the host side and the `host_args!`
+This is handled via. `host::guest::call()` on the host side and the `host_args`
 macro on the guest side.
 
-- The host moves `SomeDataType` into `SerializedBytes` on the host using the host allocator
+- The host moves serialized `SomeDataType` on the host using the host allocator
 - The host calculates the `u32` length of the serialized data
 - The host asks the guest to `__allocate` the length
 - The guest (inside `__allocate`) allocates length + 4 bytes and returns a `GuestPtr` to the host
@@ -637,54 +610,52 @@ macro on the guest side.
 - The host writes the length as 4 bytes at `GuestPtr` then writes the rest of the data into the guest memory
 - The host calls the function it wants to call in the guest, passing in the `GuestPtr`
 - The guest receives the `GuestPtr` and passes it to the `host_args!` macro
-- The `host_args!` macro inside the guest reads the length prefix out of the guest's memory at `GuestPtr`
+- The `host_args` macro inside the guest reads the length prefix out of the guest's memory at `GuestPtr`
 - The guest deserializes `length` bytes from `guest_ptr + 4` into whatever input type it was expecting
 - The deserialization process takes ownership of the bytes inside the guest so rust will handle cleanup from here
 
 ##### Guest returning to host
 
-On the guest this is handled by the `ret!`, `ret_err!` and `try_result!` macros.
+On the guest this is handled by the `return_ptr`, `return_err_ptr` and
+`try_ptr!` functions.
 
-There is a shared `WasmResult` enum that can either be `WasmResult::Ok<SerializedBytes>`
-or `WasmResult::Err<WasmError>` where `WasmError` is another enum including some
-basic variants.
+All these functions work in broadly the same way, by pushing serialized data
+across the host/guest boundary, including an error representing problems doing
+the same.
 
-All these macros work in broadly the same way, by wrapping some data in an enum
-to fake a rust native `Result`.
-
-The `host::guest::call()` function knows what to do with the `WasmResult`, the
+The `host::guest::call()` function knows what to do with the outer `Result`, the
 host only needs to line up `SomeDataType` of the guest inner return value with
 the `host::guest::call()` return value.
 
-- The guest calls one of the `ret!` style macros with `SomeDataType`
-- Internal to `ret!` et. al. a `WasmResult` is built out of (maybe) `SerializedBytes` or just an error
-- The `WasmResult` bytes are length-prefixed and leaked into the guest
+- The guest calls one of the `return_ptr` style functions with something `Serialize`
+- Internal to `return_ptr` et. al. a `Result` is built out of serializable data or serializes an error
+- The `Result` bytes are length-prefixed and leaked into the guest
 - The guest returns a `GuestPtr` to the host to the prefixed+leaked bytes
-- The host copies the length prefix from the `GuestPtr` and deserializes the `WasmResult`
+- The host copies the length prefix from the `GuestPtr` and deserializes the `Result`
 - The host calls `__deallocate` so that the guest can cleanup the leaked data
-- The host does a `try_into()` from the _inner_ `SerializedBytes` _if_ the return was a `WasmResult::Ok<SerializedBytes>`
+- The host deserializes the inner value if it makes sense to
 
 ##### Guest calling host
 
-On the guest side this is the first half of the `host_call!` macro.
+On the guest side this is the first half of the `host_call` macro.
 
 The host side uses the `host::guest::from_guest_ptr()` function that reads bytes
 straight from the shared memory based on a `GuestPtr` the guest passes to the
 host.
 
-- The guest moves `SomeDataType` into `SerializedBytes`
-- The guest length-prefixes and leaks the `SerializedBytes` to get a `GuestPtr`
+- The guest moves serialized `SomeDataType` into memory
+- The guest length-prefixes and leaks the serialized data to get a `GuestPtr`
 - The guest calls the host function with the `GuestPtr`
 - The host reads the length from the guest pointer and deserializes `SomeDataType` from the guest's memory
 - Note: due to a limitation in wasmer it is not possible for the host to call
   back into the guest during an imported function call, so at this point the
   input is still leaked on the guest
-- After the host call returns, the `host_call!` macro frees the previously
+- After the host call returns, the `host_call` function frees the previously
   leaked bytes on the guest side
 
 ##### Host returning data from imported function to guest
 
-On the guest side, this is the second half of the `host_call!` macro.
+On the guest side, this is the second half of the `host_call` function.
 
 This is handled by each imported function on the host side.
 
@@ -693,8 +664,8 @@ this alongside the HDK and internal workflow implementations.
 
 - The host function does whatever it does as native rust
 - The host function return value is `SomeDataType`
-- The host converts the return value to `SerializedBytes`
-- The host wraps the `SerializedBytes` in a `Box`
+- The host serializes the return value
+- The host wraps serialized data in a `Box` as a `Vec<u8>`
 - The host leaks the `Box` with `Box::into_raw()` to get a host-side pointer
 - The host stores the pointer to the serialized bytes in `Ctx.data`
 - The host returns the _length_ of the serialized data to the guest
@@ -716,7 +687,7 @@ a malicious or poorly coded guest calling a host function and never requesting
 the result.
 
 This is very simple, if `Ctx.data` is not a null pointer it will attempt to
-restore a `Box<SerializedBytes>::from_raw()` from whatever is there, which will
+restore a `Box<Vec<u8>>::from_raw()` from whatever is there, which will
 take ownership and drop it as per normal Rust.
 
 This is called interally to `crate::import::set_context_data` as well, to guard

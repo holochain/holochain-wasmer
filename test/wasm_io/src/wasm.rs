@@ -1,6 +1,6 @@
 use holochain_wasmer_guest::*;
 
-holochain_wasmer_guest::holochain_externs!();
+memory_externs!();
 
 macro_rules! _s {
     ( $t:tt; $empty:expr; ) => {
@@ -8,31 +8,37 @@ macro_rules! _s {
             #[no_mangle]
             /// ignore the input completely and return empty data
             pub extern "C" fn [< $t:lower _input_ignored_empty_ret >](_: GuestPtr) -> GuestPtr {
-                ret!(
+                return_ptr(
                     paste::expr! {
                         test_common::[< $t:camel Type >]::from($empty)
                     }
-                );
+                )
             }
 
             #[no_mangle]
             /// load the input args and do nothing with it
             pub extern "C" fn [< $t:lower _input_args_empty_ret >](ptr: GuestPtr) -> GuestPtr {
                 paste::expr! {
-                    let _: test_common::[< $t:camel Type >] = host_args!(ptr);
+                    let _: test_common::[< $t:camel Type >] = match host_args(ptr) {
+                        Ok(v) => v,
+                        Err(err_ptr) => return err_ptr,
+                    };
                 }
-                ret!(
+                return_ptr(
                     paste::expr! {
                         test_common::[< $t:camel Type >]::from($empty)
                     }
-                );
+                )
             }
 
             #[no_mangle]
             /// load the input args and return it
             pub extern "C" fn [< $t:lower _input_args_echo_ret >](ptr: GuestPtr) -> GuestPtr {
-                let r: test_common::[< $t:camel Type >] = host_args!(ptr);
-                ret!(r);
+                let r: test_common::[< $t:camel Type >] = match host_args(ptr) {
+                    Ok(v) => v,
+                    Err(err_ptr) => return err_ptr,
+                };
+                return_ptr(r)
             }
         }
     }
@@ -47,29 +53,35 @@ macro_rules! _n {
             #[no_mangle]
             pub extern "C" fn [< $t:lower _serialize_n >](ptr: GuestPtr) -> GuestPtr {
                 // build it
-                let $n: test_common::IntegerType = host_args!(ptr);
+                let $n: test_common::IntegerType = match host_args(ptr) {
+                    Ok(v) => v,
+                    Err(err_ptr) => return err_ptr,
+                };
                 let s = paste::expr! {
                     test_common::[< $t:camel Type >]::from($inner)
                 };
                 // serialize it
-                let _: SerializedBytes = s.try_into().unwrap();
+                let _: Vec<u8> = holochain_serialized_bytes::encode(&s).unwrap();
                 // return nothing
-                ret!(
+                return_ptr(
                     paste::expr! {
                         test_common::[< $t:camel Type >]::from($empty)
                     }
-                );
+                )
             }
 
             #[no_mangle]
             pub extern "C" fn [< $t:lower _ret_n >](ptr: GuestPtr) -> GuestPtr {
                 // build it
-                let $n: test_common::IntegerType = host_args!(ptr);
+                let $n: test_common::IntegerType = match host_args(ptr) {
+                    Ok(v) => v,
+                    Err(err_ptr) => return err_ptr,
+                };
                 let s = paste::expr! {
                     test_common::[< $t:camel Type >]::from($inner)
                 };
                 // return it
-                ret!(s);
+                return_ptr(s)
             }
         }
     }

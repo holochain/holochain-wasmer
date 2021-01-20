@@ -11,9 +11,16 @@ pub enum WasmError {
     /// max i64 represents about 9.2 exabytes so should keep us going long enough to patch wasmer
     /// if commercial hardware ever threatens to overstep this limit
     PointerMap,
-    /// similar to Utf8 we have somehow hit a struct that isn't round-tripping through SerializedBytes
-    /// correctly, which should be impossible for well behaved serialization
-    SerializedBytes(SerializedBytesError),
+    /// These bytes failed to deserialize.
+    /// The host should provide nice debug info and context that the wasm guest won't have.
+    #[serde(with = "serde_bytes")]
+    Deserialize(Vec<u8>),
+    /// Something failed to serialize.
+    /// This should be rare or impossible for basically everything that implements Serialize.
+    Serialize(SerializedBytesError),
+    /// Somehow we errored while erroring.
+    /// For example, maybe we failed to serialize an error while attempting to serialize an error.
+    ErrorWhileError,
     /// something went wrong while writing or reading bytes to/from wasm memory
     /// this means something like "reading 16 bytes did not produce 2x WasmSize ints"
     /// or maybe even "failed to write a byte to some pre-allocated wasm memory"
@@ -50,7 +57,7 @@ impl From<std::array::TryFromSliceError> for WasmError {
 
 impl From<SerializedBytesError> for WasmError {
     fn from(error: SerializedBytesError) -> Self {
-        Self::SerializedBytes(error)
+        Self::Serialize(error)
     }
 }
 
@@ -60,43 +67,9 @@ impl std::fmt::Display for WasmError {
     }
 }
 
-#[derive(Debug, Serialize, Deserialize, SerializedBytes)]
-pub enum WasmResult {
-    Ok(SerializedBytes),
-    Err(WasmError),
-}
-
+/// Allows ? in a TryFrom context downstream.
 impl From<core::convert::Infallible> for WasmError {
     fn from(_: core::convert::Infallible) -> WasmError {
         unreachable!()
-    }
-}
-
-#[cfg(test)]
-pub mod tests {
-
-    use super::*;
-
-    #[test]
-    fn wasm_result_serialized_bytes_round_trip() {
-        #[derive(Clone, PartialEq, Debug, Serialize, Deserialize, SerializedBytes)]
-        struct Foo(String);
-
-        let foo = Foo(String::from("bar"));
-
-        let wasm_result = WasmResult::Ok(foo.clone().try_into().unwrap());
-
-        let wasm_result_sb = SerializedBytes::try_from(wasm_result).unwrap();
-
-        let wasm_result_recover =
-            WasmResult::try_from(wasm_result_sb).expect("could not restore wasm result");
-
-        match wasm_result_recover {
-            WasmResult::Ok(sb) => {
-                let foo_recover = Foo::try_from(sb).expect("could not restore foo result");
-                assert_eq!(foo, foo_recover);
-            }
-            _ => unreachable!(),
-        };
     }
 }

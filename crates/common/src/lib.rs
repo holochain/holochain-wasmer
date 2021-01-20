@@ -2,6 +2,7 @@ pub mod result;
 
 pub use holochain_serialized_bytes::prelude::*;
 pub use result::*;
+pub use serde_bytes;
 
 /// something like usize for wasm
 /// wasm has a memory limit of 4GB so offsets and lengths fit in u32
