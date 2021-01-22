@@ -13,6 +13,19 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 [[package]]
 name = "holochain_serialized_bytes"
 version = "0.0.47"
+dependencies = [
+ "holochain_serialized_bytes_derive 0.0.47",
+ "rmp-serde 0.14.3 (registry+https://github.com/rust-lang/crates.io-index)",
+ "serde 1.0.104 (registry+https://github.com/rust-lang/crates.io-index)",
+ "serde-transcode 1.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "serde_bytes 0.11.5 (registry+https://github.com/rust-lang/crates.io-index)",
+ "serde_json 1.0.55 (registry+https://github.com/rust-lang/crates.io-index)",
+ "thiserror 1.0.19 (registry+https://github.com/rust-lang/crates.io-index)",
+]
+
+[[package]]
+name = "holochain_serialized_bytes"
+version = "0.0.47"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 dependencies = [
  "holochain_serialized_bytes_derive 0.0.47 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -27,6 +40,14 @@ dependencies = [
 [[package]]
 name = "holochain_serialized_bytes_derive"
 version = "0.0.47"
+dependencies = [
+ "quote 1.0.7 (registry+https://github.com/rust-lang/crates.io-index)",
+ "syn 1.0.31 (registry+https://github.com/rust-lang/crates.io-index)",
+]
+
+[[package]]
+name = "holochain_serialized_bytes_derive"
+version = "0.0.47"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 dependencies = [
  "quote 1.0.7 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -35,9 +56,9 @@ dependencies = [
 
 [[package]]
 name = "holochain_wasmer_common"
-version = "0.0.54"
+version = "0.0.64"
 dependencies = [
- "holochain_serialized_bytes 0.0.47 (registry+https://github.com/rust-lang/crates.io-index)",
+ "holochain_serialized_bytes 0.0.47",
  "serde 1.0.104 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde_bytes 0.11.5 (registry+https://github.com/rust-lang/crates.io-index)",
  "thiserror 1.0.19 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -45,10 +66,10 @@ dependencies = [
 
 [[package]]
 name = "holochain_wasmer_guest"
-version = "0.0.54"
+version = "0.0.64"
 dependencies = [
- "holochain_serialized_bytes 0.0.47 (registry+https://github.com/rust-lang/crates.io-index)",
- "holochain_wasmer_common 0.0.54",
+ "holochain_serialized_bytes 0.0.47",
+ "holochain_wasmer_common 0.0.64",
  "serde 1.0.104 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
@@ -195,22 +216,22 @@ dependencies = [
 
 [[package]]
 name = "test_common"
-version = "0.0.54"
+version = "0.0.64"
 dependencies = [
- "holochain_wasmer_common 0.0.54",
+ "holochain_wasmer_common 0.0.64",
  "serde 1.0.104 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde_bytes 0.11.5 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]
 name = "test_wasm_memory"
-version = "0.0.54"
+version = "0.0.64"
 dependencies = [
  "holochain_serialized_bytes 0.0.47 (registry+https://github.com/rust-lang/crates.io-index)",
- "holochain_wasmer_guest 0.0.54",
+ "holochain_wasmer_guest 0.0.64",
  "paste 0.1.16 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde 1.0.104 (registry+https://github.com/rust-lang/crates.io-index)",
- "test_common 0.0.54",
+ "test_common 0.0.64",
 ]
 
 [[package]]

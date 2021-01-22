@@ -124,7 +124,9 @@ pub mod tests {
         let err: Result<SomeStruct, WasmError> =
             guest::call(&mut test_instance(), "some_ret_err", ());
         match err {
-            Err(wasm_error) => assert_eq!(WasmError::Zome("oh no!".into()), wasm_error,),
+            Err(wasm_error) => {
+                assert_eq!(WasmError::new(WasmErrorType::Zome, "oh no!"), wasm_error,)
+            }
             Ok(_) => unreachable!(),
         };
     }
@@ -140,7 +142,10 @@ pub mod tests {
 
         match fail_result {
             Err(wasm_error) => {
-                assert_eq!(WasmError::Zome("it fails!: ()".into()), wasm_error,);
+                assert_eq!(
+                    WasmError::new(WasmErrorType::Zome, "it fails!: ()"),
+                    wasm_error,
+                );
             }
             Ok(_) => unreachable!(),
         };

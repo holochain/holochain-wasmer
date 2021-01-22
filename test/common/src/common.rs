@@ -15,7 +15,7 @@ impl SomeStruct {
     }
 }
 
-#[derive(Serialize, Deserialize, Clone)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct StringType(String);
 
 impl From<String> for StringType {

@@ -79,7 +79,13 @@ pub fn write_bytes(ctx: &mut Ctx, guest_ptr: GuestPtr, slice: &[u8]) -> Result<(
                 std::mem::size_of::<Len>() as Len + len,
             )
         }
-        .ok_or(WasmError::Memory)?
+        .ok_or(WasmError::new(
+            WasmErrorType::Memory,
+            format!(
+                "Host failed to write slice {:?} to guest_ptr {}",
+                slice, guest_ptr
+            ),
+        ))?
         .iter(),
     ) {
         cell.set(*byte)
@@ -130,18 +136,39 @@ pub fn read_bytes(ctx: &Ctx, guest_ptr: GuestPtr) -> Result<Vec<u8>, WasmError> 
     let ptr: WasmPtr<u8, Array> = WasmPtr::new(guest_ptr as _);
     let mut len_iter = ptr
         .deref(ctx.memory(0), 0, std::mem::size_of::<Len>() as Len)
-        .ok_or(WasmError::Memory)?
+        .ok_or(WasmError::new(
+            WasmErrorType::Memory,
+            format!(
+                "Host failed to read the length of the slice at guest_ptr {}",
+                guest_ptr
+            ),
+        ))?
         .iter();
 
     let mut len_array = [0; std::mem::size_of::<Len>()];
     for item in len_array.iter_mut().take(std::mem::size_of::<Len>()) {
-        *item = len_iter.next().ok_or(WasmError::Memory)?.get();
+        *item = len_iter
+            .next()
+            .ok_or(WasmError::new(
+                WasmErrorType::Memory,
+                format!(
+                    "Host failed to read bytes for the length of slice at guest_ptr {}",
+                    guest_ptr
+                ),
+            ))?
+            .get();
     }
     let len: Len = u32::from_le_bytes(len_array);
 
     Ok(ptr
         .deref(ctx.memory(0), std::mem::size_of::<Len>() as Len, len as _)
-        .ok_or(WasmError::Memory)?
+        .ok_or(WasmError::new(
+            WasmErrorType::Memory,
+            format!(
+                "Host failed to read byte slice of length {} at guest_ptr {}",
+                len, guest_ptr
+            ),
+        ))?
         .iter()
         .map(|cell| cell.get())
         .collect::<Vec<u8>>())
@@ -152,9 +179,16 @@ pub fn from_guest_ptr<O: serde::de::DeserializeOwned>(
     ctx: &mut Ctx,
     guest_ptr: GuestPtr,
 ) -> Result<O, WasmError> {
-    Ok(holochain_serialized_bytes::decode(&read_bytes(
-        ctx, guest_ptr,
-    )?)?)
+    let bytes = read_bytes(ctx, guest_ptr)?;
+    holochain_serialized_bytes::decode(&bytes).map_err(|e| {
+        WasmError::new(
+            WasmErrorType::Deserialize(e),
+            format!(
+                "Host failed to deserialize bytes from the guest at guest_ptr {}",
+                guest_ptr,
+            ),
+        )
+    })
 }
 
 /// Host calling guest for the function named `call` with the given `payload` in a vector of bytes
@@ -162,16 +196,21 @@ pub fn from_guest_ptr<O: serde::de::DeserializeOwned>(
 /// allocation pointer or a `WasmError`.
 pub fn call<I, O>(instance: &mut Instance, f: &str, input: I) -> Result<O, WasmError>
 where
-    I: serde::Serialize,
+    I: serde::Serialize + std::fmt::Debug,
     O: serde::de::DeserializeOwned,
 {
     // The guest will use the same crate for decoding if it uses the wasm common crate.
-    let payload: Vec<u8> = holochain_serialized_bytes::encode(&input)?;
+    let payload: Vec<u8> = holochain_serialized_bytes::encode(&input).map_err(|e| {
+        WasmError::new(
+            WasmErrorType::Serialize(e),
+            "Host failed to serialize input for the guest",
+        )
+    })?;
 
     // Get a pre-allocated guest pointer to write the input into.
     let guest_input_ptr: GuestPtr = match instance
         .call("__allocate", &[Value::I32(payload.len().try_into()?)])
-        .map_err(|e| WasmError::CallError(format!("{:?}", e)))?[0]
+        .map_err(|e| WasmError::new(WasmErrorType::CallError, e.to_string()))?[0]
     {
         Value::I32(i) => i as GuestPtr,
         _ => unreachable!(),
@@ -184,7 +223,7 @@ where
     // Collect the guest's pointer to its output.
     let guest_return_ptr: GuestPtr = match instance
         .call(f, &[Value::I32(guest_input_ptr.try_into()?)])
-        .map_err(|e| WasmError::CallError(format!("{:?}", e)))?[0]
+        .map_err(|e| WasmError::new(WasmErrorType::CallError, e.to_string()))?[0]
     {
         Value::I32(i) => i as GuestPtr,
         _ => unreachable!(),
@@ -208,7 +247,7 @@ where
     // Tell the guest we are finished with the return pointer's data.
     instance
         .call("__deallocate", &[Value::I32(guest_return_ptr.try_into()?)])
-        .map_err(|e| WasmError::CallError(format!("{:?}", e)))?;
+        .map_err(|e| WasmError::new(WasmErrorType::CallError, e.to_string()))?;
 
     return_value
 }

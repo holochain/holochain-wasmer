@@ -29,14 +29,19 @@ pub fn free_context_data(data: *mut std::ffi::c_void) {
 /// Set the `Ctx` data as a `Vec<u8>` for any serializable input.
 pub fn set_context_data<I>(ctx: &mut Ctx, input: I) -> Result<Len, WasmError>
 where
-    I: serde::Serialize,
+    I: serde::Serialize + std::fmt::Debug,
 {
     // Guard against the situation where some bad code sets a new Ctx.data value while some other
     // data is leaked in memory, free it before setting a new value.
     free_context_data(ctx.data);
 
     // Leak the provided serialized bytes into the context data so it can be imported later.
-    let data: Vec<u8> = holochain_serialized_bytes::encode(&input)?;
+    let data: Vec<u8> = holochain_serialized_bytes::encode(&input).map_err(|e| {
+        WasmError::new(
+            WasmErrorType::Serialize(e),
+            "Host failed to serialize output for the guest",
+        )
+    })?;
     let len = data.len();
     let b = Box::new(data);
     ctx.data = Box::into_raw(b) as _;

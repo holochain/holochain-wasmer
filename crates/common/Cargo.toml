@@ -7,7 +7,7 @@ authors = [ "thedavidmeister", "thedavidmeister@gmail.com" ]
 edition = "2018"
 
 [dependencies]
-holochain_serialized_bytes = "=0.0.47"
-serde = "=1.0.104"
+holochain_serialized_bytes = { path = "../../../holochain-serialization/crates/holochain_serialized_bytes"}
+serde = { version = "1.0.104", features = ["serde_derive"] }
 thiserror = "1.0.10"
 serde_bytes = "0.11"

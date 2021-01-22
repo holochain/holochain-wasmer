@@ -33,15 +33,21 @@ macro_rules! host_externs {
 /// The guest should __immediately__ return an `Err` back to the host.
 /// The `WasmError::Deserialize` enum contains the bytes that failed to deserialize so the host can
 /// unambiguously provide debug information.
-pub fn host_args<O>(ptr: GuestPtr) -> Result<O, GuestPtr>
+pub fn host_args<O>(guest_ptr: GuestPtr) -> Result<O, GuestPtr>
 where
     O: serde::de::DeserializeOwned,
 {
-    let bytes = consume_bytes(ptr);
+    let bytes = consume_bytes(guest_ptr);
 
     match holochain_serialized_bytes::decode(&bytes) {
         Ok(v) => Ok(v),
-        Err(_) => Err(return_err_ptr(WasmError::Deserialize(bytes))),
+        Err(e) => Err(return_err_ptr(WasmError::new(
+            WasmErrorType::Deserialize(e),
+            format!(
+                "Failed to deserialize input from the host at guest_ptr {}",
+                guest_ptr,
+            ),
+        ))),
     }
 }
 
@@ -59,12 +65,18 @@ pub fn host_call<I, O>(
     input: I,
 ) -> Result<O, crate::WasmError>
 where
-    I: serde::Serialize,
+    I: serde::Serialize + std::fmt::Debug,
     O: serde::de::DeserializeOwned,
 {
     // Call the host function and receive the length of the serialized result.
-    let input_guest_ptr =
-        crate::allocation::write_bytes(&holochain_serialized_bytes::encode(&input)?);
+    let input_guest_ptr = crate::allocation::write_bytes(
+        &holochain_serialized_bytes::encode(&input).map_err(|e| {
+            WasmError::new(
+                WasmErrorType::Serialize(e),
+                "Guest failed to serialize input to the host",
+            )
+        })?,
+    );
 
     // This is unsafe because all host function calls in wasm are unsafe.
     let result_len: Len = unsafe { f(input_guest_ptr) };
@@ -82,7 +94,13 @@ where
     let bytes: Vec<u8> = crate::allocation::consume_bytes(output_guest_ptr);
     match holochain_serialized_bytes::decode(&bytes) {
         Ok(output) => Ok(output),
-        Err(_) => Err(WasmError::Deserialize(bytes)),
+        Err(e) => Err(WasmError::new(
+            WasmErrorType::Deserialize(e),
+            format!(
+                "Failed to deserialize output from the host at output_guest_ptr {}",
+                output_guest_ptr,
+            ),
+        )),
     }
 }
 
@@ -90,11 +108,14 @@ where
 /// The host is expected to know how to consume and deserialize it.
 pub fn return_ptr<R>(return_value: R) -> GuestPtr
 where
-    R: Serialize,
+    R: Serialize + std::fmt::Debug,
 {
     match holochain_serialized_bytes::encode::<Result<R, WasmError>>(&Ok(return_value)) {
         Ok(bytes) => write_bytes(&bytes),
-        Err(e) => return_err_ptr(WasmError::Serialize(e)),
+        Err(e) => return_err_ptr(WasmError::new(
+            WasmErrorType::Serialize(e),
+            "Failed to serialize the return value",
+        )),
     }
 }
 
@@ -102,19 +123,25 @@ where
 pub fn return_err_ptr(wasm_error: WasmError) -> GuestPtr {
     match holochain_serialized_bytes::encode::<Result<(), WasmError>>(&Err(wasm_error)) {
         Ok(bytes) => write_bytes(&bytes),
-        Err(e) => match holochain_serialized_bytes::encode::<Result<(), WasmError>>(&Err(
-            WasmError::Serialize(e),
-        )) {
-            Ok(bytes) => write_bytes(&bytes),
-            // At this point we've errored while erroring
-            Err(_) => match holochain_serialized_bytes::encode::<Result<(), WasmError>>(&Err(
-                WasmError::ErrorWhileError,
-            )) {
+        Err(e) => {
+            match holochain_serialized_bytes::encode::<Result<(), WasmError>>(&Err(WasmError::new(
+                WasmErrorType::Serialize(e),
+                "Guest failed to serialize an error return value",
+            ))) {
                 Ok(bytes) => write_bytes(&bytes),
-                // At this point we failed to serialize a unit struct so IDK ¯\_(ツ)_/¯
-                Err(_) => unreachable!(),
-            },
-        },
+                // At this point we've errored while erroring
+                Err(_) => match holochain_serialized_bytes::encode::<Result<(), WasmError>>(&Err(
+                    WasmError::new(
+                        WasmErrorType::ErrorWhileError,
+                        "Guest errored while erroring while returning an error",
+                    ),
+                )) {
+                    Ok(bytes) => write_bytes(&bytes),
+                    // At this point we failed to serialize a unit struct so IDK ¯\_(ツ)_/¯
+                    Err(_) => unreachable!(),
+                },
+            }
+        }
     }
 }
 
@@ -124,7 +151,12 @@ macro_rules! try_ptr {
     ( $e:expr, $fail:expr ) => {{
         match $e {
             Ok(v) => v,
-            Err(e) => return return_err_ptr(WasmError::Zome(format!("{}: {:?}", $fail, e))),
+            Err(e) => {
+                return return_err_ptr(WasmError::new(
+                    WasmErrorType::Zome,
+                    format!("{}: {:?}", $fail, e),
+                ))
+            }
         }
     }};
 }
