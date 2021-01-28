@@ -12,7 +12,7 @@ wasmer-runtime = "=0.16.2"
 holochain_wasmer_common = { version = "=0.0.64", path = "../common" }
 lazy_static = "1.4.0"
 holochain_serialized_bytes = "=0.0.47"
-serde = "=1.0.104"
+serde = "=1.0.123"
 
 [lib]
 name = "holochain_wasmer_host"

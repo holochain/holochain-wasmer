@@ -8,6 +8,6 @@ edition = "2018"
 
 [dependencies]
 holochain_serialized_bytes = "=0.0.47"
-serde = "=1.0.104"
+serde = "=1.0.123"
 thiserror = "1.0.10"
 serde_bytes = "0.11"
