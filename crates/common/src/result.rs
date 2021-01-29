@@ -5,35 +5,38 @@ use thiserror::Error;
 #[derive(Clone, Debug, PartialEq, Eq, Hash, PartialOrd, Ord, serde::Serialize, serde::Deserialize, thiserror::Error)]
 #[rustfmt::skip]
 pub enum WasmErrorType {
-    /// while converting pointers and lengths between u64 and i64 across the host/guest
-    /// we hit either a negative number (cannot fit in u64) or very large number (cannot fit in i64)
-    /// negative pointers and lengths are almost certainly indicative of a critical bug somewhere
-    /// max i64 represents about 9.2 exabytes so should keep us going long enough to patch wasmer
-    /// if commercial hardware ever threatens to overstep this limit
+    /// While converting pointers and lengths between u64 and i64 across the host/guest.
+    /// Either a negative number (cannot fit in u64) or very large number (cannot fit in i64).
+    /// Negative pointers and lengths are almost certainly indicative of a critical bug somewhere.
+    /// Max i64 represents about 9.2 exabytes so should keep us going long enough to patch wasmer
+    /// if commercial hardware ever threatens to overstep this limit.
     PointerMap,
     /// These bytes failed to deserialize.
-    /// The host should provide nice debug info and context that the wasm guest won't have.
+    /// SerializedBytesError provides nice debug info about the deserialization itself.
+    /// Please provide additional context about what was happening when deserialization failed.
     Deserialize(SerializedBytesError),
     /// Something failed to serialize.
     /// This should be rare or impossible for basically everything that implements Serialize.
+    /// SerializedBytesError provides nice debug info about the serialization itself.
+    /// Please provide additional context about what was happening when serializaiton failed.
     Serialize(SerializedBytesError),
     /// Somehow we errored while erroring.
     /// For example, maybe we failed to serialize an error while attempting to serialize an error.
     ErrorWhileError,
-    /// something went wrong while writing or reading bytes to/from wasm memory
-    /// this means something like "reading 16 bytes did not produce 2x WasmSize ints"
-    /// or maybe even "failed to write a byte to some pre-allocated wasm memory"
-    /// whatever this is it is very bad and probably not recoverable
+    /// Something went wrong while writing or reading bytes to/from wasm memory.
+    /// This means something like "reading 16 bytes did not produce 2x WasmSize ints"
+    /// or maybe even "failed to write a byte to some pre-allocated wasm memory".
+    /// Whatever this is it is very bad and probably not recoverable.
     Memory,
-    /// failed to take bytes out of the guest and do something with it
-    /// the string is whatever error message comes back from the interal process
-    GuestResultHandling,
-    /// something to do with zome logic that we don't know about
-    Zome,
-    /// somehow wasmer failed to compile machine code from wasm byte code
+    /// Somehow wasmer failed to compile machine code from wasm byte code.
     Compile,
+    /// Somehow wasmer failed to call a function on the wasm instance.
+    Call,
 
-    CallError,
+    /// Generic error from the guest.
+    Guest,
+    /// Generic error from the host.
+    Host,
 }
 
 impl std::fmt::Display for WasmErrorType {
@@ -62,6 +65,14 @@ impl WasmError {
             error_type,
             msg: msg.to_string(),
         }
+    }
+
+    pub fn from_guest<S: ToString>(msg: S) -> Self {
+        Self::new(WasmErrorType::Guest, msg)
+    }
+
+    pub fn from_host<S: ToString>(msg: S) -> Self {
+        Self::new(WasmErrorType::Host, msg)
     }
 
     pub fn as_error_type(&self) -> &WasmErrorType {
@@ -123,5 +134,27 @@ impl From<std::num::TryFromIntError> for WasmError {
             WasmErrorType::PointerMap,
             String::from("Failed to convert between integer types"),
         )
+    }
+}
+
+/// A generic conversion of serialization errors to WasmError.
+/// This is a double edged sword.
+/// On one hand it allows us to use `?` which is great for encode/decode in app code.
+/// On the other hand it is a missed opportunity to provide additional debugging context in the
+/// debug message, where serialization/deserialization is exactly where we most often need that
+/// additonal context because often the compiler does not have it either.
+/// If you find your way to this code path and wish you had additional context, please provide it!
+impl From<SerializedBytesError> for WasmError {
+    fn from(serialized_bytes_error: SerializedBytesError) -> Self {
+        match serialized_bytes_error {
+            SerializedBytesError::Serialize(_, _) => WasmError::new(
+                WasmErrorType::Serialize(serialized_bytes_error),
+                "Failed to serialize.",
+            ),
+            SerializedBytesError::Deserialize(_, _) => WasmError::new(
+                WasmErrorType::Deserialize(serialized_bytes_error),
+                "Failed to deserialize.",
+            ),
+        }
     }
 }

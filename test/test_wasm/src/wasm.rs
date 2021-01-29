@@ -108,7 +108,7 @@ pub extern "C" fn some_ret_err(guest_ptr: GuestPtr) -> GuestPtr {
         Ok(v) => v,
         Err(err_ptr) => return err_ptr,
     };
-    return_err_ptr(WasmError::new(WasmErrorType::Zome, "oh no!"))
+    return_err_ptr(WasmError::from_guest("oh no!"))
 }
 
 #[no_mangle]

@@ -119,7 +119,7 @@ where
     }
 }
 
-/// Convert an Into<String> into a generic `Err(WasmError::Zome)` as a `GuestPtr` returned.
+/// Convert an Into<String> into a generic `Err(WasmError)` as a `GuestPtr` returned.
 pub fn return_err_ptr(wasm_error: WasmError) -> GuestPtr {
     match holochain_serialized_bytes::encode::<Result<(), WasmError>>(&Err(wasm_error)) {
         Ok(bytes) => write_bytes(&bytes),
@@ -151,12 +151,7 @@ macro_rules! try_ptr {
     ( $e:expr, $fail:expr ) => {{
         match $e {
             Ok(v) => v,
-            Err(e) => {
-                return return_err_ptr(WasmError::new(
-                    WasmErrorType::Zome,
-                    format!("{}: {:?}", $fail, e),
-                ))
-            }
+            Err(e) => return return_err_ptr(WasmError::from_guest(format!("{}: {:?}", $fail, e))),
         }
     }};
 }

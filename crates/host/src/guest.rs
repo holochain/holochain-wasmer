@@ -79,13 +79,15 @@ pub fn write_bytes(ctx: &mut Ctx, guest_ptr: GuestPtr, slice: &[u8]) -> Result<(
                 std::mem::size_of::<Len>() as Len + len,
             )
         }
-        .ok_or(WasmError::new(
-            WasmErrorType::Memory,
-            format!(
-                "Host failed to write slice {:?} to guest_ptr {}",
-                slice, guest_ptr
-            ),
-        ))?
+        .ok_or_else(|| {
+            WasmError::new(
+                WasmErrorType::Memory,
+                format!(
+                    "Host failed to write slice {:?} to guest_ptr {}",
+                    slice, guest_ptr
+                ),
+            )
+        })?
         .iter(),
     ) {
         cell.set(*byte)
@@ -136,39 +138,45 @@ pub fn read_bytes(ctx: &Ctx, guest_ptr: GuestPtr) -> Result<Vec<u8>, WasmError> 
     let ptr: WasmPtr<u8, Array> = WasmPtr::new(guest_ptr as _);
     let mut len_iter = ptr
         .deref(ctx.memory(0), 0, std::mem::size_of::<Len>() as Len)
-        .ok_or(WasmError::new(
-            WasmErrorType::Memory,
-            format!(
-                "Host failed to read the length of the slice at guest_ptr {}",
-                guest_ptr
-            ),
-        ))?
+        .ok_or_else(|| {
+            WasmError::new(
+                WasmErrorType::Memory,
+                format!(
+                    "Host failed to read the length of the slice at guest_ptr {}",
+                    guest_ptr
+                ),
+            )
+        })?
         .iter();
 
     let mut len_array = [0; std::mem::size_of::<Len>()];
     for item in len_array.iter_mut().take(std::mem::size_of::<Len>()) {
         *item = len_iter
             .next()
-            .ok_or(WasmError::new(
-                WasmErrorType::Memory,
-                format!(
-                    "Host failed to read bytes for the length of slice at guest_ptr {}",
-                    guest_ptr
-                ),
-            ))?
+            .ok_or_else(|| {
+                WasmError::new(
+                    WasmErrorType::Memory,
+                    format!(
+                        "Host failed to read bytes for the length of slice at guest_ptr {}",
+                        guest_ptr
+                    ),
+                )
+            })?
             .get();
     }
     let len: Len = u32::from_le_bytes(len_array);
 
     Ok(ptr
         .deref(ctx.memory(0), std::mem::size_of::<Len>() as Len, len as _)
-        .ok_or(WasmError::new(
-            WasmErrorType::Memory,
-            format!(
-                "Host failed to read byte slice of length {} at guest_ptr {}",
-                len, guest_ptr
-            ),
-        ))?
+        .ok_or_else(|| {
+            WasmError::new(
+                WasmErrorType::Memory,
+                format!(
+                    "Host failed to read byte slice of length {} at guest_ptr {}",
+                    len, guest_ptr
+                ),
+            )
+        })?
         .iter()
         .map(|cell| cell.get())
         .collect::<Vec<u8>>())
@@ -210,7 +218,7 @@ where
     // Get a pre-allocated guest pointer to write the input into.
     let guest_input_ptr: GuestPtr = match instance
         .call("__allocate", &[Value::I32(payload.len().try_into()?)])
-        .map_err(|e| WasmError::new(WasmErrorType::CallError, e.to_string()))?[0]
+        .map_err(|e| WasmError::new(WasmErrorType::Call, e.to_string()))?[0]
     {
         Value::I32(i) => i as GuestPtr,
         _ => unreachable!(),
@@ -223,7 +231,7 @@ where
     // Collect the guest's pointer to its output.
     let guest_return_ptr: GuestPtr = match instance
         .call(f, &[Value::I32(guest_input_ptr.try_into()?)])
-        .map_err(|e| WasmError::new(WasmErrorType::CallError, e.to_string()))?[0]
+        .map_err(|e| WasmError::new(WasmErrorType::Call, e.to_string()))?[0]
     {
         Value::I32(i) => i as GuestPtr,
         _ => unreachable!(),
@@ -247,7 +255,7 @@ where
     // Tell the guest we are finished with the return pointer's data.
     instance
         .call("__deallocate", &[Value::I32(guest_return_ptr.try_into()?)])
-        .map_err(|e| WasmError::new(WasmErrorType::CallError, e.to_string()))?;
+        .map_err(|e| WasmError::new(WasmErrorType::Call, e.to_string()))?;
 
     return_value
 }
