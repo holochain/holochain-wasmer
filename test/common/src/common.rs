@@ -15,7 +15,7 @@ impl SomeStruct {
     }
 }
 
-#[derive(Serialize, Deserialize, Clone)]
+#[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct StringType(String);
 
 impl From<String> for StringType {
@@ -45,7 +45,7 @@ impl BytesType {
     }
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Debug)]
 pub struct IntegerType(u32);
 
 impl From<u32> for IntegerType {
