@@ -35,7 +35,7 @@ macro_rules! host_externs {
 /// unambiguously provide debug information.
 pub fn host_args<O>(ptr: GuestPtr) -> Result<O, GuestPtr>
 where
-    O: serde::de::DeserializeOwned,
+    O: serde::de::DeserializeOwned + std::fmt::Debug,
 {
     let bytes = consume_bytes(ptr);
 
@@ -59,8 +59,8 @@ pub fn host_call<I, O>(
     input: I,
 ) -> Result<O, crate::WasmError>
 where
-    I: serde::Serialize,
-    O: serde::de::DeserializeOwned,
+    I: serde::Serialize + std::fmt::Debug,
+    O: serde::de::DeserializeOwned + std::fmt::Debug,
 {
     // Call the host function and receive the length of the serialized result.
     let input_guest_ptr =
@@ -90,7 +90,7 @@ where
 /// The host is expected to know how to consume and deserialize it.
 pub fn return_ptr<R>(return_value: R) -> GuestPtr
 where
-    R: Serialize,
+    R: Serialize + std::fmt::Debug,
 {
     match holochain_serialized_bytes::encode::<Result<R, WasmError>>(&Ok(return_value)) {
         Ok(bytes) => write_bytes(&bytes),
