@@ -41,7 +41,10 @@ where
 
     match holochain_serialized_bytes::decode(&bytes) {
         Ok(v) => Ok(v),
-        Err(_) => Err(return_err_ptr(WasmError::Deserialize(bytes))),
+        Err(e) => {
+            tracing::error!(input_type = std::any::type_name::<O>(), bytes = ?bytes, "{}", e);
+            Err(return_err_ptr(WasmError::Deserialize(bytes)))
+        }
     }
 }
 
@@ -80,9 +83,12 @@ where
 
     // Deserialize the host bytes into the output type.
     let bytes: Vec<u8> = crate::allocation::consume_bytes(output_guest_ptr);
-    match holochain_serialized_bytes::decode(&bytes) {
-        Ok(output) => Ok(output),
-        Err(_) => Err(WasmError::Deserialize(bytes)),
+    match holochain_serialized_bytes::decode::<Vec<u8>, Result<O, WasmError>>(&bytes) {
+        Ok(output) => Ok(output?),
+        Err(e) => {
+            tracing::error!(output_type = std::any::type_name::<O>(), bytes = ?bytes, "{}", e);
+            Err(WasmError::Deserialize(bytes))
+        },
     }
 }
 
