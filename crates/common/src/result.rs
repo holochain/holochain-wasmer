@@ -21,17 +21,19 @@ pub enum WasmError {
     /// Somehow we errored while erroring.
     /// For example, maybe we failed to serialize an error while attempting to serialize an error.
     ErrorWhileError,
-    /// something went wrong while writing or reading bytes to/from wasm memory
+    /// Something went wrong while writing or reading bytes to/from wasm memory.
     /// this means something like "reading 16 bytes did not produce 2x WasmSize ints"
     /// or maybe even "failed to write a byte to some pre-allocated wasm memory"
     /// whatever this is it is very bad and probably not recoverable
     Memory,
-    /// failed to take bytes out of the guest and do something with it
-    /// the string is whatever error message comes back from the interal process
+    /// Failed to take bytes out of the guest and do something with it.
+    /// The string is whatever error message comes back from the interal process.
     GuestResultHandling(String),
-    /// something to do with zome logic that we don't know about
-    Zome(String),
-    /// somehow wasmer failed to compile machine code from wasm byte code
+    /// Something to do with guest logic that we don't know about
+    Guest(String),
+    /// Something to do with host logic that we don't know about
+    Host(String),
+    /// Somehow wasmer failed to compile machine code from wasm byte code
     Compile(String),
 
     CallError(String),

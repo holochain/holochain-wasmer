@@ -152,9 +152,14 @@ pub fn from_guest_ptr<O>(ctx: &mut Ctx, guest_ptr: GuestPtr) -> Result<O, WasmEr
 where
     O: serde::de::DeserializeOwned + std::fmt::Debug,
 {
-    Ok(holochain_serialized_bytes::decode(&read_bytes(
-        ctx, guest_ptr,
-    )?)?)
+    let bytes = read_bytes(ctx, guest_ptr)?;
+    match holochain_serialized_bytes::decode(&bytes) {
+        Ok(v) => Ok(v),
+        Err(e) => {
+            tracing::error!(input_type = std::any::type_name::<O>(), bytes = ?bytes, "{}", e);
+            Err(e.into())
+        }
+    }
 }
 
 /// Host calling guest for the function named `call` with the given `payload` in a vector of bytes

@@ -41,7 +41,10 @@ where
 
     match holochain_serialized_bytes::decode(&bytes) {
         Ok(v) => Ok(v),
-        Err(_) => Err(return_err_ptr(WasmError::Deserialize(bytes))),
+        Err(e) => {
+            tracing::error!(input_type = std::any::type_name::<O>(), bytes = ?bytes, "{}", e);
+            Err(return_err_ptr(WasmError::Deserialize(bytes)))
+        }
     }
 }
 
@@ -80,9 +83,12 @@ where
 
     // Deserialize the host bytes into the output type.
     let bytes: Vec<u8> = crate::allocation::consume_bytes(output_guest_ptr);
-    match holochain_serialized_bytes::decode(&bytes) {
-        Ok(output) => Ok(output),
-        Err(_) => Err(WasmError::Deserialize(bytes)),
+    match holochain_serialized_bytes::decode::<Vec<u8>, Result<O, WasmError>>(&bytes) {
+        Ok(output) => Ok(output?),
+        Err(e) => {
+            tracing::error!(output_type = std::any::type_name::<O>(), bytes = ?bytes, "{}", e);
+            Err(WasmError::Deserialize(bytes))
+        }
     }
 }
 
@@ -98,7 +104,7 @@ where
     }
 }
 
-/// Convert an Into<String> into a generic `Err(WasmError::Zome)` as a `GuestPtr` returned.
+/// Convert an Into<String> into a generic `Err(WasmError::Guest)` as a `GuestPtr` returned.
 pub fn return_err_ptr(wasm_error: WasmError) -> GuestPtr {
     match holochain_serialized_bytes::encode::<Result<(), WasmError>>(&Err(wasm_error)) {
         Ok(bytes) => write_bytes(&bytes),
@@ -124,7 +130,7 @@ macro_rules! try_ptr {
     ( $e:expr, $fail:expr ) => {{
         match $e {
             Ok(v) => v,
-            Err(e) => return return_err_ptr(WasmError::Zome(format!("{}: {:?}", $fail, e))),
+            Err(e) => return return_err_ptr(WasmError::Guest(format!("{}: {:?}", $fail, e))),
         }
     }};
 }
