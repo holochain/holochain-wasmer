@@ -8,13 +8,19 @@ use test_common::SomeStruct;
 fn test_process_string(ctx: &mut Ctx, guest_ptr: GuestPtr) -> Result<Len, WasmError> {
     let string: String = guest::from_guest_ptr(ctx, guest_ptr)?;
     let processed_string = format!("host: {}", string);
-    Ok(set_context_data(ctx, processed_string)?)
+    Ok(set_context_data(
+        ctx,
+        Ok::<String, WasmError>(processed_string),
+    )?)
 }
 
 fn test_process_struct(ctx: &mut Ctx, guest_ptr: GuestPtr) -> Result<Len, WasmError> {
     let mut some_struct: SomeStruct = guest::from_guest_ptr(ctx, guest_ptr)?;
     some_struct.process();
-    Ok(set_context_data(ctx, some_struct)?)
+    Ok(set_context_data(
+        ctx,
+        Ok::<SomeStruct, WasmError>(some_struct),
+    )?)
 }
 
 fn debug(_ctx: &mut Ctx, some_number: WasmSize) -> Result<Len, WasmError> {
@@ -101,7 +107,7 @@ pub mod tests {
             guest::call(&mut test_instance(), "native_type", some_struct.clone())
                 .expect("native type handling");
 
-        assert_eq!(some_struct, result,);
+        assert_eq!(some_struct, result);
     }
 
     #[test]
@@ -124,7 +130,7 @@ pub mod tests {
         let err: Result<SomeStruct, WasmError> =
             guest::call(&mut test_instance(), "some_ret_err", ());
         match err {
-            Err(wasm_error) => assert_eq!(WasmError::Zome("oh no!".into()), wasm_error,),
+            Err(wasm_error) => assert_eq!(WasmError::Guest("oh no!".into()), wasm_error,),
             Ok(_) => unreachable!(),
         };
     }
@@ -140,7 +146,7 @@ pub mod tests {
 
         match fail_result {
             Err(wasm_error) => {
-                assert_eq!(WasmError::Zome("it fails!: ()".into()), wasm_error,);
+                assert_eq!(WasmError::Guest("it fails!: ()".into()), wasm_error,);
             }
             Ok(_) => unreachable!(),
         };

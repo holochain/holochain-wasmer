@@ -11,11 +11,16 @@ version = "1.3.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 
 [[package]]
+name = "cfg-if"
+version = "1.0.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+
+[[package]]
 name = "holochain_serialized_bytes"
-version = "0.0.47"
+version = "0.0.48"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 dependencies = [
- "holochain_serialized_bytes_derive 0.0.47 (registry+https://github.com/rust-lang/crates.io-index)",
+ "holochain_serialized_bytes_derive 0.0.48 (registry+https://github.com/rust-lang/crates.io-index)",
  "rmp-serde 0.14.3 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde 1.0.104 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde-transcode 1.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -26,7 +31,7 @@ dependencies = [
 
 [[package]]
 name = "holochain_serialized_bytes_derive"
-version = "0.0.47"
+version = "0.0.48"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 dependencies = [
  "quote 1.0.2 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -35,9 +40,9 @@ dependencies = [
 
 [[package]]
 name = "holochain_wasmer_common"
-version = "0.0.54"
+version = "0.0.65"
 dependencies = [
- "holochain_serialized_bytes 0.0.47 (registry+https://github.com/rust-lang/crates.io-index)",
+ "holochain_serialized_bytes 0.0.48 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde 1.0.104 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde_bytes 0.11.4 (registry+https://github.com/rust-lang/crates.io-index)",
  "thiserror 1.0.14 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -45,11 +50,12 @@ dependencies = [
 
 [[package]]
 name = "holochain_wasmer_guest"
-version = "0.0.54"
+version = "0.0.65"
 dependencies = [
- "holochain_serialized_bytes 0.0.47 (registry+https://github.com/rust-lang/crates.io-index)",
- "holochain_wasmer_common 0.0.54",
+ "holochain_serialized_bytes 0.0.48 (registry+https://github.com/rust-lang/crates.io-index)",
+ "holochain_wasmer_common 0.0.65",
  "serde 1.0.104 (registry+https://github.com/rust-lang/crates.io-index)",
+ "tracing 0.1.23 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]
@@ -63,6 +69,11 @@ dependencies = [
 [[package]]
 name = "itoa"
 version = "0.4.5"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+
+[[package]]
+name = "lazy_static"
+version = "1.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 
 [[package]]
@@ -92,6 +103,11 @@ dependencies = [
  "quote 1.0.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "syn 1.0.14 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
+
+[[package]]
+name = "pin-project-lite"
+version = "0.2.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
 
 [[package]]
 name = "proc-macro-hack"
@@ -195,22 +211,22 @@ dependencies = [
 
 [[package]]
 name = "test_common"
-version = "0.0.54"
+version = "0.0.65"
 dependencies = [
- "holochain_wasmer_common 0.0.54",
+ "holochain_wasmer_common 0.0.65",
  "serde 1.0.104 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde_bytes 0.11.4 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]
 name = "test_wasm_io"
-version = "0.0.54"
+version = "0.0.65"
 dependencies = [
- "holochain_serialized_bytes 0.0.47 (registry+https://github.com/rust-lang/crates.io-index)",
- "holochain_wasmer_guest 0.0.54",
+ "holochain_serialized_bytes 0.0.48 (registry+https://github.com/rust-lang/crates.io-index)",
+ "holochain_wasmer_guest 0.0.65",
  "paste 0.1.16 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde 1.0.104 (registry+https://github.com/rust-lang/crates.io-index)",
- "test_common 0.0.54",
+ "test_common 0.0.65",
 ]
 
 [[package]]
@@ -232,6 +248,35 @@ dependencies = [
 ]
 
 [[package]]
+name = "tracing"
+version = "0.1.23"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+dependencies = [
+ "cfg-if 1.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "pin-project-lite 0.2.4 (registry+https://github.com/rust-lang/crates.io-index)",
+ "tracing-attributes 0.1.12 (registry+https://github.com/rust-lang/crates.io-index)",
+ "tracing-core 0.1.17 (registry+https://github.com/rust-lang/crates.io-index)",
+]
+
+[[package]]
+name = "tracing-attributes"
+version = "0.1.12"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+dependencies = [
+ "proc-macro2 1.0.8 (registry+https://github.com/rust-lang/crates.io-index)",
+ "quote 1.0.2 (registry+https://github.com/rust-lang/crates.io-index)",
+ "syn 1.0.14 (registry+https://github.com/rust-lang/crates.io-index)",
+]
+
+[[package]]
+name = "tracing-core"
+version = "0.1.17"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+dependencies = [
+ "lazy_static 1.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
+]
+
+[[package]]
 name = "unicode-xid"
 version = "0.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -239,13 +284,16 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 [metadata]
 "checksum autocfg 1.0.0 (registry+https://github.com/rust-lang/crates.io-index)" = "f8aac770f1885fd7e387acedd76065302551364496e46b3dd00860b2f8359b9d"
 "checksum byteorder 1.3.4 (registry+https://github.com/rust-lang/crates.io-index)" = "08c48aae112d48ed9f069b33538ea9e3e90aa263cfa3d1c24309612b1f7472de"
-"checksum holochain_serialized_bytes 0.0.47 (registry+https://github.com/rust-lang/crates.io-index)" = "80e1f2f82c9ac6dc7bc7c2e06e892d4bd1f29b4681cbfa4886edeb25ee8cdfe3"
-"checksum holochain_serialized_bytes_derive 0.0.47 (registry+https://github.com/rust-lang/crates.io-index)" = "0119b7cd2aa14e4bc7129a212ff570bcba295ae19392067b2b0deeba780729e9"
+"checksum cfg-if 1.0.0 (registry+https://github.com/rust-lang/crates.io-index)" = "baf1de4339761588bc0619e3cbc0120ee582ebb74b53b4efbf79117bd2da40fd"
+"checksum holochain_serialized_bytes 0.0.48 (registry+https://github.com/rust-lang/crates.io-index)" = "79ff6ebed11c8d4cbc9cb2ea1ee779100d623e819e4cb3bdca16481a775126da"
+"checksum holochain_serialized_bytes_derive 0.0.48 (registry+https://github.com/rust-lang/crates.io-index)" = "4dbd32f37d69ab4772ec726b8d8349b6f0752f3757deac724a5791149c34ec1e"
 "checksum indexmap 1.3.2 (registry+https://github.com/rust-lang/crates.io-index)" = "076f042c5b7b98f31d205f1249267e12a6518c1481e9dae9764af19b707d2292"
 "checksum itoa 0.4.5 (registry+https://github.com/rust-lang/crates.io-index)" = "b8b7a7c0c47db5545ed3fef7468ee7bb5b74691498139e4b3f6a20685dc6dd8e"
+"checksum lazy_static 1.4.0 (registry+https://github.com/rust-lang/crates.io-index)" = "e2abad23fbc42b3700f2f279844dc832adb2b2eb069b2df918f455c4e18cc646"
 "checksum num-traits 0.2.11 (registry+https://github.com/rust-lang/crates.io-index)" = "c62be47e61d1842b9170f0fdeec8eba98e60e90e5446449a0545e5152acd7096"
 "checksum paste 0.1.16 (registry+https://github.com/rust-lang/crates.io-index)" = "d508492eeb1e5c38ee696371bf7b9fc33c83d46a7d451606b96458fbbbdc2dec"
 "checksum paste-impl 0.1.16 (registry+https://github.com/rust-lang/crates.io-index)" = "84f328a6a63192b333fce5fbb4be79db6758a4d518dfac6d54412f1492f72d32"
+"checksum pin-project-lite 0.2.4 (registry+https://github.com/rust-lang/crates.io-index)" = "439697af366c49a6d0a010c56a0d97685bc140ce0d377b13a2ea2aa42d64a827"
 "checksum proc-macro-hack 0.5.16 (registry+https://github.com/rust-lang/crates.io-index)" = "7e0456befd48169b9f13ef0f0ad46d492cf9d2dbb918bcf38e01eed4ce3ec5e4"
 "checksum proc-macro2 1.0.8 (registry+https://github.com/rust-lang/crates.io-index)" = "3acb317c6ff86a4e579dfa00fc5e6cca91ecbb4e7eb2df0468805b674eb88548"
 "checksum quote 1.0.2 (registry+https://github.com/rust-lang/crates.io-index)" = "053a8c8bcc71fcce321828dc897a98ab9760bef03a4fc36693c231e5b3216cfe"
@@ -260,4 +308,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 "checksum syn 1.0.14 (registry+https://github.com/rust-lang/crates.io-index)" = "af6f3550d8dff9ef7dc34d384ac6f107e5d31c8f57d9f28e0081503f547ac8f5"
 "checksum thiserror 1.0.14 (registry+https://github.com/rust-lang/crates.io-index)" = "f0570dc61221295909abdb95c739f2e74325e14293b2026b0a7e195091ec54ae"
 "checksum thiserror-impl 1.0.14 (registry+https://github.com/rust-lang/crates.io-index)" = "227362df41d566be41a28f64401e07a043157c21c14b9785a0d8e256f940a8fd"
+"checksum tracing 0.1.23 (registry+https://github.com/rust-lang/crates.io-index)" = "f7d40a22fd029e33300d8d89a5cc8ffce18bb7c587662f54629e94c9de5487f3"
+"checksum tracing-attributes 0.1.12 (registry+https://github.com/rust-lang/crates.io-index)" = "43f080ea7e4107844ef4766459426fa2d5c1ada2e47edba05dc7fa99d9629f47"
+"checksum tracing-core 0.1.17 (registry+https://github.com/rust-lang/crates.io-index)" = "f50de3927f93d202783f4513cda820ab47ef17f624b03c096e86ef00c67e6b5f"
 "checksum unicode-xid 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)" = "826e7639553986605ec5979c7dd957c7895e93eabed50ab2ffa7f6128a75097c"

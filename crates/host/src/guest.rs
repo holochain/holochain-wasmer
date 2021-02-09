@@ -148,13 +148,18 @@ pub fn read_bytes(ctx: &Ctx, guest_ptr: GuestPtr) -> Result<Vec<u8>, WasmError> 
 }
 
 /// Deserialize any DeserializeOwned type out of the guest from a guest pointer.
-pub fn from_guest_ptr<O: serde::de::DeserializeOwned>(
-    ctx: &mut Ctx,
-    guest_ptr: GuestPtr,
-) -> Result<O, WasmError> {
-    Ok(holochain_serialized_bytes::decode(&read_bytes(
-        ctx, guest_ptr,
-    )?)?)
+pub fn from_guest_ptr<O>(ctx: &mut Ctx, guest_ptr: GuestPtr) -> Result<O, WasmError>
+where
+    O: serde::de::DeserializeOwned + std::fmt::Debug,
+{
+    let bytes = read_bytes(ctx, guest_ptr)?;
+    match holochain_serialized_bytes::decode(&bytes) {
+        Ok(v) => Ok(v),
+        Err(e) => {
+            tracing::error!(input_type = std::any::type_name::<O>(), bytes = ?bytes, "{}", e);
+            Err(e.into())
+        }
+    }
 }
 
 /// Host calling guest for the function named `call` with the given `payload` in a vector of bytes
@@ -162,8 +167,8 @@ pub fn from_guest_ptr<O: serde::de::DeserializeOwned>(
 /// allocation pointer or a `WasmError`.
 pub fn call<I, O>(instance: &mut Instance, f: &str, input: I) -> Result<O, WasmError>
 where
-    I: serde::Serialize,
-    O: serde::de::DeserializeOwned,
+    I: serde::Serialize + std::fmt::Debug,
+    O: serde::de::DeserializeOwned + std::fmt::Debug,
 {
     // The guest will use the same crate for decoding if it uses the wasm common crate.
     let payload: Vec<u8> = holochain_serialized_bytes::encode(&input)?;

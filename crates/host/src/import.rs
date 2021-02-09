@@ -29,7 +29,7 @@ pub fn free_context_data(data: *mut std::ffi::c_void) {
 /// Set the `Ctx` data as a `Vec<u8>` for any serializable input.
 pub fn set_context_data<I>(ctx: &mut Ctx, input: I) -> Result<Len, WasmError>
 where
-    I: serde::Serialize,
+    I: serde::Serialize + std::fmt::Debug,
 {
     // Guard against the situation where some bad code sets a new Ctx.data value while some other
     // data is leaked in memory, free it before setting a new value.
