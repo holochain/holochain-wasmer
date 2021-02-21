@@ -19,5 +19,5 @@ serde = "=1.0.123"
 tracing = "0.1"
 
 [dependencies.holochain_serialized_bytes]
-version = "=0.0.48"
+version = "=0.0.50"
 features = []
