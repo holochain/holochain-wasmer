@@ -78,7 +78,7 @@ impl From<core::convert::Infallible> for WasmError {
 
 /// Used by the HDK to set a global Hdk that can be mocked out.
 impl<T> From<std::sync::PoisonError<std::sync::RwLockReadGuard<'_, T>>> for WasmError {
-    fn from (e: std::sync::PoisonError<std::sync::RwLockReadGuard<'_, T>>) -> Self {
+    fn from(e: std::sync::PoisonError<std::sync::RwLockReadGuard<'_, T>>) -> Self {
         Self::Guest(e.to_string())
     }
 }
