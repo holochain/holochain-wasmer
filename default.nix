@@ -18,6 +18,10 @@ let
  ) { config = config; use-stable-rust = true; };
  # END HOLONIX IMPORT BOILERPLATE
 
+ newer = import (fetchTarball {
+   url = "https://github.com/NixOS/nixpkgs/tarball/d23610ae657e47e06ef66c5c6a2e5bf7374553fa";
+ }) { };
+
 in
 with holonix.pkgs;
 {
@@ -25,11 +29,12 @@ with holonix.pkgs;
   name = "dev-shell";
 
   buildInputs = [
-   holonix.pkgs.gnuplot
-   holonix.pkgs.flamegraph
+  #  holonix.pkgs.gnuplot
+  #  holonix.pkgs.flamegraph
+   newer.pkgs.wasmer
   ]
-   ++ holonix.shell.buildInputs
-   ++ config.buildInputs
+  #  ++ holonix.shell.buildInputs
+  #  ++ config.buildInputs
    ;
  });
 }

@@ -73,10 +73,10 @@ where
     let result_len: Len = unsafe { f(input_guest_ptr) };
 
     // Free the leaked bytes from the input to the host function.
-    crate::allocation::__deallocate(input_guest_ptr);
+    crate::allocation::__hcdeallocate(input_guest_ptr);
 
     // Prepare a GuestPtr for the host to write into.
-    let output_guest_ptr: GuestPtr = crate::allocation::__allocate(result_len);
+    let output_guest_ptr: GuestPtr = crate::allocation::__hcallocate(result_len);
 
     // Ask the host to populate the result allocation pointer with its result.
     unsafe { __import_data(output_guest_ptr) };

@@ -50,6 +50,12 @@ pub extern "C" fn process_bytes(guest_ptr: GuestPtr) -> GuestPtr {
 }
 
 #[no_mangle]
+pub extern "C" fn ignore_args_process_string(_: GuestPtr) -> GuestPtr {
+    host_call::<&String, StringType>(__test_process_string, &"foo".into()).unwrap();
+    return_ptr(StringType::from(String::new()))
+}
+
+#[no_mangle]
 pub extern "C" fn process_string(guest_ptr: GuestPtr) -> GuestPtr {
     // get the string the host is trying to pass us out of memory
     // the ptr and cap line up with what was previously allocated with pre_alloc_string

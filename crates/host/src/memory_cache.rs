@@ -2,12 +2,13 @@ use lazy_static::lazy_static;
 use std::collections::HashMap;
 use std::io;
 use std::path::PathBuf;
-use wasmer_runtime::cache::Cache;
-use wasmer_runtime::cache::FileSystemCache;
-use wasmer_runtime::cache::WasmHash;
-use wasmer_runtime::error::CacheError;
-use wasmer_runtime::Backend;
-use wasmer_runtime::Module;
+// use wasmer_runtime::cache::Cache;
+// use wasmer_runtime::cache::FileSystemCache;
+// use wasmer_runtime::cache::WasmHash;
+// use wasmer_runtime::error::CacheError;
+// use wasmer_runtime::Backend;
+// use wasmer_runtime::Module;
+use wasmer::Cache;
 
 use std::sync::Mutex;
 
