@@ -58,9 +58,9 @@ pub fn consume_bytes(guest_ptr: GuestPtr) -> Vec<u8> {
     //
     // For example, this did _not_ work and leads to memory related panics down the line:
     // let v: Vec<u8> = Vec::from_raw_parts(
-    //     (guest_ptr + std::mem::size_of::<Len>() as Len) as *mut u8,
+    //     (guest_ptr + core::mem::size_of::<Len>() as Len) as *mut u8,
     //     len as usize,
-    //     (len + std::mem::size_of::<Len>() as Len) as usize,
+    //     (len + core::mem::size_of::<Len>() as Len) as usize,
     // );
 
     // We need the same length used to allocate the vector originally, so it includes the prefix
