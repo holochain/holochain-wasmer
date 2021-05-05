@@ -66,7 +66,7 @@ where
     // This is unsafe because all host function calls in wasm are unsafe.
     let result_len: Len = unsafe { f(input_guest_ptr) };
 
-    // // Free the leaked bytes from the input to the host function.
+    // Free the leaked bytes from the input to the host function.
     crate::allocation::__deallocate(input_guest_ptr);
 
     // Prepare a GuestPtr for the host to write into.
