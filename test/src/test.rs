@@ -5,14 +5,14 @@ pub mod wasms;
 use holochain_wasmer_host::prelude::*;
 use test_common::SomeStruct;
 
-pub fn test_process_string(env: &Env, guest_ptr: GuestPtr) -> Result<(), WasmError> {
-    let string: String = env.consume_bytes_from_guest_ptr(guest_ptr)?;
+pub fn test_process_string(env: &Env, guest_ptr: GuestPtr, len: Len) -> Result<(), WasmError> {
+    let string: String = env.consume_bytes_from_guest(guest_ptr, len)?;
     let processed_string = format!("host: {}", string);
     Ok(env.set_data(Ok::<String, WasmError>(processed_string))?)
 }
 
-pub fn test_process_struct(env: &Env, guest_ptr: GuestPtr) -> Result<(), WasmError> {
-    let mut some_struct: SomeStruct = env.consume_bytes_from_guest_ptr(guest_ptr)?;
+pub fn test_process_struct(env: &Env, guest_ptr: GuestPtr, len: Len) -> Result<(), WasmError> {
+    let mut some_struct: SomeStruct = env.consume_bytes_from_guest(guest_ptr, len)?;
     some_struct.process();
     Ok(env.set_data(Ok::<SomeStruct, WasmError>(some_struct))?)
 }

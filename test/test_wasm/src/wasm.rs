@@ -15,8 +15,8 @@ host_externs!(
 );
 
 #[no_mangle]
-pub extern "C" fn literal_bytes(guest_ptr: GuestPtr) -> GuestPtr {
-    let bytes: Vec<u8> = match host_args(guest_ptr) {
+pub extern "C" fn literal_bytes(guest_ptr: GuestPtr, len: Len) -> GuestPtrLen {
+    let bytes: Vec<u8> = match host_args(guest_ptr, len) {
         Ok(v) => v,
         Err(err_ptr) => return err_ptr,
     };
@@ -25,16 +25,16 @@ pub extern "C" fn literal_bytes(guest_ptr: GuestPtr) -> GuestPtr {
 }
 
 #[no_mangle]
-pub extern "C" fn ignore_args_process_string(_: GuestPtr) -> GuestPtr {
+pub extern "C" fn ignore_args_process_string(_: GuestPtr, _: Len) -> GuestPtrLen {
     host_call::<&String, StringType>(__test_process_string, &"foo".into()).unwrap();
     return_ptr(StringType::from(String::new()))
 }
 
 #[no_mangle]
-pub extern "C" fn process_string(guest_ptr: GuestPtr) -> GuestPtr {
+pub extern "C" fn process_string(guest_ptr: GuestPtr, len: Len) -> GuestPtrLen {
     // get the string the host is trying to pass us out of memory
     // the ptr and cap line up with what was previously allocated with pre_alloc_string
-    let s: StringType = match host_args(guest_ptr) {
+    let s: StringType = match host_args(guest_ptr, len) {
         Ok(v) => v,
         Err(err_ptr) => return err_ptr,
     };
@@ -48,8 +48,8 @@ pub extern "C" fn process_string(guest_ptr: GuestPtr) -> GuestPtr {
 }
 
 #[no_mangle]
-pub extern "C" fn process_native(guest_ptr: GuestPtr) -> GuestPtr {
-    let input: SomeStruct = match host_args(guest_ptr) {
+pub extern "C" fn process_native(guest_ptr: GuestPtr, len: Len) -> GuestPtrLen {
+    let input: SomeStruct = match host_args(guest_ptr, len) {
         Ok(v) => v,
         Err(err_ptr) => return err_ptr,
     };
@@ -61,8 +61,8 @@ pub extern "C" fn process_native(guest_ptr: GuestPtr) -> GuestPtr {
 }
 
 #[no_mangle]
-pub extern "C" fn stacked_strings(guest_ptr: GuestPtr) -> GuestPtr {
-    let _: () = match host_args(guest_ptr) {
+pub extern "C" fn stacked_strings(guest_ptr: GuestPtr, len: Len) -> GuestPtrLen {
+    let _: () = match host_args(guest_ptr, len) {
         Ok(v) => v,
         Err(err_ptr) => return err_ptr,
     };
@@ -75,8 +75,8 @@ pub extern "C" fn stacked_strings(guest_ptr: GuestPtr) -> GuestPtr {
 }
 
 #[no_mangle]
-pub extern "C" fn some_ret(guest_ptr: GuestPtr) -> GuestPtr {
-    let _: () = match host_args(guest_ptr) {
+pub extern "C" fn some_ret(guest_ptr: GuestPtr, len: Len) -> GuestPtrLen {
+    let _: () = match host_args(guest_ptr, len) {
         Ok(v) => v,
         Err(err_ptr) => return err_ptr,
     };
@@ -84,8 +84,8 @@ pub extern "C" fn some_ret(guest_ptr: GuestPtr) -> GuestPtr {
 }
 
 #[no_mangle]
-pub extern "C" fn some_ret_err(guest_ptr: GuestPtr) -> GuestPtr {
-    let _: () = match host_args(guest_ptr) {
+pub extern "C" fn some_ret_err(guest_ptr: GuestPtr, len: Len) -> GuestPtrLen {
+    let _: () = match host_args(guest_ptr, len) {
         Ok(v) => v,
         Err(err_ptr) => return err_ptr,
     };
@@ -93,8 +93,8 @@ pub extern "C" fn some_ret_err(guest_ptr: GuestPtr) -> GuestPtr {
 }
 
 #[no_mangle]
-pub extern "C" fn native_type(guest_ptr: GuestPtr) -> GuestPtr {
-    let input: SomeStruct = match host_args(guest_ptr) {
+pub extern "C" fn native_type(guest_ptr: GuestPtr, len: Len) -> GuestPtrLen {
+    let input: SomeStruct = match host_args(guest_ptr, len) {
         Ok(v) => v,
         Err(err_ptr) => return err_ptr,
     };
@@ -102,8 +102,8 @@ pub extern "C" fn native_type(guest_ptr: GuestPtr) -> GuestPtr {
 }
 
 #[no_mangle]
-pub extern "C" fn try_ptr_succeeds(guest_ptr: GuestPtr) -> GuestPtr {
-    let _: () = match host_args(guest_ptr) {
+pub extern "C" fn try_ptr_succeeds(guest_ptr: GuestPtr, len: Len) -> GuestPtrLen {
+    let _: () = match host_args(guest_ptr, len) {
         Ok(v) => v,
         Err(err_ptr) => return err_ptr,
     };
@@ -113,8 +113,8 @@ pub extern "C" fn try_ptr_succeeds(guest_ptr: GuestPtr) -> GuestPtr {
 }
 
 #[no_mangle]
-pub extern "C" fn try_ptr_fails_fast(guest_ptr: GuestPtr) -> GuestPtr {
-    let _: () = match host_args(guest_ptr) {
+pub extern "C" fn try_ptr_fails_fast(guest_ptr: GuestPtr, len: Len) -> GuestPtrLen {
+    let _: () = match host_args(guest_ptr, len) {
         Ok(v) => v,
         Err(err_ptr) => return err_ptr,
     };

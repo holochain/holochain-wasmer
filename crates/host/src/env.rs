@@ -27,7 +27,7 @@ impl Env {
         Ok(())
     }
 
-    pub fn move_data_to_guest(&self) -> Result<GuestPtr, WasmError> {
+    pub fn move_data_to_guest(&self) -> Result<GuestPtrLen, WasmError> {
         let guest_ptr: GuestPtr = match self
             .allocate_ref()
             .ok_or(WasmError::Memory)?
@@ -43,25 +43,27 @@ impl Env {
             Value::I32(guest_ptr) => guest_ptr as GuestPtr,
             _ => Err(WasmError::PointerMap)?,
         };
+        let len = self.data.read().len() as Len;
         crate::guest::write_bytes(
             self.memory_ref().ok_or(WasmError::Memory)?,
             guest_ptr,
             &self.data.read(),
         )?;
         *self.data.write() = Vec::new();
-        Ok(guest_ptr)
+        Ok(merge_u64(guest_ptr, len))
     }
 
-    pub fn consume_bytes_from_guest_ptr<O>(&self, guest_ptr: GuestPtr) -> Result<O, WasmError>
+    pub fn consume_bytes_from_guest<O>(&self, guest_ptr: GuestPtr, len: Len) -> Result<O, WasmError>
     where
         O: serde::de::DeserializeOwned + std::fmt::Debug,
     {
-        let bytes = read_bytes(self.memory_ref().ok_or(WasmError::Memory)?, guest_ptr)?;
+        let bytes = read_bytes(self.memory_ref().ok_or(WasmError::Memory)?, guest_ptr, len)?;
         self.deallocate_ref()
             .ok_or(WasmError::Memory)?
-            .call(&[Value::I32(
-                guest_ptr.try_into().map_err(|_| WasmError::PointerMap)?,
-            )])
+            .call(&[
+                Value::I32(guest_ptr.try_into().map_err(|_| WasmError::PointerMap)?),
+                Value::I32(len.try_into().map_err(|_| WasmError::PointerMap)?),
+            ])
             .map_err(|e| WasmError::Host(e.to_string()))?;
         match holochain_serialized_bytes::decode(&bytes) {
             Ok(v) => Ok(v),
