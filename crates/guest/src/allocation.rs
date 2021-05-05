@@ -1,5 +1,6 @@
 use holochain_wasmer_common::*;
 
+#[inline(always)]
 /// Attempt to extract the length at the given guest_ptr.
 //. Note that the guest_ptr could point at garbage and the "length prefix" would be garbage and
 //. then some arbitrary memory would be referenced so not erroring does not imply safety.
@@ -10,25 +11,28 @@ pub fn length_prefix_at_guest_ptr(guest_ptr: GuestPtr) -> Len {
 }
 
 #[no_mangle]
+#[inline(always)]
 /// Allocate a length __plus a length prefix__ in bytes that won't be dropped by the allocator.
 /// Return the pointer to it so a length prefix + bytes can be written to the allocation.
-pub extern "C" fn __hcallocate(len: Len) -> GuestPtr {
+pub extern "C" fn __allocate(len: Len) -> GuestPtr {
     let dummy: Vec<u8> = Vec::with_capacity((len + core::mem::size_of::<Len>() as Len) as usize);
     let ptr = dummy.as_ptr() as GuestPtr;
     let _ = core::mem::ManuallyDrop::new(dummy);
     ptr
 }
 
+#[no_mangle]
+#[inline(always)]
 /// Free a length-prefixed allocation.
 /// Needed because we leak memory every time we call `__hcallocate` and `write_bytes`.
-#[no_mangle]
-pub extern "C" fn __hcdeallocate(guest_ptr: GuestPtr) {
+pub extern "C" fn __deallocate(guest_ptr: GuestPtr) {
     // Failing to deallocate when requested is unrecoverable.
     let len = length_prefix_at_guest_ptr(guest_ptr) + core::mem::size_of::<Len>() as Len;
     let _: Vec<u8> =
         unsafe { Vec::from_raw_parts(guest_ptr as *mut u8, len as usize, len as usize) };
 }
 
+#[inline(always)]
 /// Attempt to consume bytes out of a length-prefixed allocation at the given pointer position.
 ///
 /// Consume in this context means take ownership of previously forgotten data.
@@ -82,6 +86,7 @@ pub fn consume_bytes(guest_ptr: GuestPtr) -> Vec<u8> {
     v.split_off(core::mem::size_of::<Len>())
 }
 
+#[inline(always)]
 /// Attempt to write a slice of bytes into a length prefixed allocation.
 ///
 /// This is identical to the following:

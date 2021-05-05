@@ -1,18 +1,12 @@
-pub mod import;
+// pub mod import;
 pub mod wasms;
 
-use holochain_wasmer_host::env::Env;
+// use holochain_wasmer_host::env::Env;
 use holochain_wasmer_host::import::set_host_return_encoded;
 use holochain_wasmer_host::prelude::*;
 use test_common::SomeStruct;
 
-fn test_process_string(env: &Env, guest_ptr: GuestPtr) -> Result<Len, WasmError> {
-    dbg!(&guest_ptr);
-    dbg!(&env.memory_ref());
-    let maybe_memory = env.memory_ref();
-    // dbg!(&env.host_return_encoded);
-    dbg!(&maybe_memory);
-
+pub fn test_process_string(env: &Env, guest_ptr: GuestPtr) -> Result<Len, WasmError> {
     let string: String =
         guest::from_guest_ptr(env.memory_ref().ok_or(WasmError::Memory)?, guest_ptr)?;
     let processed_string = format!("host: {}", string);
@@ -22,7 +16,7 @@ fn test_process_string(env: &Env, guest_ptr: GuestPtr) -> Result<Len, WasmError>
     )?)
 }
 
-fn test_process_struct(env: &Env, guest_ptr: GuestPtr) -> Result<Len, WasmError> {
+pub fn test_process_struct(env: &Env, guest_ptr: GuestPtr) -> Result<Len, WasmError> {
     // dbg!(env.memory_ref());
     // let maybe_memory = env.memory.read();
     let mut some_struct: SomeStruct =
@@ -34,33 +28,53 @@ fn test_process_struct(env: &Env, guest_ptr: GuestPtr) -> Result<Len, WasmError>
     )?)
 }
 
-fn debug(_env: &Env, some_number: WasmSize) -> Result<Len, WasmError> {
+pub fn debug(_env: &Env, some_number: WasmSize) -> Result<Len, WasmError> {
     println!("debug {:?}", some_number);
     Ok(0)
 }
 
-fn pages(env: &Env, _: WasmSize) -> Result<WasmSize, WasmError> {
+pub fn pages(env: &Env, _: WasmSize) -> Result<WasmSize, WasmError> {
     // let maybe_memory = env.memory.read();
     Ok(env.memory_ref().ok_or(WasmError::Memory)?.size().0)
 }
 
 #[cfg(test)]
 pub mod tests {
-
-    use crate::import::import_object;
+    use super::test_process_string;
+    use super::*;
     use crate::wasms;
-    use holochain_wasmer_host::prelude::*;
-    use test_common::SomeStruct;
     use test_common::StringType;
 
     fn test_instance(wasm: &[u8]) -> Instance {
         let engine = JIT::new(Singlepass::new()).engine();
         let store = Store::new(&engine);
-        let env = Env::new();
+        let env = Env::default();
         let module = Module::new(&store, wasm).unwrap();
-        dbg!("z");
-        let instance = Instance::new(&module, &import_object(&store, &env)).unwrap();
-        dbg!("x");
+        let import_object: ImportObject = imports! {
+            "env" => {
+                "__test_process_string" => Function::new_native_with_env(
+                    &store,
+                    env.clone(),
+                    test_process_string,
+                ),
+                "__test_process_struct" => Function::new_native_with_env(
+                    &store,
+                    env.clone(),
+                    test_process_struct,
+                ),
+                "__import_data" => Function::new_native_with_env(
+                    &store,
+                    env.clone(),
+                    __import_data,
+                ),
+                "__pages" => Function::new_native_with_env(
+                    &store,
+                    env.clone(),
+                    pages,
+                )
+            },
+        };
+        let instance = Instance::new(&module, &import_object).unwrap();
         instance
     }
 
@@ -70,13 +84,6 @@ pub mod tests {
 
         let _: () = guest::call(&mut instance, "bytes_round_trip", ()).unwrap();
     }
-
-    // #[test]
-    // fn smoke_module() {
-    //     let wasm = wasms::TEST;
-    //     let module: Module = module::<String>(&wasm, &wasm, None).unwrap();
-    //     assert!(module.info().exports.contains_key("__hcallocate"));
-    // }
 
     #[test]
     fn stacked_test() {
@@ -107,6 +114,7 @@ pub mod tests {
             &StringType::from(String::new()),
         )
         .expect("ignore_args_process_string call");
+        assert_eq!(String::new(), String::from(result));
     }
 
     #[test]

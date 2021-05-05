@@ -6,17 +6,9 @@ pub use holochain_wasmer_common::*;
 use crate::allocation::consume_bytes;
 use crate::allocation::write_bytes;
 
-#[macro_export]
-macro_rules! memory_externs {
-    () => {
-        extern "C" {
-            // Memory stuff.
-            fn __import_data(guest_allocation_ptr: $crate::GuestPtr);
-        }
-    };
+extern "C" {
+    fn __import_data(guest_allocation_ptr: crate::GuestPtr);
 }
-
-memory_externs!();
 
 #[macro_export]
 macro_rules! host_externs {
@@ -27,6 +19,7 @@ macro_rules! host_externs {
     };
 }
 
+#[inline(always)]
 /// Receive arguments from the host.
 /// The guest sets the type O that the host needs to match.
 /// If deserialization fails then a `GuestPtr` to a `WasmError::Deserialize` is returned.
@@ -57,6 +50,7 @@ where
 /// - Ask the host to write the result into the allocated empty bytes
 /// - Deserialize and deallocate whatever bytes the host has written into the result allocation
 /// - Return a Result of the deserialized output type O
+#[inline(always)]
 pub fn host_call<I, O>(
     f: unsafe extern "C" fn(GuestPtr) -> Len,
     input: I,
@@ -72,11 +66,11 @@ where
     // This is unsafe because all host function calls in wasm are unsafe.
     let result_len: Len = unsafe { f(input_guest_ptr) };
 
-    // Free the leaked bytes from the input to the host function.
-    crate::allocation::__hcdeallocate(input_guest_ptr);
+    // // Free the leaked bytes from the input to the host function.
+    crate::allocation::__deallocate(input_guest_ptr);
 
     // Prepare a GuestPtr for the host to write into.
-    let output_guest_ptr: GuestPtr = crate::allocation::__hcallocate(result_len);
+    let output_guest_ptr: GuestPtr = crate::allocation::__allocate(result_len);
 
     // Ask the host to populate the result allocation pointer with its result.
     unsafe { __import_data(output_guest_ptr) };
@@ -92,6 +86,7 @@ where
     }
 }
 
+#[inline(always)]
 /// Convert any serializable value into a GuestPtr that can be returned to the host.
 /// The host is expected to know how to consume and deserialize it.
 pub fn return_ptr<R>(return_value: R) -> GuestPtr
@@ -104,6 +99,7 @@ where
     }
 }
 
+#[inline(always)]
 /// Convert an Into<String> into a generic `Err(WasmError::Guest)` as a `GuestPtr` returned.
 pub fn return_err_ptr(wasm_error: WasmError) -> GuestPtr {
     match holochain_serialized_bytes::encode::<Result<(), WasmError>>(&Err(wasm_error)) {

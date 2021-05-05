@@ -1,4 +1,3 @@
-use crate::env::Env;
 use crate::prelude::*;
 use holochain_serialized_bytes::prelude::*;
 use wasmer::Instance;
@@ -77,7 +76,7 @@ pub fn write_bytes(memory: &Memory, guest_ptr: GuestPtr, slice: &[u8]) -> Result
             ptr.deref_mut(
                 memory,
                 0 as GuestPtr,
-                std::mem::size_of::<Len>() as Len + len,
+                core::mem::size_of::<Len>() as Len + len,
             )
         }
         .ok_or(WasmError::Memory)?
@@ -130,11 +129,11 @@ pub fn write_bytes(memory: &Memory, guest_ptr: GuestPtr, slice: &[u8]) -> Result
 pub fn read_bytes(memory: &Memory, guest_ptr: GuestPtr) -> Result<Vec<u8>, WasmError> {
     let ptr: WasmPtr<u8, Array> = WasmPtr::new(guest_ptr as _);
     let mut len_iter = ptr
-        .deref(memory, 0, std::mem::size_of::<Len>() as Len)
+        .deref(memory, 0, core::mem::size_of::<Len>() as Len)
         .ok_or(WasmError::Memory)?
         .iter();
 
-    let mut len_array = [0; std::mem::size_of::<Len>()];
+    let mut len_array = [0; core::mem::size_of::<Len>()];
     for item in len_array.iter_mut().take(core::mem::size_of::<Len>()) {
         *item = len_iter.next().ok_or(WasmError::Memory)?.get();
     }
@@ -177,7 +176,7 @@ where
     // Get a pre-allocated guest pointer to write the input into.
     let guest_input_ptr: GuestPtr = match instance
         .exports
-        .get_function("__hcallocate")
+        .get_function("__allocate")
         .map_err(|e| WasmError::CallError(e.to_string()))?
         .call(&[Value::I32(payload.len().try_into()?)])
         .map_err(|e| WasmError::CallError(e.to_string()))?[0]
@@ -185,8 +184,6 @@ where
         Value::I32(i) => i as GuestPtr,
         _ => unreachable!(),
     };
-
-    dbg!(instance.exports.get_memory("memory"));
 
     // Write the input payload into the guest at the offset specified by the allocation.
     write_bytes(
@@ -198,16 +195,8 @@ where
         &payload,
     )?;
 
-    dbg!(instance.exports.get_memory("memory"));
-
     // Call the guest function with its own pointer to its input.
     // Collect the guest's pointer to its output.
-    dbg!(&f);
-    // let function = instance
-    //     .exports
-    //     .get_function(f)
-    //     .map_err(|e| WasmError::CallError(e.to_string()))?;
-    // dbg!(&function);
     let guest_return_ptr: GuestPtr = match instance
         .exports
         .get_function(f)
@@ -240,7 +229,7 @@ where
     // Tell the guest we are finished with the return pointer's data.
     instance
         .exports
-        .get_function("__hcdeallocate")
+        .get_function("__deallocate")
         .map_err(|e| WasmError::CallError(e.to_string()))?
         .call(&[Value::I32(guest_return_ptr.try_into()?)])
         .map_err(|e| WasmError::CallError(format!("{:?}", e)))?;
