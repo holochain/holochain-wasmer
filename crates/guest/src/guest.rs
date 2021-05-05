@@ -64,6 +64,7 @@ where
         crate::allocation::write_bytes(&holochain_serialized_bytes::encode(&input)?);
 
     // This is unsafe because all host function calls in wasm are unsafe.
+    // The host MUST call __deallocate for us to free the leaked bytes from the input.
     let result_len: Len = unsafe { f(input_guest_ptr) };
 
     // Free the leaked bytes from the input to the host function.

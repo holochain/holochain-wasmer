@@ -12,6 +12,8 @@ pub struct Env {
     memory: LazyInit<Memory>,
     #[wasmer(export(name = "__allocate"))]
     allocate: LazyInit<Function>,
+    #[wasmer(export(name = "__deallocate"))]
+    deallocate: LazyInit<Function>,
     pub(crate) host_return_encoded: Arc<RwLock<Vec<u8>>>,
 }
 
@@ -51,5 +53,23 @@ impl Env {
         )?;
         self.clear_host_return_encoded();
         Ok(guest_ptr)
+    }
+
+    pub fn consume_bytes_from_guest_ptr<O>(&self, guest_ptr: &GuestPtr) -> Result<O, WasmError> where
+    O: serde::de::DeserializeOwned + std::fmt::Debug, {
+        let bytes = read_bytes(self.memory_ref().ok_of(WasmError::Memory)?, guest_ptr)?;
+        self.deallocate_ref().ok_or(WasmError::Memory)?.call(&[
+            Value::I32(
+                guest_ptr.try_into().map_err(|_| WasmError::PointerMap)?
+            )
+        ])
+        .map_err(|e| WasmError::Host(e.to_string()))?;
+        match holochain_serialized_bytes::decode(&bytes) {
+            Ok(v) => Ok(v),
+            Err(e) => {
+                tracing::error!(input_type = std::any::type_name::<O>(), bytes = ?bytes, "{}", e);
+                Err(e.into())
+            }
+        }
     }
 }
