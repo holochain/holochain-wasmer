@@ -632,7 +632,7 @@ the `host::guest::call()` return value.
 - The `Result` bytes are length-prefixed and leaked into the guest
 - The guest returns a `GuestPtr` to the host to the prefixed+leaked bytes
 - The host copies the length prefix from the `GuestPtr` and deserializes the `Result`
-- The host calls `__hcdeallocate` so that the guest can cleanup the leaked data
+- The host calls `__deallocate` so that the guest can cleanup the leaked data
 - The host deserializes the inner value if it makes sense to
 
 ##### Guest calling host
