@@ -24,7 +24,7 @@ pub extern "C" fn __allocate(len: Len) -> GuestPtr {
 #[no_mangle]
 #[inline(always)]
 /// Free a length-prefixed allocation.
-/// Needed because we leak memory every time we call `__hcallocate` and `write_bytes`.
+/// Needed because we leak memory every time we call `__allocate` and `write_bytes`.
 pub extern "C" fn __deallocate(guest_ptr: GuestPtr) {
     // Failing to deallocate when requested is unrecoverable.
     let len = length_prefix_at_guest_ptr(guest_ptr) + core::mem::size_of::<Len>() as Len;
@@ -91,7 +91,7 @@ pub fn consume_bytes(guest_ptr: GuestPtr) -> Vec<u8> {
 ///
 /// This is identical to the following:
 /// - host has some slice of bytes
-/// - host calls __hcallocate with the slice length
+/// - host calls __allocate with the slice length
 /// - guest returns GuestPtr to the host
 /// - host writes a length prefix and the slice bytes into the guest at GuestPtr location
 /// - host hands the GuestPtr back to the guest
@@ -103,7 +103,7 @@ pub fn consume_bytes(guest_ptr: GuestPtr) -> Vec<u8> {
 /// This facilitates the guest handing a GuestPtr back to the host as the _return_ value of guest
 /// functions so that the host can read the _output_ of guest logic from a length-prefixed pointer.
 ///
-/// A good host will call __hcdeallocate with the GuestPtr produced here once it has read the bytes
+/// A good host will call __deallocate with the GuestPtr produced here once it has read the bytes
 /// out of the guest, otherwise the bytes will be permanently leaked for the lifetime of the guest.
 pub fn write_bytes(slice: &[u8]) -> GuestPtr {
     let len_bytes = slice.len().to_le_bytes();

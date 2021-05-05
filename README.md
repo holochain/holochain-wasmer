@@ -604,8 +604,8 @@ macro on the guest side.
 
 - The host moves serialized `SomeDataType` on the host using the host allocator
 - The host calculates the `u32` length of the serialized data
-- The host asks the guest to `__hcallocate` the length
-- The guest (inside `__hcallocate`) allocates length + 4 bytes and returns a `GuestPtr` to the host
+- The host asks the guest to `__allocate` the length
+- The guest (inside `__allocate`) allocates length + 4 bytes and returns a `GuestPtr` to the host
 - The host checks that the `GuestPtr` + data + 4 bytes fits in the guest's memory bounds
 - The host writes the length as 4 bytes at `GuestPtr` then writes the rest of the data into the guest memory
 - The host calls the function it wants to call in the guest, passing in the `GuestPtr`
