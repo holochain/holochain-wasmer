@@ -7,7 +7,7 @@ use crate::allocation::consume_bytes;
 use crate::allocation::write_bytes;
 
 extern "C" {
-    fn __import_data(guest_allocation_ptr: crate::GuestPtr);
+    fn __import_data() -> GuestPtr;
 }
 
 #[macro_export]
@@ -69,11 +69,8 @@ where
     // Free the leaked bytes from the input to the host function.
     crate::allocation::__deallocate(input_guest_ptr);
 
-    // Prepare a GuestPtr for the host to write into.
-    let output_guest_ptr: GuestPtr = crate::allocation::__allocate(result_len);
-
     // Ask the host to populate the result allocation pointer with its result.
-    unsafe { __import_data(output_guest_ptr) };
+    let output_guest_ptr = unsafe { __import_data() };
 
     // Deserialize the host bytes into the output type.
     let bytes: Vec<u8> = crate::allocation::consume_bytes(output_guest_ptr);

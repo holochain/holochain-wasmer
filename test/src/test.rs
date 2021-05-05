@@ -2,7 +2,6 @@
 pub mod wasms;
 
 // use holochain_wasmer_host::env::Env;
-use holochain_wasmer_host::import::set_host_return_encoded;
 use holochain_wasmer_host::prelude::*;
 use test_common::SomeStruct;
 
@@ -10,10 +9,7 @@ pub fn test_process_string(env: &Env, guest_ptr: GuestPtr) -> Result<Len, WasmEr
     let string: String =
         guest::from_guest_ptr(env.memory_ref().ok_or(WasmError::Memory)?, guest_ptr)?;
     let processed_string = format!("host: {}", string);
-    Ok(set_host_return_encoded(
-        env,
-        Ok::<String, WasmError>(processed_string),
-    )?)
+    Ok(env.set_host_return_encoded(Ok::<String, WasmError>(processed_string))?)
 }
 
 pub fn test_process_struct(env: &Env, guest_ptr: GuestPtr) -> Result<Len, WasmError> {
@@ -22,10 +18,7 @@ pub fn test_process_struct(env: &Env, guest_ptr: GuestPtr) -> Result<Len, WasmEr
     let mut some_struct: SomeStruct =
         guest::from_guest_ptr(env.memory_ref().ok_or(WasmError::Memory)?, guest_ptr)?;
     some_struct.process();
-    Ok(set_host_return_encoded(
-        env,
-        Ok::<SomeStruct, WasmError>(some_struct),
-    )?)
+    Ok(env.set_host_return_encoded(Ok::<SomeStruct, WasmError>(some_struct))?)
 }
 
 pub fn debug(_env: &Env, some_number: WasmSize) -> Result<Len, WasmError> {

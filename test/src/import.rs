@@ -14,7 +14,7 @@ pub fn memory_only(store: &Store, env: &Env) -> ImportObject {
             "__import_data" => Function::new_native_with_env(
                 store,
                 env.to_owned(),
-                holochain_wasmer_host::import::__import_data
+                holochain_wasmer_host::env::Env::write_host_return_at_guest_ptr
             ),
         },
     }
