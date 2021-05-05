@@ -29,7 +29,7 @@ pub enum WasmError {
     /// Failed to take bytes out of the guest and do something with it.
     /// The string is whatever error message comes back from the interal process.
     GuestResultHandling(String),
-    // Something to do with guest logic that we don't know about
+    /// Something to do with guest logic that we don't know about
     Guest(String),
     /// Something to do with host logic that we don't know about
     Host(String),
