@@ -14,7 +14,7 @@ extern "C" {
 macro_rules! host_externs {
     ( $( $func_name:ident ),* ) => {
         extern "C" {
-            $( pub fn $func_name(guest_allocation_ptr: $crate::GuestPtr) -> $crate::Len; )*
+            $( pub fn $func_name(guest_allocation_ptr: $crate::GuestPtr); )*
         }
     };
 }
@@ -31,7 +31,6 @@ where
     O: serde::de::DeserializeOwned + std::fmt::Debug,
 {
     let bytes = consume_bytes(ptr);
-
     match holochain_serialized_bytes::decode(&bytes) {
         Ok(v) => Ok(v),
         Err(e) => {
@@ -41,20 +40,14 @@ where
     }
 }
 
-/// Given an `GuestPtr` -> `Len` extern that we expect the host to provide:
+/// Given an `GuestPtr` -> `()` extern that we expect the host to provide:
 /// - Serialize the payload by reference
 /// - Write the bytes into a new allocation
 /// - Call the host function and pass it the pointer to our allocation full of serialized data
-/// - Deallocate the serialized bytes when the host function completes
-/// - Allocate empty bytes of the length that the host tells us the result is
-/// - Ask the host to write the result into the allocated empty bytes
-/// - Deserialize and deallocate whatever bytes the host has written into the result allocation
+/// - Deserialize whatever bytes we can import from the host after calling the host function
 /// - Return a Result of the deserialized output type O
 #[inline(always)]
-pub fn host_call<I, O>(
-    f: unsafe extern "C" fn(GuestPtr) -> Len,
-    input: I,
-) -> Result<O, crate::WasmError>
+pub fn host_call<I, O>(f: unsafe extern "C" fn(GuestPtr), input: I) -> Result<O, crate::WasmError>
 where
     I: serde::Serialize + std::fmt::Debug,
     O: serde::de::DeserializeOwned + std::fmt::Debug,
@@ -63,22 +56,20 @@ where
     let input_guest_ptr =
         crate::allocation::write_bytes(&holochain_serialized_bytes::encode(&input)?);
 
-    // This is unsafe because all host function calls in wasm are unsafe.
-    // The host MUST call __deallocate for us to free the leaked bytes from the input.
-    let result_len: Len = unsafe { f(input_guest_ptr) };
-
-    // Free the leaked bytes from the input to the host function.
-    crate::allocation::__deallocate(input_guest_ptr);
-
-    // Ask the host to populate the result allocation pointer with its result.
-    let output_guest_ptr = unsafe { __import_data() };
+    let output_guest_ptr: GuestPtr = unsafe {
+        // This is unsafe because all host function calls in wasm are unsafe.
+        // The host will call __deallocate for us to free the leaked bytes from the input.
+        f(input_guest_ptr);
+        // Get the guest pointer to the result of calling the above function on the host.
+        __import_data()
+    };
 
     // Deserialize the host bytes into the output type.
     let bytes: Vec<u8> = crate::allocation::consume_bytes(output_guest_ptr);
     match holochain_serialized_bytes::decode::<Vec<u8>, Result<O, WasmError>>(&bytes) {
         Ok(output) => Ok(output?),
         Err(e) => {
-            tracing::error!(output_type = std::any::type_name::<O>(), bytes = ?bytes, "{}", e);
+            tracing::error!(output_type = std::any::type_name::<O>(), ?bytes, "{}", e);
             Err(WasmError::Deserialize(bytes))
         }
     }

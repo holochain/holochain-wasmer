@@ -5,25 +5,21 @@ pub mod wasms;
 use holochain_wasmer_host::prelude::*;
 use test_common::SomeStruct;
 
-pub fn test_process_string(env: &Env, guest_ptr: GuestPtr) -> Result<Len, WasmError> {
-    let string: String =
-        guest::from_guest_ptr(env.memory_ref().ok_or(WasmError::Memory)?, guest_ptr)?;
+pub fn test_process_string(env: &Env, guest_ptr: GuestPtr) -> Result<(), WasmError> {
+    let string: String = env.consume_bytes_from_guest_ptr(guest_ptr)?;
     let processed_string = format!("host: {}", string);
-    Ok(env.set_host_return_encoded(Ok::<String, WasmError>(processed_string))?)
+    Ok(env.set_data(Ok::<String, WasmError>(processed_string))?)
 }
 
-pub fn test_process_struct(env: &Env, guest_ptr: GuestPtr) -> Result<Len, WasmError> {
-    // dbg!(env.memory_ref());
-    // let maybe_memory = env.memory.read();
-    let mut some_struct: SomeStruct =
-        guest::from_guest_ptr(env.memory_ref().ok_or(WasmError::Memory)?, guest_ptr)?;
+pub fn test_process_struct(env: &Env, guest_ptr: GuestPtr) -> Result<(), WasmError> {
+    let mut some_struct: SomeStruct = env.consume_bytes_from_guest_ptr(guest_ptr)?;
     some_struct.process();
-    Ok(env.set_host_return_encoded(Ok::<SomeStruct, WasmError>(some_struct))?)
+    Ok(env.set_data(Ok::<SomeStruct, WasmError>(some_struct))?)
 }
 
-pub fn debug(_env: &Env, some_number: WasmSize) -> Result<Len, WasmError> {
+pub fn debug(_env: &Env, some_number: WasmSize) -> Result<(), WasmError> {
     println!("debug {:?}", some_number);
-    Ok(0)
+    Ok(())
 }
 
 pub fn pages(env: &Env, _: WasmSize) -> Result<WasmSize, WasmError> {

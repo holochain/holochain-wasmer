@@ -208,23 +208,43 @@ where
         _ => unreachable!(),
     };
 
-    let return_value: Result<O, WasmError> = crate::guest::from_guest_ptr(
+    let return_value: Result<O, WasmError> = from_guest_ptr(
         instance
             .exports
             .get_memory("memory")
             .map_err(|_| WasmError::Memory)?,
         guest_return_ptr,
-        // This ? might be a bit controversial as it means we return with an error WITHOUT telling the
-        // guest that it can deallocate the return value
-        // PROS:
-        // - it's possible that we actually can't safely deallocate the return value here
-        // - leaving the data in the guest may aid in debugging
-        // - we avoid 'panicked while panicking' type situations
-        // - slightly simpler code and clearer error handling
-        // CONS:
-        // - leaves 'memory leak' style cruft in the wasm guest
-        //   (NOTE: all WASM memory is dropped when the instance is dropped anyway)
     )?;
+
+    // let return_bytes = read_bytes(
+    //     instance
+    //         .exports
+    //         .get_memory("memory")
+    //         .map_err(|_| WasmError::Memory)?,
+    //     guest_return_ptr,
+    //     // This ? might be a bit controversial as it means we return with an error WITHOUT telling the
+    //     // guest that it can deallocate the return value
+    //     // PROS:
+    //     // - it's possible that we actually can't safely deallocate the return value here
+    //     // - leaving the data in the guest may aid in debugging
+    //     // - we avoid 'panicked while panicking' type situations
+    //     // - slightly simpler code and clearer error handling
+    //     // CONS:
+    //     // - leaves 'memory leak' style cruft in the wasm guest
+    //     //   (NOTE: all WASM memory is dropped when the instance is dropped anyway)
+    // )?;
+    // let return_value: O = match holochain_serialized_bytes::decode(&return_bytes) {
+    //     Ok(v) => v,
+    //     Err(e) => {
+    //         tracing::error!(
+    //             input_type = std::any::type_name::<O>(),
+    //             ?return_bytes,
+    //             "{}",
+    //             e
+    //         );
+    //         return Err(e.into());
+    //     }
+    // };
 
     // Tell the guest we are finished with the return pointer's data.
     instance
@@ -234,5 +254,6 @@ where
         .call(&[Value::I32(guest_return_ptr.try_into()?)])
         .map_err(|e| WasmError::CallError(format!("{:?}", e)))?;
 
+    // Ok(return_value)
     return_value
 }

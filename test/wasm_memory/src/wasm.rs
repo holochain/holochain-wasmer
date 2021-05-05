@@ -1,9 +1,12 @@
 use holochain_wasmer_guest::*;
 
 host_externs!(
-    __debug,
-    __pages
+    __debug
 );
+
+extern "C" {
+    pub fn __pages(i: u32) -> u32;
+}
 
 #[no_mangle]
 pub extern "C" fn bytes_round_trip(_: GuestPtr) -> GuestPtr {

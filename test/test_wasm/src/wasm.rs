@@ -7,21 +7,12 @@ use test_common::StringType;
 
 // define a few functions we expect the host to provide for us
 host_externs!(
-    // __debug,
-    // __noop,
+    __debug,
+    __noop,
     __this_func_doesnt_exist_but_we_can_extern_it_anyway,
     __test_process_string,
     __test_process_struct
 );
-
-// pub fn result_support() -> Result<(), WasmError> {
-//     // want to show here that host_call!() supports the ? operator
-//     // this is needed if we are to call host functions outside the externed functions that can only
-//     // return AllocationPtrs
-//     let _: SomeStruct = host_call(__noop, &())?;
-
-//     Ok(())
-// }
 
 #[no_mangle]
 pub extern "C" fn literal_bytes(guest_ptr: GuestPtr) -> GuestPtr {
@@ -32,19 +23,6 @@ pub extern "C" fn literal_bytes(guest_ptr: GuestPtr) -> GuestPtr {
     assert_eq!(bytes, vec![1, 2, 3]);
     return_ptr(bytes)
 }
-
-// #[no_mangle]
-// pub extern "C" fn process_bytes(guest_ptr: GuestPtr) -> GuestPtr {
-//     let b: BytesType = match host_args(guest_ptr) {
-//         Ok(v) => v,
-//         Err(err_ptr) => return err_ptr,
-//     };
-//     let mut b = b.inner();
-//     let mut more_bytes = vec![50_u8, 60_u8, 70_u8, 80_u8];
-//     b.append(&mut more_bytes);
-//     let b = BytesType::from(b);
-//     return_ptr(b)
-// }
 
 #[no_mangle]
 pub extern "C" fn ignore_args_process_string(_: GuestPtr) -> GuestPtr {

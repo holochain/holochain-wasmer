@@ -1,8 +1,7 @@
 use crate::env::Env;
 use crate::prelude::*;
 
-/// Dump the current `Ctx` data wherever the guest asks us to.
-/// The `Ctx` data is cleared to a null ptr in the process.
+/// Simple wrapper around the env to move data from the env to the guest.
 pub fn __import_data(env: &Env) -> Result<GuestPtr, WasmError> {
-    env.write_host_return()
+    env.move_data_to_guest()
 }
