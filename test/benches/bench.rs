@@ -1,11 +1,11 @@
 use criterion::BenchmarkId;
 use criterion::Throughput;
 use criterion::{criterion_group, criterion_main, Criterion};
+use holochain_wasmer_host::prelude::*;
 use rand::prelude::*;
 use test::wasms;
 use wasmer::JIT;
 use wasmer_compiler_singlepass::Singlepass;
-use holochain_wasmer_host::prelude::*;
 
 /// create an instance
 pub fn wasm_instance(c: &mut Criterion) {
@@ -25,7 +25,8 @@ pub fn wasm_instance(c: &mut Criterion) {
                     let store = Store::new(&engine);
                     let env = Env::default();
                     let module = Module::new(&store, wasm).unwrap();
-                    let _instance = Instance::new(&module, &test::import::import_object(&store, &env)).unwrap();
+                    let _instance =
+                        Instance::new(&module, &test::import::import_object(&store, &env)).unwrap();
                 });
             },
         );

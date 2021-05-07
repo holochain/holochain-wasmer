@@ -23,7 +23,7 @@ pub extern "C" fn bytes_round_trip(_: GuestPtr, _: Len) -> GuestPtrLen {
         let bytes: Vec<[u8; 5]> = std::iter::repeat([ 1, 2, 3, 4, 5 ]).take(100).collect();
 
         let ptrs: Vec<GuestPtr> = bytes.iter().map(|b| {
-            allocation::write_bytes(b)
+            allocation::write_bytes(b.to_vec())
         }).collect();
 
         for i in 0..ptrs.len() {

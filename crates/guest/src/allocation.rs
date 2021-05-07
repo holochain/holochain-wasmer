@@ -58,8 +58,7 @@ pub fn consume_bytes(guest_ptr: GuestPtr, len: Len) -> Vec<u8> {
 /// functions so that the host can read the _output_ of guest logic from a pointer.
 ///
 /// The host MUST ensure either __deallocate is called or the entire wasm memory is dropped.
-pub fn write_bytes(slice: &[u8]) -> GuestPtr {
-    let v = slice.to_vec();
+pub fn write_bytes(v: Vec<u8>) -> GuestPtr {
     let ptr: GuestPtr = v.as_ptr() as GuestPtr;
     let _ = core::mem::ManuallyDrop::new(v);
     ptr

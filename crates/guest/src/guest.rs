@@ -58,12 +58,13 @@ where
 {
     // Call the host function and receive the length of the serialized result.
     let input_bytes = holochain_serialized_bytes::encode(&input)?;
-    let input_guest_ptr = crate::allocation::write_bytes(&input_bytes);
+    let input_len = input_bytes.len();
+    let input_guest_ptr = crate::allocation::write_bytes(input_bytes);
 
     let (output_guest_ptr, output_len): (GuestPtr, Len) = unsafe {
         // This is unsafe because all host function calls in wasm are unsafe.
         // The host will call __deallocate for us to free the leaked bytes from the input.
-        f(input_guest_ptr, input_bytes.len() as Len);
+        f(input_guest_ptr, input_len as Len);
         // Get the guest pointer to the result of calling the above function on the host.
         split_u64(__import_data())
     };
@@ -87,7 +88,10 @@ where
     R: Serialize + std::fmt::Debug,
 {
     match holochain_serialized_bytes::encode::<Result<R, WasmError>>(&Ok(return_value)) {
-        Ok(bytes) => merge_u64(write_bytes(&bytes), bytes.len() as Len),
+        Ok(bytes) => {
+            let len = bytes.len();
+            merge_u64(write_bytes(bytes), len as Len)
+        }
         Err(e) => return_err_ptr(WasmError::Serialize(e)),
     }
 }
@@ -96,16 +100,25 @@ where
 /// Convert a WasmError to a GuestPtrLen as best we can.
 pub fn return_err_ptr(wasm_error: WasmError) -> GuestPtrLen {
     match holochain_serialized_bytes::encode::<Result<(), WasmError>>(&Err(wasm_error)) {
-        Ok(bytes) => merge_u64(write_bytes(&bytes), bytes.len() as Len),
+        Ok(bytes) => {
+            let len = bytes.len();
+            merge_u64(write_bytes(bytes), len as Len)
+        }
         Err(e) => match holochain_serialized_bytes::encode::<Result<(), WasmError>>(&Err(
             WasmError::Serialize(e),
         )) {
-            Ok(bytes) => merge_u64(write_bytes(&bytes), bytes.len() as Len),
+            Ok(bytes) => {
+                let len = bytes.len();
+                merge_u64(write_bytes(bytes), len as Len)
+            }
             // At this point we've errored while erroring
             Err(_) => match holochain_serialized_bytes::encode::<Result<(), WasmError>>(&Err(
                 WasmError::ErrorWhileError,
             )) {
-                Ok(bytes) => merge_u64(write_bytes(&bytes), bytes.len() as Len),
+                Ok(bytes) => {
+                    let len = bytes.len();
+                    merge_u64(write_bytes(bytes), len as Len)
+                }
                 // At this point we failed to serialize a unit struct so IDK ¯\_(ツ)_/¯
                 Err(_) => unreachable!(),
             },
