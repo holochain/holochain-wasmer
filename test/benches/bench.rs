@@ -1,35 +1,21 @@
 use criterion::BenchmarkId;
 use criterion::Throughput;
 use criterion::{criterion_group, criterion_main, Criterion};
-use holochain_wasmer_host::prelude::*;
 use rand::prelude::*;
-use test::wasms;
-use wasmer::JIT;
-use wasmer_compiler_singlepass::Singlepass;
+use test::wasms::TestWasm;
 
 /// create an instance
 pub fn wasm_instance(c: &mut Criterion) {
     let mut group = c.benchmark_group("wasm_instance");
 
-    for (name, wasm) in vec![
-        ("empty", wasms::EMPTY),
-        ("io", wasms::IO),
-        ("test", wasms::TEST),
+    for wasm in vec![
+        TestWasm::Empty,
+        TestWasm::Io,
+        // TestWasm::Test,
     ] {
-        group.bench_with_input(
-            BenchmarkId::new("wasm_instance", name),
-            &wasm,
-            |b, &wasm| {
-                b.iter(|| {
-                    let engine = JIT::new(Singlepass::new()).engine();
-                    let store = Store::new(&engine);
-                    let env = Env::default();
-                    let module = Module::new(&store, wasm).unwrap();
-                    let _instance =
-                        Instance::new(&module, &test::import::import_object(&store, &env)).unwrap();
-                });
-            },
-        );
+        group.bench_function(BenchmarkId::new("wasm_instance", wasm.name()), |b| {
+            b.iter(|| wasm.instance());
+        });
     }
 
     group.finish();
@@ -39,11 +25,7 @@ pub fn wasm_instance(c: &mut Criterion) {
 pub fn wasm_call(c: &mut Criterion) {
     let mut group = c.benchmark_group("wasm_call");
 
-    let engine = JIT::new(Singlepass::new()).engine();
-    let store = Store::new(&engine);
-    let env = Env::default();
-    let module = Module::new(&store, wasms::IO).unwrap();
-    let mut instance = Instance::new(&module, &test::import::import_object(&store, &env)).unwrap();
+    let mut instance = TestWasm::Io.instance();
 
     macro_rules! bench_call {
         ( $fs:expr; $t:tt; $n:ident; $build:expr; ) => {
@@ -75,7 +57,7 @@ pub fn wasm_call(c: &mut Criterion) {
 
     bench_call!(
         vec![
-            // "string_input_ignored_empty_ret",
+            "string_input_ignored_empty_ret",
             "string_input_args_empty_ret",
             "string_input_args_echo_ret",
         ];
@@ -86,7 +68,7 @@ pub fn wasm_call(c: &mut Criterion) {
 
     bench_call!(
         vec![
-            // "bytes_input_ignored_empty_ret",
+            "bytes_input_ignored_empty_ret",
             "bytes_input_args_empty_ret",
             "bytes_input_args_echo_ret",
         ];
@@ -102,11 +84,7 @@ pub fn wasm_call(c: &mut Criterion) {
 pub fn wasm_call_n(c: &mut Criterion) {
     let mut group = c.benchmark_group("wasm_call_n");
 
-    let engine = JIT::new(Singlepass::new()).engine();
-    let store = Store::new(&engine);
-    let env = Env::default();
-    let module = Module::new(&store, wasms::IO).unwrap();
-    let mut instance = Instance::new(&module, &test::import::memory_only(&store, &env)).unwrap();
+    let mut instance = TestWasm::Io.instance();
 
     macro_rules! bench_n {
         ( $fs:expr; $t:ty; ) => {
@@ -148,11 +126,7 @@ pub fn wasm_call_n(c: &mut Criterion) {
 pub fn test_process_string(c: &mut Criterion) {
     let mut group = c.benchmark_group("test_process_string");
 
-    let engine = JIT::new(Singlepass::new()).engine();
-    let store = Store::new(&engine);
-    let env = Env::default();
-    let module = Module::new(&store, wasms::TEST).unwrap();
-    let mut instance = Instance::new(&module, &test::import::import_object(&store, &env)).unwrap();
+    let mut instance = TestWasm::Test.instance();
 
     for n in vec![0, 1, 1_000, 1_000_000] {
         group.throughput(Throughput::Bytes(n as _));

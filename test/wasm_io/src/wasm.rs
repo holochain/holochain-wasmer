@@ -5,7 +5,9 @@ macro_rules! _s {
         paste::item! {
             #[no_mangle]
             /// ignore the input completely and return empty data
-            pub extern "C" fn [< $t:lower _input_ignored_empty_ret >](_: GuestPtr, _: Len) -> GuestPtrLen {
+            pub extern "C" fn [< $t:lower _input_ignored_empty_ret >](guest_ptr: GuestPtr, len: Len) -> GuestPtrLen {
+                // Still need to deallocate the input even if we don't use it.
+                crate::allocation::__deallocate(guest_ptr, len);
                 return_ptr(
                     paste::expr! {
                         test_common::[< $t:camel Type >]::from($empty)

@@ -25,7 +25,12 @@ pub extern "C" fn literal_bytes(guest_ptr: GuestPtr, len: Len) -> GuestPtrLen {
 }
 
 #[no_mangle]
-pub extern "C" fn ignore_args_process_string(_: GuestPtr, _: Len) -> GuestPtrLen {
+pub extern "C" fn ignore_args_process_string(guest_ptr: GuestPtr, len: Len) -> GuestPtrLen {
+    // A well behaved wasm must either use or deallocate the input.
+    // A malicious wasm can simply define a __deallocate function that does nothing.
+    // The host has no way of knowing whether the guest is behaving right up until it leaks all available memory.
+    // If the host tries to force deallocation it risks double-deallocating an honest guest.
+    crate::allocation::__deallocate(guest_ptr, len);
     host_call::<&String, StringType>(__test_process_string, &"foo".into()).unwrap();
     return_ptr(StringType::from(String::new()))
 }

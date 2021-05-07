@@ -30,27 +30,16 @@ pub mod tests {
     use super::*;
     use crate::wasms;
     use test_common::StringType;
-
-    fn test_instance(wasm: &[u8]) -> Instance {
-        let engine = JIT::new(Singlepass::new()).engine();
-        let store = Store::new(&engine);
-        let env = Env::default();
-        let module = Module::new(&store, wasm).unwrap();
-        let import_object: ImportObject = import::import_object(&store, &env);
-        let instance = Instance::new(&module, &import_object).unwrap();
-        instance
-    }
+    use wasms::TestWasm;
 
     #[test]
     fn bytes_round_trip() {
-        let mut instance = test_instance(wasms::MEMORY);
-
-        let _: () = guest::call(&mut instance, "bytes_round_trip", ()).unwrap();
+        let _: () = guest::call(&mut TestWasm::Memory.instance(), "bytes_round_trip", ()).unwrap();
     }
 
     #[test]
     fn stacked_test() {
-        let result: String = guest::call(&mut test_instance(wasms::TEST), "stacked_strings", ())
+        let result: String = guest::call(&mut TestWasm::Test.instance(), "stacked_strings", ())
             .expect("stacked strings call");
 
         assert_eq!("first", &result);
@@ -60,7 +49,7 @@ pub mod tests {
     fn literal_bytes() {
         let input: Vec<u8> = vec![1, 2, 3];
         let result: Vec<u8> = guest::call(
-            &mut test_instance(wasms::TEST),
+            &mut TestWasm::Test.instance(),
             "literal_bytes",
             input.clone(),
         )
@@ -70,7 +59,7 @@ pub mod tests {
 
     #[test]
     fn ignore_args_process_string_test() {
-        let mut instance = test_instance(wasms::TEST);
+        let mut instance = TestWasm::Test.instance();
         let result: StringType = guest::call(
             &mut instance,
             "ignore_args_process_string",
@@ -85,7 +74,7 @@ pub mod tests {
         // use a "crazy" string that is much longer than a single wasm page to show that pagination
         // and utf-8 are both working OK
         let starter_string = "╰▐ ✖ 〜 ✖ ▐╯".repeat((10_u32 * std::u16::MAX as u32) as _);
-        let mut instance = test_instance(wasms::TEST);
+        let mut instance = TestWasm::Test.instance();
         let result: StringType = guest::call(
             &mut instance,
             "process_string",
@@ -105,7 +94,7 @@ pub mod tests {
         let some_struct = SomeStruct::new(some_inner.into());
 
         let result: SomeStruct = guest::call(
-            &mut test_instance(wasms::TEST),
+            &mut TestWasm::Test.instance(),
             "native_type",
             some_struct.clone(),
         )
@@ -120,7 +109,7 @@ pub mod tests {
         let some_struct = SomeStruct::new(some_inner.into());
 
         let result: SomeStruct = guest::call(
-            &mut test_instance(wasms::TEST),
+            &mut TestWasm::Test.instance(),
             "process_native",
             some_struct.clone(),
         )
@@ -133,11 +122,11 @@ pub mod tests {
     #[test]
     fn ret_test() {
         let some_struct: SomeStruct =
-            guest::call(&mut test_instance(wasms::TEST), "some_ret", ()).unwrap();
+            guest::call(&mut TestWasm::Test.instance(), "some_ret", ()).unwrap();
         assert_eq!(SomeStruct::new("foo".into()), some_struct,);
 
         let err: Result<SomeStruct, WasmError> =
-            guest::call(&mut test_instance(wasms::TEST), "some_ret_err", ());
+            guest::call(&mut TestWasm::Test.instance(), "some_ret_err", ());
         match err {
             Err(wasm_error) => assert_eq!(WasmError::Guest("oh no!".into()), wasm_error,),
             Ok(_) => unreachable!(),
@@ -147,11 +136,11 @@ pub mod tests {
     #[test]
     fn try_ptr_test() {
         let success_result: Result<SomeStruct, ()> =
-            guest::call(&mut test_instance(wasms::TEST), "try_ptr_succeeds", ()).unwrap();
+            guest::call(&mut TestWasm::Test.instance(), "try_ptr_succeeds", ()).unwrap();
         assert_eq!(SomeStruct::new("foo".into()), success_result.unwrap());
 
         let fail_result: Result<(), WasmError> =
-            guest::call(&mut test_instance(wasms::TEST), "try_ptr_fails_fast", ());
+            guest::call(&mut TestWasm::Test.instance(), "try_ptr_fails_fast", ());
 
         match fail_result {
             Err(wasm_error) => {
