@@ -3,6 +3,9 @@ use criterion::Throughput;
 use criterion::{criterion_group, criterion_main, Criterion};
 use rand::prelude::*;
 use test::wasms;
+use wasmer::JIT;
+use wasmer_compiler_singlepass::Singlepass;
+use holochain_wasmer_host::prelude::*;
 
 /// create an instance
 pub fn wasm_instance(c: &mut Criterion) {
@@ -18,13 +21,11 @@ pub fn wasm_instance(c: &mut Criterion) {
             &wasm,
             |b, &wasm| {
                 b.iter(|| {
-                    holochain_wasmer_host::instantiate::instantiate::<String>(
-                        &vec![0],
-                        wasm,
-                        &wasmer_runtime::imports!(),
-                        None,
-                    )
-                    .unwrap();
+                    let engine = JIT::new(Singlepass::new()).engine();
+                    let store = Store::new(&engine);
+                    let env = Env::default();
+                    let module = Module::new(&store, wasm).unwrap();
+                    let _instance = Instance::new(&module, &test::import::import_object(&store, &env)).unwrap();
                 });
             },
         );
@@ -37,13 +38,11 @@ pub fn wasm_instance(c: &mut Criterion) {
 pub fn wasm_call(c: &mut Criterion) {
     let mut group = c.benchmark_group("wasm_call");
 
-    let mut instance = holochain_wasmer_host::instantiate::instantiate::<String>(
-        &vec![1],
-        wasms::IO,
-        &test::import::memory_only(),
-        None,
-    )
-    .unwrap();
+    let engine = JIT::new(Singlepass::new()).engine();
+    let store = Store::new(&engine);
+    let env = Env::default();
+    let module = Module::new(&store, wasms::IO).unwrap();
+    let mut instance = Instance::new(&module, &test::import::import_object(&store, &env)).unwrap();
 
     macro_rules! bench_call {
         ( $fs:expr; $t:tt; $n:ident; $build:expr; ) => {
@@ -102,13 +101,11 @@ pub fn wasm_call(c: &mut Criterion) {
 pub fn wasm_call_n(c: &mut Criterion) {
     let mut group = c.benchmark_group("wasm_call_n");
 
-    let mut instance = holochain_wasmer_host::instantiate::instantiate::<String>(
-        &vec![1],
-        wasms::IO,
-        &test::import::memory_only(),
-        None,
-    )
-    .unwrap();
+    let engine = JIT::new(Singlepass::new()).engine();
+    let store = Store::new(&engine);
+    let env = Env::default();
+    let module = Module::new(&store, wasms::IO).unwrap();
+    let mut instance = Instance::new(&module, &test::import::memory_only(&store, &env)).unwrap();
 
     macro_rules! bench_n {
         ( $fs:expr; $t:ty; ) => {
@@ -138,7 +135,7 @@ pub fn wasm_call_n(c: &mut Criterion) {
                 }
             }
         };
-    };
+    }
 
     bench_n!( vec![ "bytes_serialize_n", "bytes_ret_n", ]; test_common::BytesType; );
     bench_n!( vec![ "string_serialize_n", "string_ret_n", ]; test_common::StringType; );
@@ -150,13 +147,11 @@ pub fn wasm_call_n(c: &mut Criterion) {
 pub fn test_process_string(c: &mut Criterion) {
     let mut group = c.benchmark_group("test_process_string");
 
-    let mut instance = holochain_wasmer_host::instantiate::instantiate::<String>(
-        &vec![2],
-        wasms::TEST,
-        &test::import::import_object(),
-        None,
-    )
-    .unwrap();
+    let engine = JIT::new(Singlepass::new()).engine();
+    let store = Store::new(&engine);
+    let env = Env::default();
+    let module = Module::new(&store, wasms::TEST).unwrap();
+    let mut instance = Instance::new(&module, &test::import::import_object(&store, &env)).unwrap();
 
     for n in vec![0, 1, 1_000, 1_000_000] {
         group.throughput(Throughput::Bytes(n as _));

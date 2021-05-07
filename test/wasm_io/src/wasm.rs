@@ -1,13 +1,11 @@
 use holochain_wasmer_guest::*;
 
-memory_externs!();
-
 macro_rules! _s {
     ( $t:tt; $empty:expr; ) => {
         paste::item! {
             #[no_mangle]
             /// ignore the input completely and return empty data
-            pub extern "C" fn [< $t:lower _input_ignored_empty_ret >](_: GuestPtr) -> GuestPtr {
+            pub extern "C" fn [< $t:lower _input_ignored_empty_ret >](_: GuestPtr, _: Len) -> GuestPtrLen {
                 return_ptr(
                     paste::expr! {
                         test_common::[< $t:camel Type >]::from($empty)
@@ -17,9 +15,9 @@ macro_rules! _s {
 
             #[no_mangle]
             /// load the input args and do nothing with it
-            pub extern "C" fn [< $t:lower _input_args_empty_ret >](ptr: GuestPtr) -> GuestPtr {
+            pub extern "C" fn [< $t:lower _input_args_empty_ret >](ptr: GuestPtr, len: Len) -> GuestPtrLen {
                 paste::expr! {
-                    let _: test_common::[< $t:camel Type >] = match host_args(ptr) {
+                    let _: test_common::[< $t:camel Type >] = match host_args(ptr, len) {
                         Ok(v) => v,
                         Err(err_ptr) => return err_ptr,
                     };
@@ -33,8 +31,8 @@ macro_rules! _s {
 
             #[no_mangle]
             /// load the input args and return it
-            pub extern "C" fn [< $t:lower _input_args_echo_ret >](ptr: GuestPtr) -> GuestPtr {
-                let r: test_common::[< $t:camel Type >] = match host_args(ptr) {
+            pub extern "C" fn [< $t:lower _input_args_echo_ret >](ptr: GuestPtr, len: Len) -> GuestPtrLen {
+                let r: test_common::[< $t:camel Type >] = match host_args(ptr, len) {
                     Ok(v) => v,
                     Err(err_ptr) => return err_ptr,
                 };
@@ -51,9 +49,9 @@ macro_rules! _n {
     ( $t:tt; $n:ident; $inner:expr; $empty:expr; ) => {
         paste::item! {
             #[no_mangle]
-            pub extern "C" fn [< $t:lower _serialize_n >](ptr: GuestPtr) -> GuestPtr {
+            pub extern "C" fn [< $t:lower _serialize_n >](ptr: GuestPtr, len: Len) -> GuestPtrLen {
                 // build it
-                let $n: test_common::IntegerType = match host_args(ptr) {
+                let $n: test_common::IntegerType = match host_args(ptr, len) {
                     Ok(v) => v,
                     Err(err_ptr) => return err_ptr,
                 };
@@ -71,9 +69,9 @@ macro_rules! _n {
             }
 
             #[no_mangle]
-            pub extern "C" fn [< $t:lower _ret_n >](ptr: GuestPtr) -> GuestPtr {
+            pub extern "C" fn [< $t:lower _ret_n >](ptr: GuestPtr, len: Len) -> GuestPtrLen {
                 // build it
-                let $n: test_common::IntegerType = match host_args(ptr) {
+                let $n: test_common::IntegerType = match host_args(ptr, len) {
                     Ok(v) => v,
                     Err(err_ptr) => return err_ptr,
                 };

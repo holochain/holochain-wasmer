@@ -3,10 +3,6 @@ use crate::pages;
 use crate::test_process_string;
 use crate::test_process_struct;
 use holochain_wasmer_host::prelude::*;
-use lazy_static::lazy_static;
-use parking_lot::RwLock;
-use std::sync::Arc;
-use std::sync::Mutex;
 
 pub fn memory_only(store: &Store, env: &Env) -> ImportObject {
     imports! {
@@ -14,7 +10,7 @@ pub fn memory_only(store: &Store, env: &Env) -> ImportObject {
             "__import_data" => Function::new_native_with_env(
                 store,
                 env.to_owned(),
-                holochain_wasmer_host::env::Env::write_host_return_at_guest_ptr
+                holochain_wasmer_host::import::__import_data
             ),
         },
     }

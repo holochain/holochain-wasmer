@@ -5,7 +5,7 @@ use holochain_wasmer_common::*;
 /// Allocate bytes that won't be dropped by the allocator.
 /// Return the pointer to the leaked allocation so the host can write to it.
 pub extern "C" fn __allocate(len: Len) -> GuestPtr {
-    let dummy: Vec<u8> = Vec::with_capacity((len + core::mem::size_of::<Len>() as Len) as usize);
+    let dummy: Vec<u8> = Vec::with_capacity(len as usize);
     let ptr = dummy.as_ptr() as GuestPtr;
     let _ = core::mem::ManuallyDrop::new(dummy);
     ptr

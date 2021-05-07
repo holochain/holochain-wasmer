@@ -10,8 +10,8 @@ fn main() {
     for &m in [
         "test_wasm",
         "wasm_memory",
-        // "wasm_empty",
-        // "wasm_io"
+        "wasm_empty",
+        "wasm_io"
     ]
     .iter()
     {

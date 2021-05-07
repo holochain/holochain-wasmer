@@ -1,7 +1,6 @@
-// pub mod import;
+pub mod import;
 pub mod wasms;
 
-// use holochain_wasmer_host::env::Env;
 use holochain_wasmer_host::prelude::*;
 use test_common::SomeStruct;
 
@@ -23,13 +22,11 @@ pub fn debug(_env: &Env, some_number: WasmSize) -> Result<(), WasmError> {
 }
 
 pub fn pages(env: &Env, _: WasmSize) -> Result<WasmSize, WasmError> {
-    // let maybe_memory = env.memory.read();
     Ok(env.memory_ref().ok_or(WasmError::Memory)?.size().0)
 }
 
 #[cfg(test)]
 pub mod tests {
-    use super::test_process_string;
     use super::*;
     use crate::wasms;
     use test_common::StringType;
@@ -39,30 +36,7 @@ pub mod tests {
         let store = Store::new(&engine);
         let env = Env::default();
         let module = Module::new(&store, wasm).unwrap();
-        let import_object: ImportObject = imports! {
-            "env" => {
-                "__test_process_string" => Function::new_native_with_env(
-                    &store,
-                    env.clone(),
-                    test_process_string,
-                ),
-                "__test_process_struct" => Function::new_native_with_env(
-                    &store,
-                    env.clone(),
-                    test_process_struct,
-                ),
-                "__import_data" => Function::new_native_with_env(
-                    &store,
-                    env.clone(),
-                    __import_data,
-                ),
-                "__pages" => Function::new_native_with_env(
-                    &store,
-                    env.clone(),
-                    pages,
-                )
-            },
-        };
+        let import_object: ImportObject = import::import_object(&store, &env);
         let instance = Instance::new(&module, &import_object).unwrap();
         instance
     }
