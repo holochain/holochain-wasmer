@@ -74,7 +74,7 @@ pub fn wasm_call(c: &mut Criterion) {
 
     bench_call!(
         vec![
-            "string_input_ignored_empty_ret",
+            // "string_input_ignored_empty_ret",
             "string_input_args_empty_ret",
             "string_input_args_echo_ret",
         ];
@@ -85,7 +85,7 @@ pub fn wasm_call(c: &mut Criterion) {
 
     bench_call!(
         vec![
-            "bytes_input_ignored_empty_ret",
+            // "bytes_input_ignored_empty_ret",
             "bytes_input_args_empty_ret",
             "bytes_input_args_echo_ret",
         ];
