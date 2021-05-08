@@ -1,5 +1,7 @@
 use crate::prelude::*;
 use holochain_serialized_bytes::prelude::*;
+use parking_lot::Mutex;
+use std::sync::Arc;
 use wasmer::Instance;
 use wasmer::Memory;
 use wasmer::Value;
@@ -144,11 +146,12 @@ where
 /// Host calling guest for the function named `call` with the given `payload` in a vector of bytes
 /// result is either a vector of bytes from the guest found at the location of the returned guest
 /// allocation pointer or a `WasmError`.
-pub fn call<I, O>(instance: &mut Instance, f: &str, input: I) -> Result<O, WasmError>
+pub fn call<I, O>(instance: Arc<Mutex<Instance>>, f: &str, input: I) -> Result<O, WasmError>
 where
     I: serde::Serialize + std::fmt::Debug,
     O: serde::de::DeserializeOwned + std::fmt::Debug,
 {
+    let instance = instance.lock();
     // The guest will use the same crate for decoding if it uses the wasm common crate.
     let payload: Vec<u8> = holochain_serialized_bytes::encode(&input)?;
 

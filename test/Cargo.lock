@@ -1141,6 +1141,7 @@ dependencies = [
  "holochain_serialized_bytes",
  "holochain_wasmer_common",
  "holochain_wasmer_host",
+ "parking_lot",
  "rand 0.7.3",
  "serde",
  "serde_bytes",

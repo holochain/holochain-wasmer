@@ -1,5 +1,7 @@
 use crate::import::import_object;
 use holochain_wasmer_host::prelude::*;
+use parking_lot::Mutex;
+use std::sync::Arc;
 use wasmer::Module;
 
 pub enum TestWasm {
@@ -49,13 +51,19 @@ impl TestWasm {
         }
     }
 
-    pub fn module(&self) -> Module {
-        MODULE_CACHE.lock().get(self.key(), self.bytes()).unwrap()
+    pub fn module(&self) -> Arc<Module> {
+        MODULE_CACHE.write().get(self.key(), self.bytes()).unwrap()
     }
 
-    pub fn instance(&self) -> Instance {
-        let module = self.module();
-        let import_object: ImportObject = import_object(&module.store(), &Env::default());
-        Instance::new(&module, &import_object).unwrap()
+    pub fn instance(&self) -> Arc<Mutex<Instance>> {
+        // let module = self.module();
+        // let env = Env::default();
+        // // let store = Store::new(&env);
+        // let import_object: ImportObject = import_object(&module.store(), &env);
+        // Instance::new(&module, &import_object).unwrap()
+        INSTANCE_CACHE
+            .write()
+            .get(self.key(), self.bytes(), import_object)
+            .unwrap()
     }
 }
