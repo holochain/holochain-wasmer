@@ -11,8 +11,8 @@ pub fn wasm_instance(c: &mut Criterion) {
     let mut group = c.benchmark_group("wasm_instance");
 
     for wasm in vec![
-        // TestWasm::Empty,
-        // TestWasm::Io,
+        TestWasm::Empty,
+        TestWasm::Io,
         TestWasm::Test,
         TestWasm::Memory,
     ] {
