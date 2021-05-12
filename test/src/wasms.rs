@@ -2,7 +2,6 @@ use crate::import::import_object;
 use holochain_wasmer_host::prelude::*;
 use parking_lot::Mutex;
 use std::sync::Arc;
-use wasmer::Module;
 
 pub enum TestWasm {
     Empty,
@@ -49,10 +48,6 @@ impl TestWasm {
             TestWasm::Test => [2; 32],
             TestWasm::Memory => [3; 32],
         }
-    }
-
-    pub fn module(&self) -> Arc<Module> {
-        MODULE_CACHE.write().get(self.key(), self.bytes()).unwrap()
     }
 
     pub fn instance(&self) -> Arc<Mutex<Instance>> {

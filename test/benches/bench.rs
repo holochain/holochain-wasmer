@@ -96,9 +96,12 @@ pub fn wasm_call(c: &mut Criterion) {
                         &$n,
                         |b, _| {
                             b.iter(|| {
-                                let _drop: test_common::$t =
-                                    holochain_wasmer_host::guest::call(Arc::clone(&instance), f, &input)
-                                        .unwrap();
+                                let _drop: test_common::$t = holochain_wasmer_host::guest::call(
+                                    Arc::clone(&instance),
+                                    f,
+                                    &input,
+                                )
+                                .unwrap();
                             });
                         },
                     );
@@ -186,9 +189,12 @@ pub fn test_process_string(c: &mut Criterion) {
         let input = test_common::StringType::from(".".repeat(n));
         group.bench_with_input(BenchmarkId::new("test_process_string", n), &n, |b, _| {
             b.iter(|| {
-                let _: test_common::StringType =
-                    holochain_wasmer_host::guest::call(Arc::clone(&instance), "process_string", &input)
-                        .unwrap();
+                let _: test_common::StringType = holochain_wasmer_host::guest::call(
+                    Arc::clone(&instance),
+                    "process_string",
+                    &input,
+                )
+                .unwrap();
             });
         });
     }
