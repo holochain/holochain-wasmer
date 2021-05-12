@@ -50,6 +50,10 @@ impl TestWasm {
         }
     }
 
+    pub fn module(&self) -> Arc<Module> {
+        MODULE_CACHE.write().get(self.key(), self.bytes()).unwrap()
+    }
+
     pub fn instance(&self) -> Arc<Mutex<Instance>> {
         // let module = self.module();
         // let env = Env::default();

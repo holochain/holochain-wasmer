@@ -6,6 +6,26 @@ use rand::prelude::*;
 use std::sync::Arc;
 use test::wasms::TestWasm;
 
+/// create a module
+pub fn wasm_module(c: &mut Criterion) {
+    let mut group = c.benchmark_group("wasm_module");
+
+    for wasm in vec![
+        TestWasm::Empty,
+        TestWasm::Io,
+        TestWasm::Test,
+        TestWasm::Memory,
+    ] {
+        group.bench_function(BenchmarkId::new("wasm_module", wasm.name()), |b| {
+            b.iter(|| {
+                wasm.module();
+            })
+        });
+    }
+
+    group.finish()
+}
+
 /// create an instance
 pub fn wasm_instance(c: &mut Criterion) {
     let mut group = c.benchmark_group("wasm_instance");
@@ -16,15 +36,15 @@ pub fn wasm_instance(c: &mut Criterion) {
         TestWasm::Test,
         TestWasm::Memory,
     ] {
-        let store = wasmer::Store::new(&JIT::new(Singlepass::new()).engine());
-        let serialized_module = wasmer::Module::from_binary(&store, wasm.bytes())
-            .unwrap()
-            .serialize()
-            .unwrap();
+        // let store = wasmer::Store::new(&JIT::new(Singlepass::new()).engine());
+        // let serialized_module = wasmer::Module::from_binary(&store, wasm.bytes())
+        //     .unwrap()
+        //     .serialize()
+        //     .unwrap();
 
         group.bench_function(BenchmarkId::new("wasm_instance", wasm.name()), |b| {
             b.iter(|| {
-                wasm.instance()
+                // wasm.instance()
                 // let store = wasmer::Store::new(&JIT::new(Singlepass::new()).engine());
                 // // let module = wasmer::Module::from_binary(
                 // //     &store,
@@ -32,40 +52,40 @@ pub fn wasm_instance(c: &mut Criterion) {
                 // // ).unwrap();
                 // let module =
                 //     unsafe { wasmer::Module::deserialize(&store, &serialized_module).unwrap() };
-                // // let module = wasm.module();
+                let module = wasm.module();
                 // // let module = Arc::clone(&module);
                 // // let module = module.clone();
-                // let env = Env::default();
-                // let import_object: wasmer::ImportObject = imports! {
-                //     "env" => {
-                //         "__import_data" => Function::new_native_with_env(
-                //             module.store(),
-                //             env.clone(),
-                //             holochain_wasmer_host::import::__import_data
-                //         ),
-                //         "__test_process_string" => Function::new_native_with_env(
-                //             module.store(),
-                //             env.clone(),
-                //             test::test_process_string
-                //         ),
-                //         "__test_process_struct" => Function::new_native_with_env(
-                //             module.store(),
-                //             env.clone(),
-                //             test::test_process_struct
-                //         ),
-                //         "__debug" => Function::new_native_with_env(
-                //             module.store(),
-                //             env.clone(),
-                //             test::debug
-                //         ),
-                //         "__pages" => Function::new_native_with_env(
-                //             module.store(),
-                //             env.clone(),
-                //             test::pages
-                //         ),
-                //     },
-                // };
-                // wasmer::Instance::new(&module, &import_object).unwrap()
+                let env = Env::default();
+                let import_object: wasmer::ImportObject = imports! {
+                    "env" => {
+                        "__import_data" => Function::new_native_with_env(
+                            module.store(),
+                            env.clone(),
+                            holochain_wasmer_host::import::__import_data
+                        ),
+                        "__test_process_string" => Function::new_native_with_env(
+                            module.store(),
+                            env.clone(),
+                            test::test_process_string
+                        ),
+                        "__test_process_struct" => Function::new_native_with_env(
+                            module.store(),
+                            env.clone(),
+                            test::test_process_struct
+                        ),
+                        "__debug" => Function::new_native_with_env(
+                            module.store(),
+                            env.clone(),
+                            test::debug
+                        ),
+                        "__pages" => Function::new_native_with_env(
+                            module.store(),
+                            env.clone(),
+                            test::pages
+                        ),
+                    },
+                };
+                wasmer::Instance::new(&module, &import_object).unwrap()
             });
         });
     }
@@ -204,6 +224,7 @@ pub fn test_process_string(c: &mut Criterion) {
 
 criterion_group!(
     benches,
+    wasm_module,
     wasm_instance,
     wasm_call,
     wasm_call_n,
