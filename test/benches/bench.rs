@@ -85,7 +85,7 @@ pub fn wasm_instance(c: &mut Criterion) {
                         ),
                     },
                 };
-                wasmer::Instance::new(&module, &import_object).unwrap()
+                let _ = wasmer::Instance::new(&module, &import_object).unwrap();
             });
         });
     }
@@ -224,7 +224,7 @@ pub fn test_process_string(c: &mut Criterion) {
 
 criterion_group!(
     benches,
-    wasm_module,
+    // wasm_module,
     wasm_instance,
     wasm_call,
     wasm_call_n,

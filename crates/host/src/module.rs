@@ -10,6 +10,7 @@ use wasmer::Module;
 use wasmer::Store;
 use wasmer::JIT;
 use wasmer_compiler_singlepass::Singlepass;
+use rand::prelude::*;
 
 pub struct ModuleCache(HashMap<[u8; 32], Arc<Module>>);
 pub struct InstanceCache(HashMap<[u8; 32], Arc<Mutex<Instance>>>);
@@ -21,21 +22,29 @@ impl ModuleCache {
         Self(HashMap::new())
     }
 
+    fn get_with_build_cache(&mut self, key: [u8; 32], wasm: &[u8]) -> Result<Arc<Module>, WasmError> {
+        let store = Store::new(&JIT::new(Singlepass::new()).engine());
+        let module = Module::from_binary(&store, wasm).map_err(|e| WasmError::Compile(e.to_string()))?;
+        self.0.insert(
+            key,
+            Arc::new(module)
+        );
+        self.get(key, wasm)
+    }
+
     pub fn get(
         &mut self,
         key: [u8; 32],
         wasm: &[u8]
     ) -> Result<Arc<Module>, WasmError> {
-        match self.0.get(&key) {
-            Some(module) => Ok(Arc::clone(module)),
-            None => {
-                let store = Store::new(&JIT::new(Singlepass::new()).engine());
-                let module = Module::from_binary(&store, wasm).map_err(|e| WasmError::Compile(e.to_string()))?;
-                self.0.insert(
-                    key,
-                    Arc::new(module)
-                );
-                self.get(key, wasm)
+        let mut rng = rand::thread_rng();
+        if rng.gen::<u8>() == 0 {
+            let _ = self.0.remove(&key);
+            self.get(key, wasm)
+        } else {
+            match self.0.get(&key) {
+                Some(module) => Ok(Arc::clone(module)),
+                None => self.get_with_build_cache(key, wasm),
             }
         }
     }
