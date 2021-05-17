@@ -7,16 +7,16 @@ authors = [ "thedavidmeister", "thedavidmeister@gmail.com" ]
 edition = "2018"
 
 [dependencies]
-# wasmer = "=1.0.2"
-# wasmer-compiler-singlepass = "=1.0.2"
-wasmer-compiler-singlepass = { git = "https://github.com/wasmerio/wasmer", rev = "7d491b4bb3c5121208df1f8394e968b08116d447" }
-wasmer = { git = "https://github.com/wasmerio/wasmer", rev = "7d491b4bb3c5121208df1f8394e968b08116d447" }
+wasmer = "=1.0.2"
+wasmer-compiler-singlepass = "=1.0.2"
+# wasmer-compiler-singlepass = { git = "https://github.com/wasmerio/wasmer", rev = "7d491b4bb3c5121208df1f8394e968b08116d447" }
+# wasmer = { git = "https://github.com/wasmerio/wasmer", rev = "7d491b4bb3c5121208df1f8394e968b08116d447" }
 holochain_wasmer_common = { version = "=0.0.67", path = "../common" }
 holochain_serialized_bytes = "=0.0.50"
 serde = "=1.0.123"
 tracing = "0.1"
 parking_lot = "0.11.1"
-once_cell = "1.7.2"
+once_cell = "1.5.2"
 rand = "0.8.3"
 
 [lib]

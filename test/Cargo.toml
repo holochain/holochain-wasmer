@@ -15,10 +15,10 @@ rand = "0.7"
 serde_bytes = "0.11"
 parking_lot = "0.11.1"
 # lazy_static = "1.4.0"
-# wasmer = "=1.0.2"
-# wasmer-compiler-singlepass = "=1.0.2"
-wasmer = { git = "https://github.com/wasmerio/wasmer", rev = "7d491b4bb3c5121208df1f8394e968b08116d447" }
-wasmer-compiler-singlepass = { git = "https://github.com/wasmerio/wasmer", rev = "7d491b4bb3c5121208df1f8394e968b08116d447" }
+wasmer = "=1.0.2"
+wasmer-compiler-singlepass = "=1.0.2"
+# wasmer = { git = "https://github.com/wasmerio/wasmer", rev = "7d491b4bb3c5121208df1f8394e968b08116d447" }
+# wasmer-compiler-singlepass = { git = "https://github.com/wasmerio/wasmer", rev = "7d491b4bb3c5121208df1f8394e968b08116d447" }
 
 [[bench]]
 name = "bench"

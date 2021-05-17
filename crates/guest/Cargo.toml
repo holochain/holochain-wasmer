@@ -19,4 +19,4 @@ holochain_wasmer_common = { version = "=0.0.67", path = "../common" }
 serde = "=1.0.123"
 tracing = "0.1"
 parking_lot = "0.11.1"
-once_cell = "1.7.2"
+once_cell = "1.5.2"

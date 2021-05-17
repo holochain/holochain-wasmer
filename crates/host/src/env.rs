@@ -41,7 +41,7 @@ impl Env {
             .map_err(|e| WasmError::Host(e.to_string()))?[0]
         {
             Value::I32(guest_ptr) => guest_ptr as GuestPtr,
-            _ => Err(WasmError::PointerMap)?,
+            _ => return Err(WasmError::PointerMap),
         };
         let len = self.data.read().len() as Len;
         crate::guest::write_bytes(

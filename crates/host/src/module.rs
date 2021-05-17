@@ -12,16 +12,14 @@ use wasmer::Store;
 use wasmer::JIT;
 use wasmer_compiler_singlepass::Singlepass;
 
+#[derive(Default)]
 pub struct ModuleCache(HashMap<[u8; 32], Arc<Module>>);
+#[derive(Default)]
 pub struct InstanceCache(HashMap<[u8; 32], Arc<Mutex<Instance>>>);
 
-pub static MODULE_CACHE: Lazy<RwLock<ModuleCache>> = Lazy::new(|| RwLock::new(ModuleCache::new()));
+pub static MODULE_CACHE: Lazy<RwLock<ModuleCache>> = Lazy::new(|| RwLock::new(ModuleCache::default()));
 
 impl ModuleCache {
-    pub fn new() -> Self {
-        Self(HashMap::new())
-    }
-
     fn get_with_build_cache(
         &mut self,
         key: [u8; 32],
@@ -49,13 +47,9 @@ impl ModuleCache {
 }
 
 pub static INSTANCE_CACHE: Lazy<RwLock<InstanceCache>> =
-    Lazy::new(|| RwLock::new(InstanceCache::new()));
+    Lazy::new(|| RwLock::new(InstanceCache::default()));
 
 impl InstanceCache {
-    pub fn new() -> Self {
-        Self(HashMap::new())
-    }
-
     pub fn get(
         &mut self,
         key: [u8; 32],
