@@ -55,14 +55,9 @@ impl TestWasm {
     }
 
     pub fn instance(&self) -> Arc<Mutex<Instance>> {
-        // let module = self.module();
-        // let env = Env::default();
-        // // let store = Store::new(&env);
-        // let import_object: ImportObject = import_object(&module.store(), &env);
-        // Instance::new(&module, &import_object).unwrap()
-        INSTANCE_CACHE
-            .write()
-            .get(self.key(), self.bytes(), import_object)
-            .unwrap()
+        let module = self.module();
+        let env = Env::default();
+        let import_object: ImportObject = import_object(&module.store(), &env);
+        Arc::new(Mutex::new(Instance::new(&module, &import_object).unwrap()))
     }
 }
