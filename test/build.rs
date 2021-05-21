@@ -3,8 +3,6 @@ use std::path::Path;
 fn main() {
     let out_dir = std::env::var_os("OUT_DIR").unwrap();
 
-    // assert_eq!(&out_dir, "");
-
     println!("cargo:rerun-if-changed=*");
 
     for &m in ["test_wasm", "wasm_memory", "wasm_empty", "wasm_io"].iter() {

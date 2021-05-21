@@ -1,7 +1,6 @@
 extern crate test_common;
 
 use holochain_wasmer_guest::*;
-// use test_common::BytesType;
 use test_common::SomeStruct;
 use test_common::StringType;
 

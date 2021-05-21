@@ -36,25 +36,9 @@ pub fn wasm_instance(c: &mut Criterion) {
         TestWasm::Test,
         TestWasm::Memory,
     ] {
-        // let store = wasmer::Store::new(&JIT::new(Singlepass::new()).engine());
-        // let serialized_module = wasmer::Module::from_binary(&store, wasm.bytes())
-        //     .unwrap()
-        //     .serialize()
-        //     .unwrap();
-
         group.bench_function(BenchmarkId::new("wasm_instance", wasm.name()), |b| {
             b.iter(|| {
-                // wasm.instance()
-                // let store = wasmer::Store::new(&JIT::new(Singlepass::new()).engine());
-                // // let module = wasmer::Module::from_binary(
-                // //     &store,
-                // //     wasm.bytes()
-                // // ).unwrap();
-                // let module =
-                //     unsafe { wasmer::Module::deserialize(&store, &serialized_module).unwrap() };
                 let module = wasm.module();
-                // // let module = Arc::clone(&module);
-                // // let module = module.clone();
                 let env = Env::default();
                 let import_object: wasmer::ImportObject = imports! {
                     "env" => {
