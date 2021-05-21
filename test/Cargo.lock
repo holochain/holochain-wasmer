@@ -42,7 +42,7 @@ dependencies = [
  "cfg-if 1.0.0",
  "libc",
  "miniz_oxide",
- "object",
+ "object 0.23.0",
  "rustc-demangle",
 ]
 
@@ -116,18 +116,18 @@ dependencies = [
 
 [[package]]
 name = "cranelift-bforest"
-version = "0.70.0"
+version = "0.73.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "31f782ffb172d8095cbb4c6464d85432c3bcfa8609b0bb1dc27cfd35bd90e052"
+checksum = "07f641ec9146b7d7498d78cd832007d66ca44a9b61f23474d1fb78e5a3701e99"
 dependencies = [
  "cranelift-entity",
 ]
 
 [[package]]
 name = "cranelift-codegen"
-version = "0.70.0"
+version = "0.73.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "91e0910022b490bd0a65d5baa1693b0475cdbeea1c26472343f2acea1f1f55b8"
+checksum = "fd1f2c0cd4ac12c954116ab2e26e40df0d51db322a855b5664fa208bc32d6686"
 dependencies = [
  "byteorder",
  "cranelift-bforest",
@@ -144,9 +144,9 @@ dependencies = [
 
 [[package]]
 name = "cranelift-codegen-meta"
-version = "0.70.0"
+version = "0.73.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7cafe95cb5ac659e113549b2794a2c8d3a14f36e1a98728a6e0ea7a773be2129"
+checksum = "105e11b2f0ff7ac81f80dd05ec938ce529a75e36f3d598360d806bb5bfa75e5a"
 dependencies = [
  "cranelift-codegen-shared",
  "cranelift-entity",
@@ -154,21 +154,21 @@ dependencies = [
 
 [[package]]
 name = "cranelift-codegen-shared"
-version = "0.70.0"
+version = "0.73.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8d1bd002e42cc094a131a8227d06d48df28ea3b9127e5e3bc3010e079858e9af"
+checksum = "51e5eba2c1858d50abf023be4d88bd0450cb12d4ec2ba3ffac56353e6d09caf2"
 
 [[package]]
 name = "cranelift-entity"
-version = "0.70.0"
+version = "0.73.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e55e9043403f0dec775f317280015150e78b2352fb947d2f37407fd4ce6311c7"
+checksum = "79fa6fdd77a8d317763cd21668d3e72b96e09ac8a974326c6149f7de5aafa8ed"
 
 [[package]]
 name = "cranelift-frontend"
-version = "0.70.0"
+version = "0.73.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0153680ebce89aac7cad90a5442bb136faacfc86ea62587a01b8e8e79f8249c9"
+checksum = "ae11da9ca99f987c29e3eb39ebe10e9b879ecca30f3aeaee13db5e8e02b80fb6"
 dependencies = [
  "cranelift-codegen",
  "log",
@@ -675,6 +675,12 @@ name = "object"
 version = "0.23.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "a9a7ab5d64814df0fe4a4b5ead45ed6c5f181ee3ff04ba344313a6c80446c5d4"
+
+[[package]]
+name = "object"
+version = "0.24.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "1a5b3dd1c072ee7963717671d1ca129f1048fda25edea6b752bfc71ac8854170"
 dependencies = [
  "crc32fast",
  "indexmap",
@@ -1168,9 +1174,9 @@ dependencies = [
 
 [[package]]
 name = "target-lexicon"
-version = "0.11.2"
+version = "0.12.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "422045212ea98508ae3d28025bc5aaa2bd4a9cdaecd442a08da2ee620ee9ea95"
+checksum = "64ae3b39281e4b14b8123bdbaddd472b7dfe215e444181f2f9d2443c2444f834"
 
 [[package]]
 name = "tempfile"
@@ -1381,7 +1387,7 @@ checksum = "c9ba19973a58daf4db6f352eda73dc0e289493cd29fb2632eb172085b6521acd"
 [[package]]
 name = "wasmer"
 version = "1.0.2"
-source = "git+https://github.com/wasmerio/wasmer?rev=7d491b4bb3c5121208df1f8394e968b08116d447#7d491b4bb3c5121208df1f8394e968b08116d447"
+source = "git+https://github.com/wasmerio/wasmer?branch=fix-cyclic-ref#d3c58eb9d63a5a19e382f70aaa9be495d110c4a2"
 dependencies = [
  "cfg-if 0.1.10",
  "indexmap",
@@ -1404,7 +1410,7 @@ dependencies = [
 [[package]]
 name = "wasmer-compiler"
 version = "1.0.2"
-source = "git+https://github.com/wasmerio/wasmer?rev=7d491b4bb3c5121208df1f8394e968b08116d447#7d491b4bb3c5121208df1f8394e968b08116d447"
+source = "git+https://github.com/wasmerio/wasmer?branch=fix-cyclic-ref#d3c58eb9d63a5a19e382f70aaa9be495d110c4a2"
 dependencies = [
  "enumset",
  "loupe",
@@ -1422,7 +1428,7 @@ dependencies = [
 [[package]]
 name = "wasmer-compiler-cranelift"
 version = "1.0.2"
-source = "git+https://github.com/wasmerio/wasmer?rev=7d491b4bb3c5121208df1f8394e968b08116d447#7d491b4bb3c5121208df1f8394e968b08116d447"
+source = "git+https://github.com/wasmerio/wasmer?branch=fix-cyclic-ref#d3c58eb9d63a5a19e382f70aaa9be495d110c4a2"
 dependencies = [
  "cranelift-codegen",
  "cranelift-entity",
@@ -1441,7 +1447,7 @@ dependencies = [
 [[package]]
 name = "wasmer-compiler-singlepass"
 version = "1.0.2"
-source = "git+https://github.com/wasmerio/wasmer?rev=7d491b4bb3c5121208df1f8394e968b08116d447#7d491b4bb3c5121208df1f8394e968b08116d447"
+source = "git+https://github.com/wasmerio/wasmer?branch=fix-cyclic-ref#d3c58eb9d63a5a19e382f70aaa9be495d110c4a2"
 dependencies = [
  "byteorder",
  "dynasm",
@@ -1459,7 +1465,7 @@ dependencies = [
 [[package]]
 name = "wasmer-derive"
 version = "1.0.2"
-source = "git+https://github.com/wasmerio/wasmer?rev=7d491b4bb3c5121208df1f8394e968b08116d447#7d491b4bb3c5121208df1f8394e968b08116d447"
+source = "git+https://github.com/wasmerio/wasmer?branch=fix-cyclic-ref#d3c58eb9d63a5a19e382f70aaa9be495d110c4a2"
 dependencies = [
  "proc-macro-error",
  "proc-macro2",
@@ -1470,7 +1476,7 @@ dependencies = [
 [[package]]
 name = "wasmer-engine"
 version = "1.0.2"
-source = "git+https://github.com/wasmerio/wasmer?rev=7d491b4bb3c5121208df1f8394e968b08116d447#7d491b4bb3c5121208df1f8394e968b08116d447"
+source = "git+https://github.com/wasmerio/wasmer?branch=fix-cyclic-ref#d3c58eb9d63a5a19e382f70aaa9be495d110c4a2"
 dependencies = [
  "backtrace",
  "lazy_static",
@@ -1490,7 +1496,7 @@ dependencies = [
 [[package]]
 name = "wasmer-engine-jit"
 version = "1.0.2"
-source = "git+https://github.com/wasmerio/wasmer?rev=7d491b4bb3c5121208df1f8394e968b08116d447#7d491b4bb3c5121208df1f8394e968b08116d447"
+source = "git+https://github.com/wasmerio/wasmer?branch=fix-cyclic-ref#d3c58eb9d63a5a19e382f70aaa9be495d110c4a2"
 dependencies = [
  "cfg-if 0.1.10",
  "leb128",
@@ -1507,7 +1513,7 @@ dependencies = [
 [[package]]
 name = "wasmer-engine-native"
 version = "1.0.2"
-source = "git+https://github.com/wasmerio/wasmer?rev=7d491b4bb3c5121208df1f8394e968b08116d447#7d491b4bb3c5121208df1f8394e968b08116d447"
+source = "git+https://github.com/wasmerio/wasmer?branch=fix-cyclic-ref#d3c58eb9d63a5a19e382f70aaa9be495d110c4a2"
 dependencies = [
  "cfg-if 0.1.10",
  "leb128",
@@ -1528,9 +1534,9 @@ dependencies = [
 [[package]]
 name = "wasmer-object"
 version = "1.0.2"
-source = "git+https://github.com/wasmerio/wasmer?rev=7d491b4bb3c5121208df1f8394e968b08116d447#7d491b4bb3c5121208df1f8394e968b08116d447"
+source = "git+https://github.com/wasmerio/wasmer?branch=fix-cyclic-ref#d3c58eb9d63a5a19e382f70aaa9be495d110c4a2"
 dependencies = [
- "object",
+ "object 0.24.0",
  "thiserror",
  "wasmer-compiler",
  "wasmer-types",
@@ -1539,7 +1545,7 @@ dependencies = [
 [[package]]
 name = "wasmer-types"
 version = "1.0.2"
-source = "git+https://github.com/wasmerio/wasmer?rev=7d491b4bb3c5121208df1f8394e968b08116d447#7d491b4bb3c5121208df1f8394e968b08116d447"
+source = "git+https://github.com/wasmerio/wasmer?branch=fix-cyclic-ref#d3c58eb9d63a5a19e382f70aaa9be495d110c4a2"
 dependencies = [
  "indexmap",
  "loupe",
@@ -1551,7 +1557,7 @@ dependencies = [
 [[package]]
 name = "wasmer-vm"
 version = "1.0.2"
-source = "git+https://github.com/wasmerio/wasmer?rev=7d491b4bb3c5121208df1f8394e968b08116d447#7d491b4bb3c5121208df1f8394e968b08116d447"
+source = "git+https://github.com/wasmerio/wasmer?branch=fix-cyclic-ref#d3c58eb9d63a5a19e382f70aaa9be495d110c4a2"
 dependencies = [
  "backtrace",
  "cc",

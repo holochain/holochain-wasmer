@@ -33,6 +33,9 @@ pub enum WasmError {
     Guest(String),
     /// Something to do with host logic that we don't know about
     Host(String),
+    /// Something to do with host logic that we don't know about
+    /// AND wasm execution MUST immediately halt.
+    HostShortCircuit(String),
     /// Somehow wasmer failed to compile machine code from wasm byte code
     Compile(String),
 

@@ -17,7 +17,8 @@ pub struct ModuleCache(HashMap<[u8; 32], Arc<Module>>);
 #[derive(Default)]
 pub struct InstanceCache(HashMap<[u8; 32], Arc<Mutex<Instance>>>);
 
-pub static MODULE_CACHE: Lazy<RwLock<ModuleCache>> = Lazy::new(|| RwLock::new(ModuleCache::default()));
+pub static MODULE_CACHE: Lazy<RwLock<ModuleCache>> =
+    Lazy::new(|| RwLock::new(ModuleCache::default()));
 
 impl ModuleCache {
     fn get_with_build_cache(

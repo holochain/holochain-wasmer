@@ -97,7 +97,7 @@ pub fn wasm_instance(c: &mut Criterion) {
 pub fn wasm_call(c: &mut Criterion) {
     let mut group = c.benchmark_group("wasm_call");
 
-    let mut instance = TestWasm::Io.instance();
+    let instance = TestWasm::Io.instance();
 
     macro_rules! bench_call {
         ( $fs:expr; $t:tt; $n:ident; $build:expr; ) => {
@@ -159,7 +159,7 @@ pub fn wasm_call(c: &mut Criterion) {
 pub fn wasm_call_n(c: &mut Criterion) {
     let mut group = c.benchmark_group("wasm_call_n");
 
-    let mut instance = TestWasm::Io.instance();
+    let instance = TestWasm::Io.instance();
 
     macro_rules! bench_n {
         ( $fs:expr; $t:ty; ) => {
@@ -201,7 +201,7 @@ pub fn wasm_call_n(c: &mut Criterion) {
 pub fn test_process_string(c: &mut Criterion) {
     let mut group = c.benchmark_group("test_process_string");
 
-    let mut instance = TestWasm::Test.instance();
+    let instance = TestWasm::Test.instance();
 
     for n in vec![0, 1, 1_000, 1_000_000] {
         group.throughput(Throughput::Bytes(n as _));
@@ -224,7 +224,7 @@ pub fn test_process_string(c: &mut Criterion) {
 
 criterion_group!(
     benches,
-    // wasm_module,
+    wasm_module,
     wasm_instance,
     wasm_call,
     wasm_call_n,
