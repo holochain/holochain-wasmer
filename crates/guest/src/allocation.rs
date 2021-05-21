@@ -1,9 +1,9 @@
 use holochain_wasmer_common::*;
 
-#[no_mangle]
-#[inline(always)]
 /// Allocate bytes that won't be dropped by the allocator.
 /// Return the pointer to the leaked allocation so the host can write to it.
+#[no_mangle]
+#[inline(always)]
 pub extern "C" fn __allocate(len: Len) -> GuestPtr {
     let dummy: Vec<u8> = Vec::with_capacity(len as usize);
     let ptr = dummy.as_ptr() as GuestPtr;
@@ -11,22 +11,22 @@ pub extern "C" fn __allocate(len: Len) -> GuestPtr {
     ptr
 }
 
-#[no_mangle]
-#[inline(always)]
 /// Free an allocation.
 /// Needed because we leak memory every time we call `__allocate` and `write_bytes`.
+#[no_mangle]
+#[inline(always)]
 pub extern "C" fn __deallocate(guest_ptr: GuestPtr, len: Len) {
     let _: Vec<u8> =
         unsafe { Vec::from_raw_parts(guest_ptr as *mut u8, len as usize, len as usize) };
 }
 
-#[inline(always)]
 /// Attempt to consume bytes from a known guest_ptr and len.
 ///
 /// Consume in this context means take ownership of previously forgotten data.
 ///
 /// This needs to work for bytes written into the guest from the host and for bytes written with
 /// the write_bytes() function within the guest.
+#[inline(always)]
 pub fn consume_bytes(guest_ptr: GuestPtr, len: Len) -> Vec<u8> {
     unsafe {
         Vec::from_raw_parts(
@@ -40,7 +40,6 @@ pub fn consume_bytes(guest_ptr: GuestPtr, len: Len) -> Vec<u8> {
     }
 }
 
-#[inline(always)]
 /// Attempt to write a slice of bytes.
 ///
 /// This is identical to the following:
@@ -58,6 +57,7 @@ pub fn consume_bytes(guest_ptr: GuestPtr, len: Len) -> Vec<u8> {
 /// functions so that the host can read the _output_ of guest logic from a pointer.
 ///
 /// The host MUST ensure either __deallocate is called or the entire wasm memory is dropped.
+#[inline(always)]
 pub fn write_bytes(v: Vec<u8>) -> GuestPtr {
     let ptr: GuestPtr = v.as_ptr() as GuestPtr;
     let _ = core::mem::ManuallyDrop::new(v);

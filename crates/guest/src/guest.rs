@@ -19,13 +19,13 @@ macro_rules! host_externs {
     };
 }
 
-#[inline(always)]
 /// Receive arguments from the host.
 /// The guest sets the type O that the host needs to match.
 /// If deserialization fails then a `GuestPtr` to a `WasmError::Deserialize` is returned.
 /// The guest should __immediately__ return an `Err` back to the host.
 /// The `WasmError::Deserialize` enum contains the bytes that failed to deserialize so the host can
 /// unambiguously provide debug information.
+#[inline(always)]
 pub fn host_args<O>(ptr: GuestPtr, len: Len) -> Result<O, GuestPtrLen>
 where
     O: serde::de::DeserializeOwned + std::fmt::Debug,
@@ -80,9 +80,9 @@ where
     }
 }
 
-#[inline(always)]
 /// Convert any serializable value into a GuestPtr that can be returned to the host.
 /// The host is expected to know how to consume and deserialize it.
+#[inline(always)]
 pub fn return_ptr<R>(return_value: R) -> GuestPtrLen
 where
     R: Serialize + std::fmt::Debug,
@@ -96,8 +96,8 @@ where
     }
 }
 
-#[inline(always)]
 /// Convert a WasmError to a GuestPtrLen as best we can.
+#[inline(always)]
 pub fn return_err_ptr(wasm_error: WasmError) -> GuestPtrLen {
     match holochain_serialized_bytes::encode::<Result<(), WasmError>>(&Err(wasm_error)) {
         Ok(bytes) => {
@@ -126,8 +126,8 @@ pub fn return_err_ptr(wasm_error: WasmError) -> GuestPtrLen {
     }
 }
 
-#[macro_export]
 /// A simple macro to wrap return_err_ptr in an analogy to the native rust `?`.
+#[macro_export]
 macro_rules! try_ptr {
     ( $e:expr, $fail:expr ) => {{
         match $e {
