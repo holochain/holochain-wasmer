@@ -1,7 +1,11 @@
+pub use crate::env::Env;
 pub use crate::guest;
-pub use crate::instantiate::instantiate;
-pub use crate::instantiate::module;
+pub use crate::import::__import_data;
+pub use crate::module::MODULE_CACHE;
 pub use holochain_serialized_bytes::prelude::*;
+pub use holochain_wasmer_common::result::WasmError;
 pub use holochain_wasmer_common::*;
-pub use wasmer_runtime::*;
-pub use wasmer_runtime_core::import::*;
+pub use parking_lot::Mutex;
+pub use wasmer::WasmerEnv;
+pub use wasmer::*;
+pub use wasmer_compiler_singlepass::Singlepass;

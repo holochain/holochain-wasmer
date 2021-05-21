@@ -5,7 +5,6 @@ authors = [ "thedavidmeister", "thedavidmeister@gmail.com" ]
 edition = "2018"
 
 [dependencies]
-wasmer-runtime = "=0.16.2"
 holochain_wasmer_common = { path = "../crates/common" }
 holochain_wasmer_host = { path = "../crates/host" }
 holochain_serialized_bytes = "=0.0.50"
@@ -14,6 +13,11 @@ test_common = { version = "=0.0.67", path = "./common" }
 criterion = "0.3"
 rand = "0.7"
 serde_bytes = "0.11"
+parking_lot = "0.11.1"
+# wasmer = "=1.0.2"
+# wasmer-compiler-singlepass = "=1.0.2"
+wasmer = { git = "https://github.com/wasmerio/wasmer", branch = "fix-cyclic-ref" }
+wasmer-compiler-singlepass = { git = "https://github.com/wasmerio/wasmer", branch = "fix-cyclic-ref" }
 
 [[bench]]
 name = "bench"

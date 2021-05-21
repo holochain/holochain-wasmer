@@ -1,12 +1,15 @@
 use holochain_wasmer_guest::*;
 
 host_externs!(
-    __debug,
-    __pages
+    __debug
 );
 
+extern "C" {
+    pub fn __pages(i: u32) -> u32;
+}
+
 #[no_mangle]
-pub extern "C" fn bytes_round_trip(_: GuestPtr) -> GuestPtr {
+pub extern "C" fn bytes_round_trip(_: GuestPtr, _: Len) -> GuestPtrLen {
 
     let mut old_pages: WasmSize = unsafe { __pages(0) };
     let mut current_pages: WasmSize = old_pages;
@@ -20,20 +23,14 @@ pub extern "C" fn bytes_round_trip(_: GuestPtr) -> GuestPtr {
         let bytes: Vec<[u8; 5]> = std::iter::repeat([ 1, 2, 3, 4, 5 ]).take(100).collect();
 
         let ptrs: Vec<GuestPtr> = bytes.iter().map(|b| {
-            allocation::write_bytes(b)
+            allocation::write_bytes(b.to_vec())
         }).collect();
 
         for i in 0..ptrs.len() {
-            // the length prefix needs to be correct
-            assert_eq!(
-                allocation::length_prefix_at_guest_ptr(ptrs[i]),
-                bytes[i].len() as Len,
-            );
-
             // consuming the bytes should give a vector of the same bytes as the original bytes
             assert_eq!(
                 bytes[i].to_vec(),
-                allocation::consume_bytes(ptrs[i]),
+                allocation::consume_bytes(ptrs[i], 5 as Len),
             );
         };
 

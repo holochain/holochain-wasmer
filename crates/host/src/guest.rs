@@ -1,8 +1,10 @@
 use crate::prelude::*;
 use holochain_serialized_bytes::prelude::*;
-use wasmer_runtime::Ctx;
-use wasmer_runtime::Instance;
-use wasmer_runtime::Value;
+use parking_lot::Mutex;
+use std::sync::Arc;
+use wasmer::Instance;
+use wasmer::Memory;
+use wasmer::Value;
 
 /// write a slice of bytes to the guest in a safe-ish way
 ///
@@ -63,24 +65,14 @@ use wasmer_runtime::Value;
 /// additional 4 byte prefix in order to read/write the real payload correctly
 ///
 /// @see read_bytes()
-pub fn write_bytes(ctx: &mut Ctx, guest_ptr: GuestPtr, slice: &[u8]) -> Result<(), WasmError> {
+pub fn write_bytes(memory: &Memory, guest_ptr: GuestPtr, slice: &[u8]) -> Result<(), WasmError> {
     let ptr: WasmPtr<u8, Array> = WasmPtr::new(guest_ptr as _);
 
-    // build the length prefix slice
-    let len = slice.len() as Len;
-    let len_bytes: [u8; std::mem::size_of::<Len>()] = len.to_le_bytes();
-
     // write the length prefix immediately before the slice at the guest pointer position
-    for (byte, cell) in len_bytes.iter().chain(slice.iter()).zip(
-        unsafe {
-            ptr.deref_mut(
-                ctx.memory(0),
-                0 as GuestPtr,
-                std::mem::size_of::<Len>() as Len + len,
-            )
-        }
-        .ok_or(WasmError::Memory)?
-        .iter(),
+    for (byte, cell) in slice.iter().zip(
+        unsafe { ptr.deref_mut(memory, 0 as GuestPtr, slice.len() as Len) }
+            .ok_or(WasmError::Memory)?
+            .iter(),
     ) {
         cell.set(*byte)
     }
@@ -126,21 +118,10 @@ pub fn write_bytes(ctx: &mut Ctx, guest_ptr: GuestPtr, slice: &[u8]) -> Result<(
 ///
 /// we then read the length 3 bytes from position `5682` (ptr + 4) to get our originally written
 /// bytes of `[ 1_u8, 2_u8, 3_u8 ]`.
-pub fn read_bytes(ctx: &Ctx, guest_ptr: GuestPtr) -> Result<Vec<u8>, WasmError> {
+pub fn read_bytes(memory: &Memory, guest_ptr: GuestPtr, len: Len) -> Result<Vec<u8>, WasmError> {
     let ptr: WasmPtr<u8, Array> = WasmPtr::new(guest_ptr as _);
-    let mut len_iter = ptr
-        .deref(ctx.memory(0), 0, std::mem::size_of::<Len>() as Len)
-        .ok_or(WasmError::Memory)?
-        .iter();
-
-    let mut len_array = [0; std::mem::size_of::<Len>()];
-    for item in len_array.iter_mut().take(std::mem::size_of::<Len>()) {
-        *item = len_iter.next().ok_or(WasmError::Memory)?.get();
-    }
-    let len: Len = u32::from_le_bytes(len_array);
-
     Ok(ptr
-        .deref(ctx.memory(0), std::mem::size_of::<Len>() as Len, len as _)
+        .deref(memory, 0, len as _)
         .ok_or(WasmError::Memory)?
         .iter()
         .map(|cell| cell.get())
@@ -148,11 +129,11 @@ pub fn read_bytes(ctx: &Ctx, guest_ptr: GuestPtr) -> Result<Vec<u8>, WasmError> 
 }
 
 /// Deserialize any DeserializeOwned type out of the guest from a guest pointer.
-pub fn from_guest_ptr<O>(ctx: &mut Ctx, guest_ptr: GuestPtr) -> Result<O, WasmError>
+pub fn from_guest_ptr<O>(memory: &Memory, guest_ptr: GuestPtr, len: Len) -> Result<O, WasmError>
 where
     O: serde::de::DeserializeOwned + std::fmt::Debug,
 {
-    let bytes = read_bytes(ctx, guest_ptr)?;
+    let bytes = read_bytes(memory, guest_ptr, len)?;
     match holochain_serialized_bytes::decode(&bytes) {
         Ok(v) => Ok(v),
         Err(e) => {
@@ -165,54 +146,73 @@ where
 /// Host calling guest for the function named `call` with the given `payload` in a vector of bytes
 /// result is either a vector of bytes from the guest found at the location of the returned guest
 /// allocation pointer or a `WasmError`.
-pub fn call<I, O>(instance: &mut Instance, f: &str, input: I) -> Result<O, WasmError>
+pub fn call<I, O>(instance: Arc<Mutex<Instance>>, f: &str, input: I) -> Result<O, WasmError>
 where
     I: serde::Serialize + std::fmt::Debug,
     O: serde::de::DeserializeOwned + std::fmt::Debug,
 {
+    let instance = instance.lock();
     // The guest will use the same crate for decoding if it uses the wasm common crate.
     let payload: Vec<u8> = holochain_serialized_bytes::encode(&input)?;
 
     // Get a pre-allocated guest pointer to write the input into.
     let guest_input_ptr: GuestPtr = match instance
-        .call("__allocate", &[Value::I32(payload.len().try_into()?)])
-        .map_err(|e| WasmError::CallError(format!("{:?}", e)))?[0]
+        .exports
+        .get_function("__allocate")
+        .map_err(|e| WasmError::CallError(e.to_string()))?
+        .call(&[Value::I32(payload.len().try_into()?)])
+        .map_err(|e| WasmError::CallError(e.to_string()))?[0]
     {
         Value::I32(i) => i as GuestPtr,
         _ => unreachable!(),
     };
 
     // Write the input payload into the guest at the offset specified by the allocation.
-    write_bytes(instance.context_mut(), guest_input_ptr, &payload)?;
+    write_bytes(
+        instance
+            .exports
+            .get_memory("memory")
+            .map_err(|_| WasmError::Memory)?,
+        guest_input_ptr,
+        &payload,
+    )?;
 
     // Call the guest function with its own pointer to its input.
     // Collect the guest's pointer to its output.
-    let guest_return_ptr: GuestPtr = match instance
-        .call(f, &[Value::I32(guest_input_ptr.try_into()?)])
+    let (guest_return_ptr, len): (GuestPtr, Len) = match instance
+        .exports
+        .get_function(f)
+        .map_err(|e| WasmError::CallError(e.to_string()))?
+        .call(&[
+            Value::I32(guest_input_ptr.try_into()?),
+            Value::I32(payload.len().try_into()?),
+        ])
         .map_err(|e| WasmError::CallError(format!("{:?}", e)))?[0]
     {
-        Value::I32(i) => i as GuestPtr,
+        Value::I64(i) => split_u64(i as _),
         _ => unreachable!(),
     };
 
-    let return_value: Result<O, WasmError> = crate::guest::from_guest_ptr(
-        instance.context_mut(),
+    // We ? here to return early WITHOUT calling deallocate.
+    // The host MUST discard any wasm instance that errors at this point to avoid memory leaks.
+    let return_value: Result<O, WasmError> = from_guest_ptr(
+        instance
+            .exports
+            .get_memory("memory")
+            .map_err(|_| WasmError::Memory)?,
         guest_return_ptr,
-        // This ? might be a bit controversial as it means we return with an error WITHOUT telling the
-        // guest that it can deallocate the return value
-        // PROS:
-        // - it's possible that we actually can't safely deallocate the return value here
-        // - leaving the data in the guest may aid in debugging
-        // - we avoid 'panicked while panicking' type situations
-        // - slightly simpler code and clearer error handling
-        // CONS:
-        // - leaves 'memory leak' style cruft in the wasm guest
-        //   (NOTE: all WASM memory is dropped when the instance is dropped anyway)
+        len,
     )?;
 
     // Tell the guest we are finished with the return pointer's data.
     instance
-        .call("__deallocate", &[Value::I32(guest_return_ptr.try_into()?)])
+        .exports
+        .get_function("__deallocate")
+        .map_err(|e| WasmError::CallError(e.to_string()))?
+        .call(&[
+            Value::I32(guest_return_ptr.try_into()?),
+            Value::I32(len.try_into()?),
+        ])
         .map_err(|e| WasmError::CallError(format!("{:?}", e)))?;
 
     return_value
