@@ -186,11 +186,20 @@ where
         .call(&[
             Value::I32(guest_input_ptr.try_into()?),
             Value::I32(payload.len().try_into()?),
-        ])
-        .map_err(|e| WasmError::CallError(format!("{:?}", e)))?[0]
-    {
-        Value::I64(i) => split_u64(i as _),
-        _ => unreachable!(),
+        ]) {
+        Ok(v) => match v[0] {
+            Value::I64(i) => split_u64(i as _),
+            _ => unreachable!(),
+        },
+        Err(e) => match e.downcast::<WasmError>() {
+            Ok(wasm_error) => match wasm_error {
+                WasmError::HostShortCircuit(encoded) => {
+                    return Ok(holochain_serialized_bytes::decode(&encoded)?)
+                }
+                _ => return Err(wasm_error),
+            },
+            Err(e) => return Err(WasmError::CallError(e.to_string())),
+        },
     };
 
     // We ? here to return early WITHOUT calling deallocate.

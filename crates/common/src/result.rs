@@ -35,7 +35,8 @@ pub enum WasmError {
     Host(String),
     /// Something to do with host logic that we don't know about
     /// AND wasm execution MUST immediately halt.
-    HostShortCircuit(String),
+    /// The Vec<u8> holds the encoded data as though the guest had returned.
+    HostShortCircuit(Vec<u8>),
     /// Somehow wasmer failed to compile machine code from wasm byte code
     Compile(String),
 

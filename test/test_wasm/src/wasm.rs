@@ -10,8 +10,15 @@ host_externs!(
     __noop,
     __this_func_doesnt_exist_but_we_can_extern_it_anyway,
     __test_process_string,
-    __test_process_struct
+    __test_process_struct,
+    __short_circuit
 );
+
+#[no_mangle]
+pub extern "C" fn short_circuit(_guest_ptr: GuestPtr, _len: Len) -> GuestPtrLen {
+    host_call::<(), String>(__short_circuit, ()).unwrap();
+    0
+}
 
 #[no_mangle]
 pub extern "C" fn literal_bytes(guest_ptr: GuestPtr, len: Len) -> GuestPtrLen {

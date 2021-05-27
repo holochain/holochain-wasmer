@@ -4,6 +4,12 @@ pub mod wasms;
 use holochain_wasmer_host::prelude::*;
 use test_common::SomeStruct;
 
+pub fn short_circuit(_: &Env, _: GuestPtr, _: Len) -> Result<(), WasmError> {
+    RuntimeError::raise(Box::new(WasmError::HostShortCircuit(
+        holochain_serialized_bytes::encode(&String::from("shorts"))?,
+    )));
+}
+
 pub fn test_process_string(env: &Env, guest_ptr: GuestPtr, len: Len) -> Result<(), WasmError> {
     let string: String = env.consume_bytes_from_guest(guest_ptr, len)?;
     let processed_string = format!("host: {}", string);
@@ -31,6 +37,12 @@ pub mod tests {
     use crate::wasms;
     use test_common::StringType;
     use wasms::TestWasm;
+
+    #[test]
+    fn short_circuit() {
+        let result: String = guest::call(TestWasm::Test.instance(), "short_circuit", ()).unwrap();
+        assert_eq!(result, String::from("shorts"));
+    }
 
     #[test]
     fn bytes_round_trip() {
