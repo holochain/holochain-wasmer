@@ -6,7 +6,7 @@ version = "0.14.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "a55f82cfe485775d02112886f4169bde0c5894d75e79ead7eafe7e40a25e45f7"
 dependencies = [
- "gimli",
+ "gimli 0.23.0",
 ]
 
 [[package]]
@@ -120,7 +120,16 @@ version = "0.73.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "07f641ec9146b7d7498d78cd832007d66ca44a9b61f23474d1fb78e5a3701e99"
 dependencies = [
- "cranelift-entity",
+ "cranelift-entity 0.73.0",
+]
+
+[[package]]
+name = "cranelift-bforest"
+version = "0.74.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "c8ca3560686e7c9c7ed7e0fe77469f2410ba5d7781b1acaa9adc8d8deea28e3e"
+dependencies = [
+ "cranelift-entity 0.74.0",
 ]
 
 [[package]]
@@ -130,11 +139,11 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "fd1f2c0cd4ac12c954116ab2e26e40df0d51db322a855b5664fa208bc32d6686"
 dependencies = [
  "byteorder",
- "cranelift-bforest",
- "cranelift-codegen-meta",
- "cranelift-codegen-shared",
- "cranelift-entity",
- "gimli",
+ "cranelift-bforest 0.73.0",
+ "cranelift-codegen-meta 0.73.0",
+ "cranelift-codegen-shared 0.73.0",
+ "cranelift-entity 0.73.0",
+ "gimli 0.23.0",
  "log",
  "regalloc",
  "smallvec",
@@ -143,13 +152,40 @@ dependencies = [
 ]
 
 [[package]]
+name = "cranelift-codegen"
+version = "0.74.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "baf9bf1ffffb6ce3d2e5ebc83549bd2436426c99b31cc550d521364cbe35d276"
+dependencies = [
+ "cranelift-bforest 0.74.0",
+ "cranelift-codegen-meta 0.74.0",
+ "cranelift-codegen-shared 0.74.0",
+ "cranelift-entity 0.74.0",
+ "gimli 0.24.0",
+ "log",
+ "regalloc",
+ "smallvec",
+ "target-lexicon",
+]
+
+[[package]]
 name = "cranelift-codegen-meta"
 version = "0.73.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "105e11b2f0ff7ac81f80dd05ec938ce529a75e36f3d598360d806bb5bfa75e5a"
 dependencies = [
- "cranelift-codegen-shared",
- "cranelift-entity",
+ "cranelift-codegen-shared 0.73.0",
+ "cranelift-entity 0.73.0",
+]
+
+[[package]]
+name = "cranelift-codegen-meta"
+version = "0.74.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "4cc21936a5a6d07e23849ffe83e5c1f6f50305c074f4b2970ca50c13bf55b821"
+dependencies = [
+ "cranelift-codegen-shared 0.74.0",
+ "cranelift-entity 0.74.0",
 ]
 
 [[package]]
@@ -159,10 +195,22 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "51e5eba2c1858d50abf023be4d88bd0450cb12d4ec2ba3ffac56353e6d09caf2"
 
 [[package]]
+name = "cranelift-codegen-shared"
+version = "0.74.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "ca5b6ffaa87560bebe69a5446449da18090b126037920b0c1c6d5945f72faf6b"
+
+[[package]]
 name = "cranelift-entity"
 version = "0.73.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "79fa6fdd77a8d317763cd21668d3e72b96e09ac8a974326c6149f7de5aafa8ed"
+
+[[package]]
+name = "cranelift-entity"
+version = "0.74.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "7d6b4a8bef04f82e4296782646f733c641d09497df2fabf791323fefaa44c64c"
 
 [[package]]
 name = "cranelift-frontend"
@@ -170,7 +218,19 @@ version = "0.73.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "ae11da9ca99f987c29e3eb39ebe10e9b879ecca30f3aeaee13db5e8e02b80fb6"
 dependencies = [
- "cranelift-codegen",
+ "cranelift-codegen 0.73.0",
+ "log",
+ "smallvec",
+ "target-lexicon",
+]
+
+[[package]]
+name = "cranelift-frontend"
+version = "0.74.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "c31b783b351f966fce33e3c03498cb116d16d97a8f9978164a60920bd0d3a99c"
+dependencies = [
+ "cranelift-codegen 0.74.0",
  "log",
  "smallvec",
  "target-lexicon",
@@ -421,6 +481,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "gimli"
+version = "0.24.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "0e4075386626662786ddb0ec9081e7c7eeb1ba31951f447ca780ef9f5d568189"
+dependencies = [
+ "fallible-iterator",
+ "indexmap",
+ "stable_deref_trait",
+]
+
+[[package]]
 name = "hashbrown"
 version = "0.9.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -481,8 +552,8 @@ dependencies = [
  "rand 0.8.3",
  "serde",
  "tracing",
- "wasmer",
- "wasmer-compiler-singlepass",
+ "wasmer 1.0.2 (git+https://github.com/wasmerio/wasmer)",
+ "wasmer-compiler-singlepass 1.0.2 (git+https://github.com/wasmerio/wasmer)",
 ]
 
 [[package]]
@@ -1205,8 +1276,8 @@ dependencies = [
  "serde",
  "serde_bytes",
  "test_common",
- "wasmer",
- "wasmer-compiler-singlepass",
+ "wasmer 1.0.2 (git+https://github.com/wasmerio/wasmer?branch=fix-cyclic-ref)",
+ "wasmer-compiler-singlepass 1.0.2 (git+https://github.com/wasmerio/wasmer?branch=fix-cyclic-ref)",
 ]
 
 [[package]]
@@ -1395,14 +1466,37 @@ dependencies = [
  "more-asserts",
  "target-lexicon",
  "thiserror",
- "wasmer-compiler",
- "wasmer-compiler-cranelift",
- "wasmer-derive",
- "wasmer-engine",
+ "wasmer-compiler 1.0.2 (git+https://github.com/wasmerio/wasmer?branch=fix-cyclic-ref)",
+ "wasmer-compiler-cranelift 1.0.2 (git+https://github.com/wasmerio/wasmer?branch=fix-cyclic-ref)",
+ "wasmer-derive 1.0.2 (git+https://github.com/wasmerio/wasmer?branch=fix-cyclic-ref)",
+ "wasmer-engine 1.0.2 (git+https://github.com/wasmerio/wasmer?branch=fix-cyclic-ref)",
  "wasmer-engine-jit",
  "wasmer-engine-native",
- "wasmer-types",
- "wasmer-vm",
+ "wasmer-types 1.0.2 (git+https://github.com/wasmerio/wasmer?branch=fix-cyclic-ref)",
+ "wasmer-vm 1.0.2 (git+https://github.com/wasmerio/wasmer?branch=fix-cyclic-ref)",
+ "wat",
+ "winapi",
+]
+
+[[package]]
+name = "wasmer"
+version = "1.0.2"
+source = "git+https://github.com/wasmerio/wasmer#99f42b0c01ab04953bc5457d5708ac812d4bbddf"
+dependencies = [
+ "cfg-if 1.0.0",
+ "indexmap",
+ "loupe",
+ "more-asserts",
+ "target-lexicon",
+ "thiserror",
+ "wasmer-compiler 1.0.2 (git+https://github.com/wasmerio/wasmer)",
+ "wasmer-compiler-cranelift 1.0.2 (git+https://github.com/wasmerio/wasmer)",
+ "wasmer-derive 1.0.2 (git+https://github.com/wasmerio/wasmer)",
+ "wasmer-engine 1.0.2 (git+https://github.com/wasmerio/wasmer)",
+ "wasmer-engine-dylib",
+ "wasmer-engine-universal",
+ "wasmer-types 1.0.2 (git+https://github.com/wasmerio/wasmer)",
+ "wasmer-vm 1.0.2 (git+https://github.com/wasmerio/wasmer)",
  "wat",
  "winapi",
 ]
@@ -1420,8 +1514,26 @@ dependencies = [
  "smallvec",
  "target-lexicon",
  "thiserror",
- "wasmer-types",
- "wasmer-vm",
+ "wasmer-types 1.0.2 (git+https://github.com/wasmerio/wasmer?branch=fix-cyclic-ref)",
+ "wasmer-vm 1.0.2 (git+https://github.com/wasmerio/wasmer?branch=fix-cyclic-ref)",
+ "wasmparser",
+]
+
+[[package]]
+name = "wasmer-compiler"
+version = "1.0.2"
+source = "git+https://github.com/wasmerio/wasmer#99f42b0c01ab04953bc5457d5708ac812d4bbddf"
+dependencies = [
+ "enumset",
+ "loupe",
+ "rkyv",
+ "serde",
+ "serde_bytes",
+ "smallvec",
+ "target-lexicon",
+ "thiserror",
+ "wasmer-types 1.0.2 (git+https://github.com/wasmerio/wasmer)",
+ "wasmer-vm 1.0.2 (git+https://github.com/wasmerio/wasmer)",
  "wasmparser",
 ]
 
@@ -1430,18 +1542,37 @@ name = "wasmer-compiler-cranelift"
 version = "1.0.2"
 source = "git+https://github.com/wasmerio/wasmer?branch=fix-cyclic-ref#d3c58eb9d63a5a19e382f70aaa9be495d110c4a2"
 dependencies = [
- "cranelift-codegen",
- "cranelift-entity",
- "cranelift-frontend",
- "gimli",
+ "cranelift-codegen 0.73.0",
+ "cranelift-entity 0.73.0",
+ "cranelift-frontend 0.73.0",
+ "gimli 0.23.0",
  "loupe",
  "more-asserts",
  "rayon",
  "smallvec",
  "tracing",
- "wasmer-compiler",
- "wasmer-types",
- "wasmer-vm",
+ "wasmer-compiler 1.0.2 (git+https://github.com/wasmerio/wasmer?branch=fix-cyclic-ref)",
+ "wasmer-types 1.0.2 (git+https://github.com/wasmerio/wasmer?branch=fix-cyclic-ref)",
+ "wasmer-vm 1.0.2 (git+https://github.com/wasmerio/wasmer?branch=fix-cyclic-ref)",
+]
+
+[[package]]
+name = "wasmer-compiler-cranelift"
+version = "1.0.2"
+source = "git+https://github.com/wasmerio/wasmer#99f42b0c01ab04953bc5457d5708ac812d4bbddf"
+dependencies = [
+ "cranelift-codegen 0.74.0",
+ "cranelift-entity 0.74.0",
+ "cranelift-frontend 0.74.0",
+ "gimli 0.24.0",
+ "loupe",
+ "more-asserts",
+ "rayon",
+ "smallvec",
+ "tracing",
+ "wasmer-compiler 1.0.2 (git+https://github.com/wasmerio/wasmer)",
+ "wasmer-types 1.0.2 (git+https://github.com/wasmerio/wasmer)",
+ "wasmer-vm 1.0.2 (git+https://github.com/wasmerio/wasmer)",
 ]
 
 [[package]]
@@ -1457,15 +1588,44 @@ dependencies = [
  "more-asserts",
  "rayon",
  "smallvec",
- "wasmer-compiler",
- "wasmer-types",
- "wasmer-vm",
+ "wasmer-compiler 1.0.2 (git+https://github.com/wasmerio/wasmer?branch=fix-cyclic-ref)",
+ "wasmer-types 1.0.2 (git+https://github.com/wasmerio/wasmer?branch=fix-cyclic-ref)",
+ "wasmer-vm 1.0.2 (git+https://github.com/wasmerio/wasmer?branch=fix-cyclic-ref)",
+]
+
+[[package]]
+name = "wasmer-compiler-singlepass"
+version = "1.0.2"
+source = "git+https://github.com/wasmerio/wasmer#99f42b0c01ab04953bc5457d5708ac812d4bbddf"
+dependencies = [
+ "byteorder",
+ "dynasm",
+ "dynasmrt",
+ "lazy_static",
+ "loupe",
+ "more-asserts",
+ "rayon",
+ "smallvec",
+ "wasmer-compiler 1.0.2 (git+https://github.com/wasmerio/wasmer)",
+ "wasmer-types 1.0.2 (git+https://github.com/wasmerio/wasmer)",
+ "wasmer-vm 1.0.2 (git+https://github.com/wasmerio/wasmer)",
 ]
 
 [[package]]
 name = "wasmer-derive"
 version = "1.0.2"
 source = "git+https://github.com/wasmerio/wasmer?branch=fix-cyclic-ref#d3c58eb9d63a5a19e382f70aaa9be495d110c4a2"
+dependencies = [
+ "proc-macro-error",
+ "proc-macro2",
+ "quote",
+ "syn",
+]
+
+[[package]]
+name = "wasmer-derive"
+version = "1.0.2"
+source = "git+https://github.com/wasmerio/wasmer#99f42b0c01ab04953bc5457d5708ac812d4bbddf"
 dependencies = [
  "proc-macro-error",
  "proc-macro2",
@@ -1488,9 +1648,50 @@ dependencies = [
  "serde_bytes",
  "target-lexicon",
  "thiserror",
- "wasmer-compiler",
- "wasmer-types",
- "wasmer-vm",
+ "wasmer-compiler 1.0.2 (git+https://github.com/wasmerio/wasmer?branch=fix-cyclic-ref)",
+ "wasmer-types 1.0.2 (git+https://github.com/wasmerio/wasmer?branch=fix-cyclic-ref)",
+ "wasmer-vm 1.0.2 (git+https://github.com/wasmerio/wasmer?branch=fix-cyclic-ref)",
+]
+
+[[package]]
+name = "wasmer-engine"
+version = "1.0.2"
+source = "git+https://github.com/wasmerio/wasmer#99f42b0c01ab04953bc5457d5708ac812d4bbddf"
+dependencies = [
+ "backtrace",
+ "lazy_static",
+ "loupe",
+ "memmap2",
+ "more-asserts",
+ "rustc-demangle",
+ "serde",
+ "serde_bytes",
+ "target-lexicon",
+ "thiserror",
+ "wasmer-compiler 1.0.2 (git+https://github.com/wasmerio/wasmer)",
+ "wasmer-types 1.0.2 (git+https://github.com/wasmerio/wasmer)",
+ "wasmer-vm 1.0.2 (git+https://github.com/wasmerio/wasmer)",
+]
+
+[[package]]
+name = "wasmer-engine-dylib"
+version = "1.0.2"
+source = "git+https://github.com/wasmerio/wasmer#99f42b0c01ab04953bc5457d5708ac812d4bbddf"
+dependencies = [
+ "cfg-if 1.0.0",
+ "leb128",
+ "libloading",
+ "loupe",
+ "rkyv",
+ "serde",
+ "tempfile",
+ "tracing",
+ "wasmer-compiler 1.0.2 (git+https://github.com/wasmerio/wasmer)",
+ "wasmer-engine 1.0.2 (git+https://github.com/wasmerio/wasmer)",
+ "wasmer-object 1.0.2 (git+https://github.com/wasmerio/wasmer)",
+ "wasmer-types 1.0.2 (git+https://github.com/wasmerio/wasmer)",
+ "wasmer-vm 1.0.2 (git+https://github.com/wasmerio/wasmer)",
+ "which",
 ]
 
 [[package]]
@@ -1503,10 +1704,10 @@ dependencies = [
  "loupe",
  "region",
  "rkyv",
- "wasmer-compiler",
- "wasmer-engine",
- "wasmer-types",
- "wasmer-vm",
+ "wasmer-compiler 1.0.2 (git+https://github.com/wasmerio/wasmer?branch=fix-cyclic-ref)",
+ "wasmer-engine 1.0.2 (git+https://github.com/wasmerio/wasmer?branch=fix-cyclic-ref)",
+ "wasmer-types 1.0.2 (git+https://github.com/wasmerio/wasmer?branch=fix-cyclic-ref)",
+ "wasmer-vm 1.0.2 (git+https://github.com/wasmerio/wasmer?branch=fix-cyclic-ref)",
  "winapi",
 ]
 
@@ -1523,12 +1724,29 @@ dependencies = [
  "serde",
  "tempfile",
  "tracing",
- "wasmer-compiler",
- "wasmer-engine",
- "wasmer-object",
- "wasmer-types",
- "wasmer-vm",
+ "wasmer-compiler 1.0.2 (git+https://github.com/wasmerio/wasmer?branch=fix-cyclic-ref)",
+ "wasmer-engine 1.0.2 (git+https://github.com/wasmerio/wasmer?branch=fix-cyclic-ref)",
+ "wasmer-object 1.0.2 (git+https://github.com/wasmerio/wasmer?branch=fix-cyclic-ref)",
+ "wasmer-types 1.0.2 (git+https://github.com/wasmerio/wasmer?branch=fix-cyclic-ref)",
+ "wasmer-vm 1.0.2 (git+https://github.com/wasmerio/wasmer?branch=fix-cyclic-ref)",
  "which",
+]
+
+[[package]]
+name = "wasmer-engine-universal"
+version = "1.0.2"
+source = "git+https://github.com/wasmerio/wasmer#99f42b0c01ab04953bc5457d5708ac812d4bbddf"
+dependencies = [
+ "cfg-if 1.0.0",
+ "leb128",
+ "loupe",
+ "region",
+ "rkyv",
+ "wasmer-compiler 1.0.2 (git+https://github.com/wasmerio/wasmer)",
+ "wasmer-engine 1.0.2 (git+https://github.com/wasmerio/wasmer)",
+ "wasmer-types 1.0.2 (git+https://github.com/wasmerio/wasmer)",
+ "wasmer-vm 1.0.2 (git+https://github.com/wasmerio/wasmer)",
+ "winapi",
 ]
 
 [[package]]
@@ -1538,14 +1756,37 @@ source = "git+https://github.com/wasmerio/wasmer?branch=fix-cyclic-ref#d3c58eb9d
 dependencies = [
  "object 0.24.0",
  "thiserror",
- "wasmer-compiler",
- "wasmer-types",
+ "wasmer-compiler 1.0.2 (git+https://github.com/wasmerio/wasmer?branch=fix-cyclic-ref)",
+ "wasmer-types 1.0.2 (git+https://github.com/wasmerio/wasmer?branch=fix-cyclic-ref)",
+]
+
+[[package]]
+name = "wasmer-object"
+version = "1.0.2"
+source = "git+https://github.com/wasmerio/wasmer#99f42b0c01ab04953bc5457d5708ac812d4bbddf"
+dependencies = [
+ "object 0.24.0",
+ "thiserror",
+ "wasmer-compiler 1.0.2 (git+https://github.com/wasmerio/wasmer)",
+ "wasmer-types 1.0.2 (git+https://github.com/wasmerio/wasmer)",
 ]
 
 [[package]]
 name = "wasmer-types"
 version = "1.0.2"
 source = "git+https://github.com/wasmerio/wasmer?branch=fix-cyclic-ref#d3c58eb9d63a5a19e382f70aaa9be495d110c4a2"
+dependencies = [
+ "indexmap",
+ "loupe",
+ "rkyv",
+ "serde",
+ "thiserror",
+]
+
+[[package]]
+name = "wasmer-types"
+version = "1.0.2"
+source = "git+https://github.com/wasmerio/wasmer#99f42b0c01ab04953bc5457d5708ac812d4bbddf"
 dependencies = [
  "indexmap",
  "loupe",
@@ -1571,7 +1812,28 @@ dependencies = [
  "rkyv",
  "serde",
  "thiserror",
- "wasmer-types",
+ "wasmer-types 1.0.2 (git+https://github.com/wasmerio/wasmer?branch=fix-cyclic-ref)",
+ "winapi",
+]
+
+[[package]]
+name = "wasmer-vm"
+version = "1.0.2"
+source = "git+https://github.com/wasmerio/wasmer#99f42b0c01ab04953bc5457d5708ac812d4bbddf"
+dependencies = [
+ "backtrace",
+ "cc",
+ "cfg-if 1.0.0",
+ "indexmap",
+ "libc",
+ "loupe",
+ "memoffset",
+ "more-asserts",
+ "region",
+ "rkyv",
+ "serde",
+ "thiserror",
+ "wasmer-types 1.0.2 (git+https://github.com/wasmerio/wasmer)",
  "winapi",
 ]
 
