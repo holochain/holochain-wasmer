@@ -9,8 +9,8 @@ edition = "2018"
 [dependencies]
 # wasmer = "=1.0.2"
 # wasmer-compiler-singlepass = "=1.0.2"
-wasmer = { git = "https://github.com/wasmerio/wasmer", branch = "fix-cyclic-ref" }
-wasmer-compiler-singlepass = { git = "https://github.com/wasmerio/wasmer", branch = "fix-cyclic-ref" }
+wasmer = { git = "https://github.com/wasmerio/wasmer" }
+wasmer-compiler-singlepass = { git = "https://github.com/wasmerio/wasmer" }
 holochain_wasmer_common = { version = "=0.0.67", path = "../common" }
 holochain_serialized_bytes = "=0.0.50"
 serde = "=1.0.123"
