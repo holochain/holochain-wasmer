@@ -8,4 +8,3 @@ pub use holochain_wasmer_common::*;
 pub use parking_lot::Mutex;
 pub use wasmer::WasmerEnv;
 pub use wasmer::*;
-pub use wasmer_compiler_singlepass::Singlepass;

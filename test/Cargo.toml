@@ -14,10 +14,7 @@ criterion = "0.3"
 rand = "0.7"
 serde_bytes = "0.11"
 parking_lot = "0.11.1"
-# wasmer = "=1.0.2"
-# wasmer-compiler-singlepass = "=1.0.2"
-wasmer = { git = "https://github.com/wasmerio/wasmer", branch = "fix-cyclic-ref" }
-wasmer-compiler-singlepass = { git = "https://github.com/wasmerio/wasmer", branch = "fix-cyclic-ref" }
+wasmer = { git = "https://github.com/wasmerio/wasmer", rev = "99f42b0c01ab04953bc5457d5708ac812d4bbddf" }
 
 [[bench]]
 name = "bench"
