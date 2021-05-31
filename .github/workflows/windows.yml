@@ -1,0 +1,15 @@
+name: run tests windows
+
+on: [ push, pull_request ]
+
+jobs:
+  test:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          target: wasm32-unknown-unknown
+      - run: cargo test -- --nocapture
+      - run: cargo test --manifest-path test/Cargo.toml -- --nocapture
