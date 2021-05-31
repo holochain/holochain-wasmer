@@ -1,4 +1,4 @@
-name: run tests mac
+name: run tests windows
 
 on: [ push, pull_request ]
 
