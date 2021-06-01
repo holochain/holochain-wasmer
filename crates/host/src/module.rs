@@ -3,7 +3,6 @@ use once_cell::sync::Lazy;
 use parking_lot::RwLock;
 use std::collections::HashMap;
 use std::sync::Arc;
-use wasmer::Cranelift;
 use wasmer::Module;
 use wasmer::Store;
 use wasmer::Universal;
@@ -20,7 +19,7 @@ impl ModuleCache {
         key: [u8; 32],
         wasm: &[u8],
     ) -> Result<Arc<Module>, WasmError> {
-        let store = Store::new(&Universal::new(Cranelift::default()).engine());
+        let store = create_store();
         let module =
             Module::from_binary(&store, wasm).map_err(|e| WasmError::Compile(e.to_string()))?;
         self.0.insert(key, Arc::new(module));
@@ -33,4 +32,16 @@ impl ModuleCache {
             None => self.get_with_build_cache(key, wasm),
         }
     }
+}
+
+#[cfg(target_arch = "aarch64")]
+fn create_store() -> Store {
+    let compiler = wasmer_compiler_cranelift::Cranelift::new();
+    Store::new(&Universal::new(compiler).engine())
+}
+
+#[cfg(not(target_arch = "aarch64"))]
+fn create_store() -> Store {
+    let compiler = wasmer_compiler_singlepass::Singlepass::new();
+    Store::new(&Universal::new(compiler).engine())
 }
