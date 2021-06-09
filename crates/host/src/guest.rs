@@ -197,7 +197,12 @@ where
                     return match holochain_serialized_bytes::decode(&encoded) {
                         Ok(v) => Ok(v),
                         Err(e) => {
-                            tracing::error!(input_type = std::any::type_name::<O>(), ?encoded, "{}", e);
+                            tracing::error!(
+                                input_type = std::any::type_name::<O>(),
+                                ?encoded,
+                                "{}",
+                                e
+                            );
                             Err(e.into())
                         }
                     }
