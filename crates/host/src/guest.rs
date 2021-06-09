@@ -194,7 +194,13 @@ where
         Err(e) => match e.downcast::<WasmError>() {
             Ok(wasm_error) => match wasm_error {
                 WasmError::HostShortCircuit(encoded) => {
-                    return Ok(holochain_serialized_bytes::decode(&encoded)?)
+                    return match holochain_serialized_bytes::decode(&encoded) {
+                        Ok(v) => Ok(v),
+                        Err(e) => {
+                            tracing::error!(input_type = std::any::type_name::<O>(), ?encoded, "{}", e);
+                            Err(e.into())
+                        }
+                    }
                 }
                 _ => return Err(wasm_error),
             },
