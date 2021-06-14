@@ -214,7 +214,7 @@ pub fn test_instances(c: &mut Criterion) {
     let input = test_common::StringType::from(".".repeat(1000));
     group.bench_with_input(BenchmarkId::new("test_instances", 1000), &1000, |b, _| {
         b.iter(|| {
-            for _ in 0..100 {
+            for _ in 0..25 {
                 let instance = TestWasm::Test.instance();
                 let input = input.clone();
                 std::thread::spawn(move || {
