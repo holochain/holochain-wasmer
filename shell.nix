@@ -1,7 +1,7 @@
 let
   holonixPath = builtins.fetchTarball {
-    url = "https://github.com/holochain/holonix/archive/f8ee43113ababeedad3e1203a8e8309f5d75e3f8.tar.gz";
-    sha256 = "1765x81nkm79fn98kv782wr6amj2vaxccp9l4ppv8h1lhfvapbgp";
+    url = "https://github.com/holochain/holonix/archive/2b7797d9ec3dc49f7e4b1e89d165f0d714d837e2.tar.gz";
+    sha256 = "1q1z3mrdr0cf5p4nayc1lwq56n1080mkjzny44p2yzjpp8mydj66";
   };
 
   holonix = import (holonixPath) {
