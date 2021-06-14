@@ -47,6 +47,11 @@ pub fn wasm_instance(c: &mut Criterion) {
                             env.clone(),
                             holochain_wasmer_host::import::__import_data
                         ),
+                        "__short_circuit" => Function::new_native_with_env(
+                            module.store(),
+                            env.clone(),
+                            test::short_circuit
+                        ),
                         "__test_process_string" => Function::new_native_with_env(
                             module.store(),
                             env.clone(),
