@@ -206,6 +206,32 @@ pub fn test_process_string(c: &mut Criterion) {
     group.finish();
 }
 
+pub fn test_instances(c: &mut Criterion) {
+    let mut group = c.benchmark_group("test_instances");
+
+    group.throughput(Throughput::Bytes(1_000 as _));
+    group.sample_size(1000);
+    let input = test_common::StringType::from(".".repeat(1000));
+    group.bench_with_input(BenchmarkId::new("test_instances", 1000), &1000, |b, _| {
+        b.iter(|| {
+            for _ in 0..100 {
+                let instance = TestWasm::Test.instance();
+                let input = input.clone();
+                std::thread::spawn(move || {
+                    let _: test_common::StringType = holochain_wasmer_host::guest::call(
+                        Arc::clone(&instance),
+                        "process_string",
+                        &input,
+                    )
+                    .unwrap();
+                });
+            }
+        });
+    });
+
+    group.finish();
+}
+
 criterion_group!(
     benches,
     wasm_module,
@@ -213,6 +239,7 @@ criterion_group!(
     wasm_call,
     wasm_call_n,
     test_process_string,
+    test_instances,
 );
 
 criterion_main!(benches);
