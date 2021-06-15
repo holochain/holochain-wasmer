@@ -219,10 +219,11 @@ pub fn test_instances(c: &mut Criterion) {
     let input = test_common::StringType::from(".".repeat(1000));
     group.bench_with_input(BenchmarkId::new("test_instances", 1000), &1000, |b, _| {
         b.iter(|| {
+            let mut jhs = Vec::new();
             for _ in 0..25 {
                 let instance = TestWasm::Test.instance();
                 let input = input.clone();
-                std::thread::spawn(move || {
+                let jh = std::thread::spawn(move || {
                     let _: test_common::StringType = holochain_wasmer_host::guest::call(
                         Arc::clone(&instance),
                         "process_string",
@@ -230,6 +231,10 @@ pub fn test_instances(c: &mut Criterion) {
                     )
                     .unwrap();
                 });
+                jhs.push(jh);
+            }
+            for jh in jhs {
+                jh.join().unwrap();
             }
         });
     });
