@@ -1,4 +1,5 @@
 pub mod result;
+pub mod scopetracker;
 
 pub use holochain_serialized_bytes::prelude::*;
 pub use result::*;

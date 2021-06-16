@@ -1,5 +1,6 @@
 use crate::prelude::*;
 use holochain_serialized_bytes::prelude::*;
+use holochain_wasmer_common::scopetracker::ScopeTracker;
 use parking_lot::Mutex;
 use std::sync::Arc;
 use wasmer::Instance;
@@ -151,6 +152,8 @@ where
     I: serde::Serialize + std::fmt::Debug,
     O: serde::de::DeserializeOwned + std::fmt::Debug,
 {
+    mem_guard!("host::guest::call");
+
     let instance = instance.lock();
     // The guest will use the same crate for decoding if it uses the wasm common crate.
     let payload: Vec<u8> = holochain_serialized_bytes::encode(&input)?;

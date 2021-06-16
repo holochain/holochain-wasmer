@@ -1,6 +1,9 @@
 pub mod import;
 pub mod wasms;
 
+use std::sync::Arc;
+
+use crate::scopetracker::ScopeTracker;
 use holochain_wasmer_host::prelude::*;
 use test_common::SomeStruct;
 
@@ -155,5 +158,38 @@ pub mod tests {
             }
             Ok(_) => unreachable!(),
         };
+    }
+
+    #[test]
+    fn mem_leak() {
+        let leaked: isize;
+
+        {
+            let guard = mem_guard!("host::guest::call");
+
+            let input = test_common::StringType::from(".".repeat(1000));
+
+            let mut jhs = Vec::new();
+            for _ in 0..1000 {
+                let instance = TestWasm::Test.instance();
+                let input = input.clone();
+                let jh = std::thread::spawn(move || {
+                    let _: test_common::StringType = holochain_wasmer_host::guest::call(
+                        Arc::clone(&instance),
+                        "process_string",
+                        &input,
+                    )
+                    .unwrap();
+                });
+                jhs.push(jh);
+            }
+            for jh in jhs {
+                jh.join().unwrap();
+            }
+
+            leaked = guard.leaked();
+        }
+
+        assert_eq!(leaked, 0);
     }
 }

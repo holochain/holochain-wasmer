@@ -213,7 +213,6 @@ pub fn test_process_string(c: &mut Criterion) {
 
 pub fn test_instances(c: &mut Criterion) {
     let mut group = c.benchmark_group("test_instances");
-
     group.throughput(Throughput::Bytes(1_000 as _));
     group.sample_size(1000);
     let input = test_common::StringType::from(".".repeat(1000));
