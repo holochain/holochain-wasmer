@@ -162,34 +162,38 @@ pub mod tests {
 
     #[test]
     fn mem_leak() {
-        let leaked: isize;
+        let mut leaked = std::collections::HashMap::<usize, isize>::new();
 
-        {
-            let guard = mem_guard!("host::guest::call");
+        let input = test_common::StringType::from(".".repeat(1000));
 
-            let input = test_common::StringType::from(".".repeat(1000));
+        for n in &[1, 25, 100] {
+            leaked.insert(*n, 0);
 
-            let mut jhs = Vec::new();
-            for _ in 0..1000 {
+            let guard = mem_guard!("test::mem_leak");
+
+            {
+                let mut threads = vec![];
+
                 let instance = TestWasm::Test.instance();
-                let input = input.clone();
-                let jh = std::thread::spawn(move || {
-                    let _: test_common::StringType = holochain_wasmer_host::guest::call(
-                        Arc::clone(&instance),
-                        "process_string",
-                        &input,
-                    )
-                    .unwrap();
-                });
-                jhs.push(jh);
-            }
-            for jh in jhs {
-                jh.join().unwrap();
+
+                for _ in 0..*n {
+                    let input = input.clone();
+                    let instance = Arc::clone(&instance);
+                    threads.push(std::thread::spawn(move || {
+                        let _: test_common::StringType =
+                            holochain_wasmer_host::guest::call(instance, "process_string", &input)
+                                .unwrap();
+                    }));
+                }
+
+                for thread in threads {
+                    thread.join().unwrap();
+                }
             }
 
-            leaked = guard.leaked();
+            leaked.insert(*n, guard.leaked());
         }
 
-        assert_eq!(leaked, 0);
+        assert!(false, "{:#?}", leaked);
     }
 }
