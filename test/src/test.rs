@@ -166,7 +166,7 @@ pub mod tests {
 
         let input = test_common::StringType::from(".".repeat(1000));
 
-        for n in &[1, 25, 100] {
+        for n in &[1, 25, 100, 1000] {
             leaked.insert(*n, 0);
 
             let guard = mem_guard!("test::mem_leak");
