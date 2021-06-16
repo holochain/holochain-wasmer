@@ -1,9 +1,9 @@
 pub mod import;
 pub mod wasms;
 
-use std::sync::Arc;
-
+#[cfg(test)]
 use crate::scopetracker::ScopeTracker;
+
 use holochain_wasmer_host::prelude::*;
 use test_common::SomeStruct;
 
@@ -162,37 +162,48 @@ pub mod tests {
 
     #[test]
     fn mem_leak() {
-        let mut leaked = std::collections::HashMap::<usize, isize>::new();
+        let mut leaked = std::collections::BTreeMap::<(usize, usize), isize>::new();
 
         let input = test_common::StringType::from(".".repeat(1000));
 
-        for n in &[1, 25, 100, 1000] {
-            leaked.insert(*n, 0);
+        let guard = mem_guard!("test::mem_leak");
 
-            let guard = mem_guard!("test::mem_leak");
-
-            {
-                let mut threads = vec![];
-
-                let instance = TestWasm::Test.instance();
+        for n in &[1, 10, 100] {
+            for m in &[1, 10, 100] {
+                leaked.insert((*n, *m), 0);
+                let inner_guard = mem_guard!("test::mem_leak");
 
                 for _ in 0..*n {
-                    let input = input.clone();
-                    let instance = Arc::clone(&instance);
-                    threads.push(std::thread::spawn(move || {
-                        let _: test_common::StringType =
-                            holochain_wasmer_host::guest::call(instance, "process_string", &input)
-                                .unwrap();
-                    }));
-                }
+                    let mut threads = vec![];
 
-                for thread in threads {
-                    thread.join().unwrap();
+                    for _ in 0..*m {
+                        let input = input.clone();
+                        threads.push(std::thread::spawn(move || {
+                            let _: test_common::StringType = holochain_wasmer_host::guest::call(
+                                TestWasm::Test.instance(),
+                                "process_string",
+                                &input,
+                            )
+                            .unwrap();
+                        }));
+                    }
+
+                    for thread in threads {
+                        thread.join().unwrap();
+                    }
                 }
+                leaked.insert((*n, *m), inner_guard.leaked());
             }
-
-            leaked.insert(*n, guard.leaked());
         }
+
+        println!("leaked in sum: {}", guard.leaked());
+
+        let module = MODULE_CACHE
+            .write()
+            .get(TestWasm::Test.key(), Default::default())
+            .unwrap();
+        let exports = module.exports();
+        println!("{:#?}", exports.collect::<Vec<_>>());
 
         assert!(false, "{:#?}", leaked);
     }
