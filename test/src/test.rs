@@ -164,13 +164,16 @@ pub mod tests {
     fn mem_leak() {
         let mut leaked = std::collections::BTreeMap::<(usize, usize), isize>::new();
 
-        let input = test_common::StringType::from(".".repeat(1000));
+        let input = test_common::StringType::from(".".repeat(0));
 
         let guard = mem_guard!("test::mem_leak");
 
-        for n in &[1, 10, 100] {
-            for m in &[1, 10, 100] {
+        for n in &[1, 10, 100, 500] {
+            for m in &[1, 10, 50] {
                 leaked.insert((*n, *m), 0);
+
+                *MODULE_CACHE.write() = holochain_wasmer_host::module::ModuleCache::default();
+
                 let inner_guard = mem_guard!("test::mem_leak");
 
                 for _ in 0..*n {
@@ -198,12 +201,12 @@ pub mod tests {
 
         println!("leaked in sum: {}", guard.leaked());
 
-        let module = MODULE_CACHE
-            .write()
-            .get(TestWasm::Test.key(), Default::default())
-            .unwrap();
-        let exports = module.exports();
-        println!("{:#?}", exports.collect::<Vec<_>>());
+        // let module = MODULE_CACHE
+        //     .write()
+        //     .get(TestWasm::Test.key(), Default::default())
+        //     .unwrap();
+        // let exports = module.exports();
+        // println!("{:#?}", exports.collect::<Vec<_>>());
 
         assert!(false, "{:#?}", leaked);
     }
