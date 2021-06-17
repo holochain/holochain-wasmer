@@ -1,7 +1,9 @@
 pub mod import;
 pub mod wasms;
 
+#[cfg(test)]
 use crate::scopetracker::ScopeTracker;
+
 use holochain_wasmer_host::prelude::*;
 use test_common::SomeStruct;
 
@@ -162,18 +164,16 @@ pub mod tests {
     fn mem_leak() {
         let mut leaked = std::collections::HashMap::<(usize, usize), isize>::new();
 
-        let input = test_common::StringType::from(".".repeat(1000));
+        let input = test_common::StringType::from(".".repeat(0));
 
         let _instance = TestWasm::Test.instance();
         for n in &[1, 25] {
-
             for m in &[1, 25, 100, 1000] {
                 let guard = mem_guard!("test::mem_leak");
 
                 for _ in 0..*m {
                     {
                         let mut threads = vec![];
-
 
                         for _ in 0..*n {
                             let instance = TestWasm::Test.instance();
