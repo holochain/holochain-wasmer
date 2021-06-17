@@ -214,14 +214,14 @@ pub fn test_process_string(c: &mut Criterion) {
 pub fn test_instances(c: &mut Criterion) {
     let mut group = c.benchmark_group("test_instances");
     group.throughput(Throughput::Bytes(1_000 as _));
-    group.sample_size(1000);
+    group.sample_size(100);
     let input = test_common::StringType::from(".".repeat(1000));
     group.bench_with_input(BenchmarkId::new("test_instances", 1000), &1000, |b, _| {
         b.iter(|| {
             let mut jhs = Vec::new();
             for _ in 0..25 {
-                let instance = TestWasm::Test.instance();
                 let input = input.clone();
+                let instance = TestWasm::Test.instance();
                 let jh = std::thread::spawn(move || {
                     let _: test_common::StringType = holochain_wasmer_host::guest::call(
                         Arc::clone(&instance),

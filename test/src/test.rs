@@ -1,8 +1,6 @@
 pub mod import;
 pub mod wasms;
 
-use std::sync::Arc;
-
 use crate::scopetracker::ScopeTracker;
 use holochain_wasmer_host::prelude::*;
 use test_common::SomeStruct;
@@ -162,38 +160,52 @@ pub mod tests {
 
     #[test]
     fn mem_leak() {
-        let mut leaked = std::collections::HashMap::<usize, isize>::new();
+        let mut leaked = std::collections::HashMap::<(usize, usize), isize>::new();
 
         let input = test_common::StringType::from(".".repeat(1000));
 
-        for n in &[1, 25, 100, 1000] {
-            leaked.insert(*n, 0);
+        let _instance = TestWasm::Test.instance();
+        for n in &[1, 25] {
 
-            let guard = mem_guard!("test::mem_leak");
+            for m in &[1, 25, 100, 1000] {
+                let guard = mem_guard!("test::mem_leak");
 
-            {
-                let mut threads = vec![];
+                for _ in 0..*m {
+                    {
+                        let mut threads = vec![];
 
-                let instance = TestWasm::Test.instance();
 
-                for _ in 0..*n {
-                    let input = input.clone();
-                    let instance = Arc::clone(&instance);
-                    threads.push(std::thread::spawn(move || {
-                        let _: test_common::StringType =
-                            holochain_wasmer_host::guest::call(instance, "process_string", &input)
-                                .unwrap();
-                    }));
+                        for _ in 0..*n {
+                            let instance = TestWasm::Test.instance();
+                            let input = input.clone();
+                            threads.push(std::thread::spawn(move || {
+                                let _: test_common::StringType =
+                                    holochain_wasmer_host::guest::call(
+                                        instance,
+                                        "process_string",
+                                        &input,
+                                    )
+                                    .unwrap();
+                            }));
+                        }
+
+                        for thread in threads {
+                            thread.join().unwrap();
+                        }
+                    }
                 }
-
-                for thread in threads {
-                    thread.join().unwrap();
-                }
+                leaked.insert((*n, *m), guard.leaked());
             }
-
-            leaked.insert(*n, guard.leaked());
         }
 
+        let mut leaked = leaked
+            .into_iter()
+            .map(|mut l| {
+                l.1 /= 1_000_000;
+                l
+            })
+            .collect::<Vec<_>>();
+        leaked.sort_by_key(|l| l.1);
         assert!(false, "{:#?}", leaked);
     }
 }
