@@ -19,7 +19,9 @@ impl ModuleCache {
         let store = Store::new(&Universal::new(Cranelift::default()).engine());
         let module =
             Module::from_binary(&store, wasm).map_err(|e| WasmError::Compile(e.to_string()))?;
-        let module = module.serialize().unwrap();
+        let module = module
+            .serialize()
+            .map_err(|e| WasmError::Compile(e.to_string()))?;
         self.0.insert(key, module);
         Ok(())
     }
@@ -33,7 +35,8 @@ impl ModuleCache {
             }
         };
         let store = Store::new(&Universal::new(Cranelift::default()).engine());
-        let module = unsafe { Module::deserialize(&store, module) };
-        Ok(Arc::new(module.unwrap()))
+        let module = unsafe { Module::deserialize(&store, module) }
+            .map_err(|e| WasmError::Compile(e.to_string()))?;
+        Ok(Arc::new(module))
     }
 }
