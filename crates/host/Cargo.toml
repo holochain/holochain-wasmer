@@ -7,7 +7,7 @@ authors = [ "thedavidmeister", "thedavidmeister@gmail.com" ]
 edition = "2018"
 
 [dependencies]
-wasmer = { git = "https://github.com/wasmerio/wasmer", rev = "99f42b0c01ab04953bc5457d5708ac812d4bbddf" }
+wasmer = "=2.0.0"
 holochain_wasmer_common = { version = "=0.0.67", path = "../common" }
 holochain_serialized_bytes = "=0.0.50"
 serde = "=1.0.123"

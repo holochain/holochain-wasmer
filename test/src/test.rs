@@ -1,6 +1,9 @@
 pub mod import;
 pub mod wasms;
 
+#[cfg(test)]
+use crate::scopetracker::ScopeTracker;
+
 use holochain_wasmer_host::prelude::*;
 use test_common::SomeStruct;
 
@@ -155,5 +158,71 @@ pub mod tests {
             }
             Ok(_) => unreachable!(),
         };
+    }
+
+    #[test]
+    fn mem_leak() {
+        let mut leaked = std::collections::HashMap::<(usize, usize), isize>::new();
+
+        let input = test_common::StringType::from(".".repeat(0));
+
+        #[derive(Debug)]
+        struct Leaked {
+            runs: usize,
+            num_threads: usize,
+            bytes: isize,
+            kb: isize,
+            mb: isize,
+        }
+
+        // Don't count initial memory
+        let _instance = TestWasm::Test.instance();
+
+        for num_thread in &[1, 25] {
+            for runs in &[1, 25, 100, 1000] {
+                let guard = mem_guard!("test::mem_leak");
+
+                for _ in 0..*runs {
+                    {
+                        let mut threads = vec![];
+
+                        for _ in 0..*num_thread {
+                            let input = input.clone();
+                            threads.push(std::thread::spawn(move || {
+                                let _: test_common::StringType =
+                                    holochain_wasmer_host::guest::call(
+                                        TestWasm::Test.instance(),
+                                        "process_string",
+                                        &input,
+                                    )
+                                    .unwrap();
+                            }));
+                        }
+
+                        for thread in threads {
+                            thread.join().unwrap();
+                        }
+                    }
+                }
+                leaked.insert((*runs, *num_thread), guard.leaked());
+            }
+        }
+
+        let mut leaked = leaked
+            .into_iter()
+            .map(|l| {
+                let mb = l.1 / 1_000_000;
+                let kb = l.1 / 1_000;
+                Leaked {
+                    runs: l.0 .0,
+                    num_threads: l.0 .1,
+                    mb,
+                    kb,
+                    bytes: l.1,
+                }
+            })
+            .collect::<Vec<_>>();
+        leaked.sort_by_key(|l| l.bytes);
+        assert!(false, "{:#?}", leaked);
     }
 }
