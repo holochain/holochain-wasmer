@@ -3,6 +3,7 @@ use once_cell::sync::Lazy;
 use parking_lot::RwLock;
 use rand::Rng;
 use std::collections::HashMap;
+use std::sync::atomic::AtomicUsize;
 use std::sync::Arc;
 use wasmer::Cranelift;
 use wasmer::Module;
@@ -59,10 +60,11 @@ impl ModuleCache {
     }
 
     pub fn get(&mut self, key: [u8; 32], wasm: &[u8]) -> Result<Arc<Module>, WasmError> {
-        let mut rng = rand::thread_rng();
-        let u: u8 = rng.gen();
+        static COUNT: AtomicUsize = AtomicUsize::new(0);
+        let count = COUNT.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
 
-        if u == 0 {
+        if count > 100_000_000 {
+            COUNT.store(0, std::sync::atomic::Ordering::Relaxed);
             match self.0.remove(&key) {
                 Some(module) => Ok(module),
                 None => self.get_with_build_cache(key, wasm),
