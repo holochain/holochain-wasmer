@@ -1,7 +1,6 @@
 use holochain_wasmer_common::WasmError;
 use once_cell::sync::Lazy;
 use parking_lot::RwLock;
-use rand::Rng;
 use std::collections::HashMap;
 use std::sync::atomic::AtomicUsize;
 use std::sync::Arc;
@@ -63,7 +62,7 @@ impl ModuleCache {
         static COUNT: AtomicUsize = AtomicUsize::new(0);
         let count = COUNT.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
 
-        if count > 100_000_000 {
+        if count > 10_000 {
             COUNT.store(0, std::sync::atomic::Ordering::Relaxed);
             match self.0.remove(&key) {
                 Some(module) => Ok(module),
