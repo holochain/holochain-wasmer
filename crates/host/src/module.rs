@@ -60,13 +60,26 @@ impl ModuleCache {
 
     pub fn get(&mut self, key: [u8; 32], wasm: &[u8]) -> Result<Arc<Module>, WasmError> {
         static COUNT: AtomicUsize = AtomicUsize::new(0);
-        let count = COUNT.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+        let count = COUNT.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
 
-        if count > 10_000 {
-            COUNT.store(0, std::sync::atomic::Ordering::Relaxed);
-            match self.0.remove(&key) {
-                Some(module) => Ok(module),
-                None => self.get_with_build_cache(key, wasm),
+        if count > 100 {
+            let current = self.0.remove(&key);
+            match current {
+                Some(current) => match Arc::try_unwrap(current) {
+                    Ok(m) => {
+                        std::mem::drop(m);
+                        COUNT.store(0, std::sync::atomic::Ordering::SeqCst);
+                        self.get_with_build_cache(key, wasm)
+                    }
+                    Err(current) => {
+                        self.0.insert(key, current.clone());
+                        Ok(current)
+                    }
+                },
+                None => {
+                    COUNT.store(0, std::sync::atomic::Ordering::SeqCst);
+                    self.get_with_build_cache(key, wasm)
+                }
             }
         } else {
             match self.0.get(&key) {
