@@ -20,3 +20,7 @@ rand = "0.8.3"
 name = "holochain_wasmer_host"
 crate-type = [ "cdylib", "rlib" ]
 path = "src/host.rs"
+
+[features]
+default = []
+debug_memory_leak = ["holochain_wasmer_common/scopetracker_allocator"]

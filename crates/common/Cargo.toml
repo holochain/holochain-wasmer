@@ -11,3 +11,7 @@ holochain_serialized_bytes = "=0.0.50"
 serde = "=1.0.123"
 thiserror = "1.0.10"
 serde_bytes = "0.11"
+
+[features]
+default = []
+scopetracker_allocator = []

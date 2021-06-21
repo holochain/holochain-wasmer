@@ -4,6 +4,10 @@ static GLOBAL: AllocationTracker = AllocationTracker::new();
 use std::alloc::{GlobalAlloc, Layout, System};
 use std::sync::atomic::{AtomicIsize, Ordering};
 
+pub mod prelude {
+    pub use super::ScopeTracker;
+}
+
 pub struct AllocationTracker {
     mem: AtomicIsize,
 }

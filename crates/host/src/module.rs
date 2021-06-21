@@ -41,7 +41,7 @@ impl SerializedModuleCache {
 }
 
 #[derive(Default)]
-pub struct ModuleCache(HashMap<[u8; 32], Arc<Module>>);
+pub struct ModuleCache(HashMap<[u8; 32], Arc<Module>>, bool, AtomicUsize);
 
 pub static MODULE_CACHE: Lazy<RwLock<ModuleCache>> =
     Lazy::new(|| RwLock::new(ModuleCache::default()));
@@ -58,9 +58,12 @@ impl ModuleCache {
         Ok(arc)
     }
 
+    pub fn reset_counter(&mut self) {
+        self.2.store(0, std::sync::atomic::Ordering::SeqCst);
+    }
+
     pub fn get(&mut self, key: [u8; 32], wasm: &[u8]) -> Result<Arc<Module>, WasmError> {
-        static COUNT: AtomicUsize = AtomicUsize::new(0);
-        let count = COUNT.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
+        let count = self.2.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
 
         if count > 100 {
             let current = self.0.remove(&key);
@@ -68,7 +71,7 @@ impl ModuleCache {
                 Some(current) => match Arc::try_unwrap(current) {
                     Ok(m) => {
                         std::mem::drop(m);
-                        COUNT.store(0, std::sync::atomic::Ordering::SeqCst);
+                        self.2.store(0, std::sync::atomic::Ordering::SeqCst);
                         self.get_with_build_cache(key, wasm)
                     }
                     Err(current) => {
@@ -77,7 +80,7 @@ impl ModuleCache {
                     }
                 },
                 None => {
-                    COUNT.store(0, std::sync::atomic::Ordering::SeqCst);
+                    self.2.store(0, std::sync::atomic::Ordering::SeqCst);
                     self.get_with_build_cache(key, wasm)
                 }
             }

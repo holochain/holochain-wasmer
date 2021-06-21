@@ -1,9 +1,6 @@
 pub mod import;
 pub mod wasms;
 
-#[cfg(test)]
-use crate::scopetracker::ScopeTracker;
-
 use holochain_wasmer_host::prelude::*;
 use test_common::SomeStruct;
 
@@ -38,6 +35,7 @@ pub fn pages(env: &Env, _: WasmSize) -> Result<WasmSize, WasmError> {
 pub mod tests {
     use super::*;
     use crate::wasms;
+    use holochain_wasmer_common::scopetracker::ScopeTracker;
     use test_common::StringType;
     use wasms::TestWasm;
 
@@ -162,9 +160,10 @@ pub mod tests {
 
     #[test]
     fn mem_leak() {
-        let mut leaked = std::collections::HashMap::<(usize, usize), isize>::new();
+        let mut leaked = vec![];
+        let mut leaked_workaround = vec![];
 
-        let input = test_common::StringType::from(".".repeat(0));
+        let input = test_common::StringType::from(String::new());
 
         #[derive(Debug)]
         struct Leaked {
@@ -175,54 +174,68 @@ pub mod tests {
             mb: isize,
         }
 
-        // Don't count initial memory
-        let _instance = TestWasm::Test.instance();
+        // for num_thread in &[1, 25] {
+        //     for runs in &[1, 25, 100] {
+        for workaround_leak in &[false, true] {
+            // Don't count initial memory
+            let _instance = TestWasm::Test.instance();
 
-        for num_thread in &[1, 25] {
-            for runs in &[1, 25, 100, 1000] {
-                let guard = mem_guard!("test::mem_leak");
+            for num_thread in &[4, 40] {
+                for runs in &[100, 1000] {
+                    TestWasm::reset_module_cache();
+                    let guard = mem_guard!("test::mem_leak");
 
-                for _ in 0..*runs {
-                    {
-                        let mut threads = vec![];
+                    for _ in 0..*runs {
+                        {
+                            if !*workaround_leak {
+                                TestWasm::impair_leak_workaround();
+                            }
 
-                        for _ in 0..*num_thread {
-                            let input = input.clone();
-                            threads.push(std::thread::spawn(move || {
-                                let _: test_common::StringType =
-                                    holochain_wasmer_host::guest::call(
-                                        TestWasm::Test.instance(),
-                                        "process_string",
-                                        &input,
-                                    )
-                                    .unwrap();
-                            }));
-                        }
+                            let mut threads = vec![];
 
-                        for thread in threads {
-                            thread.join().unwrap();
+                            for _ in 0..*num_thread {
+                                let input = input.clone();
+                                threads.push(std::thread::spawn(move || {
+                                    let _: test_common::StringType =
+                                        holochain_wasmer_host::guest::call(
+                                            TestWasm::Test.instance(),
+                                            "process_string",
+                                            &input,
+                                        )
+                                        .unwrap();
+                                }));
+                            }
+
+                            for thread in threads {
+                                thread.join().unwrap();
+                            }
                         }
                     }
+
+                    let leaked_bytes = guard.leaked();
+                    let leaked_struct = Leaked {
+                        runs: *runs,
+                        num_threads: *num_thread,
+                        mb: leaked_bytes / 1_000_000,
+                        kb: leaked_bytes / 1_000,
+                        bytes: leaked_bytes,
+                    };
+
+                    if *workaround_leak {
+                        leaked_workaround.push(leaked_struct);
+                    } else {
+                        leaked.push(leaked_struct);
+                    }
                 }
-                leaked.insert((*runs, *num_thread), guard.leaked());
             }
         }
 
-        let mut leaked = leaked
-            .into_iter()
-            .map(|l| {
-                let mb = l.1 / 1_000_000;
-                let kb = l.1 / 1_000;
-                Leaked {
-                    runs: l.0 .0,
-                    num_threads: l.0 .1,
-                    mb,
-                    kb,
-                    bytes: l.1,
-                }
-            })
-            .collect::<Vec<_>>();
         leaked.sort_by_key(|l| l.bytes);
-        assert!(false, "{:#?}", leaked);
+        leaked_workaround.sort_by_key(|l| l.bytes);
+        assert!(
+            false,
+            "without workaround: {:#?}\n with workaround: {:#?}",
+            leaked, leaked_workaround
+        );
     }
 }

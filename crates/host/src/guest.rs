@@ -6,6 +6,9 @@ use wasmer::Instance;
 use wasmer::Memory;
 use wasmer::Value;
 
+#[cfg(feature = "debug_memory_leak")]
+use holochain_wasmer_common::scopetracker::prelude::*;
+
 /// write a slice of bytes to the guest in a safe-ish way
 ///
 /// a naive approach would look like this:
@@ -151,6 +154,9 @@ where
     I: serde::Serialize + std::fmt::Debug,
     O: serde::de::DeserializeOwned + std::fmt::Debug,
 {
+    #[cfg(feature = "debug_memory_leak")]
+    mem_guard!("host::guest::call");
+
     let instance = instance.lock();
     // The guest will use the same crate for decoding if it uses the wasm common crate.
     let payload: Vec<u8> = holochain_serialized_bytes::encode(&input)?;
