@@ -41,15 +41,17 @@ pub struct ScopeTracker<'a> {
     name: &'a str,
     file: &'static str,
     line: u32,
+    pub quiet: bool,
 }
 
 impl<'a> ScopeTracker<'a> {
-    pub fn new(name: &'a str, file: &'static str, line: u32) -> Self {
+    pub fn new(name: &'a str, file: &'static str, line: u32, quiet: bool) -> Self {
         Self {
             at_start: GLOBAL.current_mem(),
             name,
             file,
             line,
+            quiet,
         }
     }
 
@@ -65,22 +67,24 @@ impl Drop for ScopeTracker<'_> {
     fn drop(&mut self) {
         let old = self.at_start;
         let new = GLOBAL.current_mem();
-        if old != new {
-            if self.name == "" {
-                eprintln!(
-                    "{}:{}: {} bytes escaped scope",
-                    self.file,
-                    self.line,
-                    self.leaked()
-                );
-            } else {
-                eprintln!(
-                    "{}:{} '{}': {} bytes escaped scope",
-                    self.file,
-                    self.line,
-                    self.name,
-                    self.leaked()
-                );
+        if !self.quiet {
+            if old != new {
+                if self.name == "" {
+                    eprintln!(
+                        "{}:{}: {} bytes escaped scope",
+                        self.file,
+                        self.line,
+                        self.leaked()
+                    );
+                } else {
+                    eprintln!(
+                        "{}:{} '{}': {} bytes escaped scope",
+                        self.file,
+                        self.line,
+                        self.name,
+                        self.leaked()
+                    );
+                }
             }
         }
     }
@@ -89,9 +93,14 @@ impl Drop for ScopeTracker<'_> {
 #[macro_export]
 macro_rules! mem_guard {
     () => {
-        mem_guard!("")
+        mem_guard!("", true)
     };
+
     ($e:expr) => {
-        ScopeTracker::new($e, file!(), line!())
+        mem_guard!($e, true)
+    };
+
+    ($e:expr, $quiet:expr) => {
+        ScopeTracker::new($e, file!(), line!(), $quiet)
     };
 }

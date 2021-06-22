@@ -64,7 +64,6 @@ impl ModuleCache {
 
     pub fn get(&mut self, key: [u8; 32], wasm: &[u8]) -> Result<Arc<Module>, WasmError> {
         let count = self.2.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
-
         if count > 100 {
             let current = self.0.remove(&key);
             match current {

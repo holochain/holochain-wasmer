@@ -170,20 +170,18 @@ pub mod tests {
             runs: usize,
             num_threads: usize,
             bytes: isize,
-            kb: isize,
-            mb: isize,
+            // kb: isize,
+            mb: f64,
+            workaround_leak: bool,
         }
 
-        // for num_thread in &[1, 25] {
-        //     for runs in &[1, 25, 100] {
-        for workaround_leak in &[false, true] {
-            // Don't count initial memory
-            let _instance = TestWasm::Test.instance();
+        let outer_guard = mem_guard!("test::mem_leak::outer");
+        let _instance = TestWasm::Test.instance();
 
-            for num_thread in &[4, 40] {
-                for runs in &[100, 1000] {
-                    TestWasm::reset_module_cache();
-                    let guard = mem_guard!("test::mem_leak");
+        for num_thread in &[20] {
+            for runs in &[100, 400] {
+                for workaround_leak in &[true, false] {
+                    let guard = mem_guard!("test::mem_leak::inner");
 
                     for _ in 0..*runs {
                         {
@@ -216,26 +214,54 @@ pub mod tests {
                     let leaked_struct = Leaked {
                         runs: *runs,
                         num_threads: *num_thread,
-                        mb: leaked_bytes / 1_000_000,
-                        kb: leaked_bytes / 1_000,
                         bytes: leaked_bytes,
+                        mb: leaked_bytes as f64 / 1_000_000.0,
+                        workaround_leak: *workaround_leak,
                     };
+                    println!("{:?}", leaked_struct);
 
                     if *workaround_leak {
                         leaked_workaround.push(leaked_struct);
                     } else {
                         leaked.push(leaked_struct);
                     }
+
+                    TestWasm::reset_module_cache();
                 }
             }
         }
 
-        leaked.sort_by_key(|l| l.bytes);
-        leaked_workaround.sort_by_key(|l| l.bytes);
+        TestWasm::reset_module_cache();
+
+        println!(
+            "overall leaked despite module cache reset: {}",
+            outer_guard.leaked() as f64 / 1_000_000.0
+        );
+
+        let threshold = 20.0;
+        let max_leak_with_workaround = leaked_workaround
+            .iter()
+            .max_by(|a, b| a.bytes.cmp(&b.bytes))
+            .unwrap()
+            .mb;
+
         assert!(
-            false,
-            "without workaround: {:#?}\n with workaround: {:#?}",
-            leaked, leaked_workaround
+            max_leak_with_workaround < threshold,
+            "expected all cases with the workaround to leak less than {}mb",
+            threshold
+        );
+
+        // on windows the leak seems to be less severe
+        #[cfg(not(target_os = "windows"))]
+        assert!(
+            leaked
+                .iter()
+                .min_by(|a, b| a.bytes.cmp(&b.bytes))
+                .unwrap()
+                .mb
+                > threshold,
+            "expected all cases without the workaround to leak more than {}mb",
+            threshold
         );
     }
 }
