@@ -60,4 +60,12 @@ impl TestWasm {
         let import_object: ImportObject = import_object(&module.store(), &env);
         Arc::new(Mutex::new(Instance::new(&module, &import_object).unwrap()))
     }
+
+    pub fn impair_leak_workaround() {
+        MODULE_CACHE.write().reset_counter();
+    }
+
+    pub fn reset_module_cache() {
+        *MODULE_CACHE.write() = Default::default();
+    }
 }

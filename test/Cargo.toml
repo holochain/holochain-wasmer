@@ -5,7 +5,7 @@ authors = [ "thedavidmeister", "thedavidmeister@gmail.com" ]
 edition = "2018"
 
 [dependencies]
-holochain_wasmer_common = { path = "../crates/common" }
+holochain_wasmer_common = { path = "../crates/common", features = [ "scopetracker_allocator" ]}
 holochain_wasmer_host = { path = "../crates/host" }
 holochain_serialized_bytes = "=0.0.50"
 serde = "=1.0.123"
@@ -14,7 +14,7 @@ criterion = "0.3"
 rand = "0.7"
 serde_bytes = "0.11"
 parking_lot = "0.11.1"
-wasmer = { git = "https://github.com/wasmerio/wasmer", rev = "99f42b0c01ab04953bc5457d5708ac812d4bbddf" }
+wasmer = "=2.0.0"
 
 [[bench]]
 name = "bench"
