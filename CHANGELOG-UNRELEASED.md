@@ -23,5 +23,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Fixed
 
+- [PR#66](https://github.com/holochain/holochain-wasmer/pull/66) - workaround a memory leak in (our usage of) wasmer
+
 ### Security
 
