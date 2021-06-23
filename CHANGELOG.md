@@ -2,6 +2,45 @@
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+
+### Changed
+
+### Deprecated
+
+### Removed
+
+### Fixed
+
+### Security
+
+## [0.0.71] - 2021-06-23
+
+### Added
+
+- `HostShortCircuit` variant for `WasmError`
+- moved a lot of memory handling to the `WasmerEnv` handling
+- added a simple `MODULE_CACHE` as a status
+
+### Changed
+
+- Uses wasmer 1+
+- Uses latest holonix
+- Externs follow (ptr, len) -> ptrlen as (u32, u32) -> u64
+- all guest functions are `#[inline(always)]`
+
+### Deprecated
+
+### Removed
+
+### Fixed
+
+- [PR#66](https://github.com/holochain/holochain-wasmer/pull/66) - workaround a memory leak in (our usage of) wasmer
+
+### Security
+
 ## [0.0.67] - 2021-02-21
 
 ### Added
