@@ -24,27 +24,57 @@ trait PlruCache {
     fn plru_mut(&mut self) -> &mut MicroCache;
     fn key_map(&self) -> &PlruKeyMap;
     fn key_map_mut(&mut self) -> &mut PlruKeyMap;
-    fn cache_mut(&mut self) -> &mut HashMap<CacheKey, Self::Item>;
+    fn cache(&self) -> &HashMap<CacheKey, Arc<Self::Item>>;
+    fn cache_mut(&mut self) -> &mut HashMap<CacheKey, Arc<Self::Item>>;
 
-    fn put(&mut self, key: CacheKey, serialized_module: Self::Item) {
+    fn put_item(&mut self, key: CacheKey, item: Self::Item) -> Arc<Self::Item> {
         let plru_key = self.plru_mut().replace();
         // if there is something in the cache for this plru slot already drop it.
         if let Some(stale_key) = self.key_map().get_by_left(&plru_key).cloned() {
             self.cache_mut().remove(&stale_key);
         }
-        self.cache_mut().insert(key, serialized_module);
+        let arc = Arc::new(item);
+        self.cache_mut().insert(key, Arc::clone(&arc));
         self.plru_mut().touch(plru_key);
         self.key_map_mut().insert(plru_key, key);
+        arc
     }
 
-    fn touch(&mut self, key: CacheKey) {
-        let plru_key = *self
+    fn plru_key(&self, key: &CacheKey) -> usize {
+        *self
             .key_map()
-            .get_by_right(&key)
-            // It is a bug to call touch on a cache MISS.
+            .get_by_right(key)
+            // It is a bug to get a plru key on a cache MISS.
             // It is also a bug if a cache HIT does not map to a plru key.
-            .expect("Missing serialized cache plru key mapping. This is a bug.");
+            .expect("Missing cache plru key mapping. This is a bug.")
+    }
+
+    fn touch(&mut self, key: &CacheKey) {
+        let plru_key = self.plru_key(key);
         self.plru_mut().touch(plru_key);
+    }
+
+    fn trash(&mut self, key: &CacheKey) {
+        let plru_key = self.plru_key(key);
+        self.plru_mut().trash(plru_key);
+    }
+
+    fn remove_item(&mut self, key: &CacheKey) -> Option<Arc<Self::Item>> {
+        let maybe_item = self.cache_mut().remove(key);
+        if maybe_item.is_some() {
+            let plru_key = self.plru_key(key);
+            self.plru_mut().trash(plru_key);
+            self.key_map_mut().remove_by_left(&plru_key);
+        }
+        maybe_item
+    }
+
+    fn get_item(&mut self, key: &CacheKey) -> Option<Arc<Self::Item>> {
+        let maybe_item = self.cache().get(key).cloned();
+        if maybe_item.is_some() {
+            self.touch(key);
+        }
+        maybe_item
     }
 }
 
@@ -52,7 +82,7 @@ trait PlruCache {
 pub struct SerializedModuleCache {
     plru: MicroCache,
     key_map: PlruKeyMap,
-    cache: HashMap<CacheKey, SerializedModule>,
+    cache: HashMap<CacheKey, Arc<SerializedModule>>,
 }
 
 pub static SERIALIZED_MODULE_CACHE: Lazy<RwLock<SerializedModuleCache>> =
@@ -73,7 +103,11 @@ impl PlruCache for SerializedModuleCache {
         &self.key_map
     }
 
-    fn cache_mut(&mut self) -> &mut HashMap<CacheKey, Self::Item> {
+    fn cache(&self) -> &HashMap<CacheKey, Arc<Self::Item>> {
+        &self.cache
+    }
+
+    fn cache_mut(&mut self) -> &mut HashMap<CacheKey, Arc<Self::Item>> {
         &mut self.cache
     }
 }
@@ -86,7 +120,7 @@ impl SerializedModuleCache {
         let serialized_module = module
             .serialize()
             .map_err(|e| WasmError::Compile(e.to_string()))?;
-        self.put(key, serialized_module);
+        self.put_item(key, serialized_module);
         Ok(module)
     }
 
@@ -96,7 +130,7 @@ impl SerializedModuleCache {
                 let store = Store::new(&Universal::new(Cranelift::default()).engine());
                 let module = unsafe { Module::deserialize(&store, serialized_module) }
                     .map_err(|e| WasmError::Compile(e.to_string()))?;
-                self.touch(key);
+                self.touch(&key);
                 Ok(module)
             }
             None => self.get_with_build_cache(key, wasm),
@@ -105,10 +139,39 @@ impl SerializedModuleCache {
 }
 
 #[derive(Default)]
-pub struct ModuleCache(HashMap<CacheKey, Arc<Module>>, bool, AtomicUsize);
+pub struct ModuleCache {
+    plru: MicroCache,
+    key_map: PlruKeyMap,
+    cache: HashMap<CacheKey, Arc<Module>>,
+    leak_buster: AtomicUsize,
+}
 
 pub static MODULE_CACHE: Lazy<RwLock<ModuleCache>> =
     Lazy::new(|| RwLock::new(ModuleCache::default()));
+
+impl PlruCache for ModuleCache {
+    type Item = Module;
+
+    fn plru_mut(&mut self) -> &mut MicroCache {
+        &mut self.plru
+    }
+
+    fn key_map_mut(&mut self) -> &mut PlruKeyMap {
+        &mut self.key_map
+    }
+
+    fn key_map(&self) -> &PlruKeyMap {
+        &self.key_map
+    }
+
+    fn cache(&self) -> &HashMap<CacheKey, Arc<Self::Item>> {
+        &self.cache
+    }
+
+    fn cache_mut(&mut self) -> &mut HashMap<CacheKey, Arc<Self::Item>> {
+        &mut self.cache
+    }
+}
 
 impl ModuleCache {
     fn get_with_build_cache(
@@ -117,41 +180,36 @@ impl ModuleCache {
         wasm: &[u8],
     ) -> Result<Arc<Module>, WasmError> {
         let module = SERIALIZED_MODULE_CACHE.write().get(key, wasm)?;
-        let arc = Arc::new(module);
-        self.0.insert(key, Arc::clone(&arc));
-        Ok(arc)
+        // self.cache.insert(key, Arc::clone(&arc));
+        Ok(self.put_item(key, module))
     }
 
-    pub fn reset_counter(&mut self) {
-        self.2.store(0, std::sync::atomic::Ordering::SeqCst);
+    pub fn reset_leak_buster(&mut self) {
+        self.leak_buster
+            .store(0, std::sync::atomic::Ordering::SeqCst);
+    }
+
+    pub fn should_bust_leak(&mut self) -> bool {
+        if self
+            .leak_buster
+            .fetch_add(1, std::sync::atomic::Ordering::SeqCst)
+            > 100
+        {
+            self.reset_leak_buster();
+            true
+        } else {
+            false
+        }
     }
 
     pub fn get(&mut self, key: CacheKey, wasm: &[u8]) -> Result<Arc<Module>, WasmError> {
-        let count = self.2.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
-        if count > 100 {
-            let current = self.0.remove(&key);
-            match current {
-                Some(current) => match Arc::try_unwrap(current) {
-                    Ok(m) => {
-                        std::mem::drop(m);
-                        self.2.store(0, std::sync::atomic::Ordering::SeqCst);
-                        self.get_with_build_cache(key, wasm)
-                    }
-                    Err(current) => {
-                        self.0.insert(key, current.clone());
-                        Ok(current)
-                    }
-                },
-                None => {
-                    self.2.store(0, std::sync::atomic::Ordering::SeqCst);
-                    self.get_with_build_cache(key, wasm)
-                }
-            }
+        match if self.should_bust_leak() {
+            self.remove_item(&key)
         } else {
-            match self.0.get(&key) {
-                Some(module) => Ok(Arc::clone(module)),
-                None => self.get_with_build_cache(key, wasm),
-            }
+            self.get_item(&key)
+        } {
+            Some(module) => Ok(module),
+            None => self.get_with_build_cache(key, wasm),
         }
     }
 }
