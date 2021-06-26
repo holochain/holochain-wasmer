@@ -1,7 +1,7 @@
-// use crate::prelude::Instance;
+use crate::prelude::Instance;
 use holochain_wasmer_common::WasmError;
 use once_cell::sync::Lazy;
-// use parking_lot::Mutex;
+use parking_lot::Mutex;
 use parking_lot::RwLock;
 use plru::MicroCache;
 use std::collections::HashMap;
@@ -149,6 +149,46 @@ pub struct ModuleCache {
 pub static MODULE_CACHE: Lazy<RwLock<ModuleCache>> =
     Lazy::new(|| RwLock::new(ModuleCache::default()));
 
+impl ModuleCache {
+    pub fn reset_leak_buster(&mut self) {
+        self.leak_buster
+            .store(0, std::sync::atomic::Ordering::SeqCst);
+    }
+
+    pub fn should_bust_leak(&mut self) -> bool {
+        if self
+            .leak_buster
+            .fetch_add(1, std::sync::atomic::Ordering::SeqCst)
+            > 100
+        {
+            self.reset_leak_buster();
+            true
+        } else {
+            false
+        }
+    }
+
+    fn get_with_build_cache(
+        &mut self,
+        key: CacheKey,
+        wasm: &[u8],
+    ) -> Result<Arc<Module>, WasmError> {
+        let module = SERIALIZED_MODULE_CACHE.write().get(key, wasm)?;
+        Ok(self.put_item(key, module))
+    }
+
+    pub fn get(&mut self, key: CacheKey, wasm: &[u8]) -> Result<Arc<Module>, WasmError> {
+        match if self.should_bust_leak() {
+            self.remove_item(&key)
+        } else {
+            self.get_item(&key)
+        } {
+            Some(module) => Ok(module),
+            None => self.get_with_build_cache(key, wasm),
+        }
+    }
+}
+
 impl PlruCache for ModuleCache {
     type Item = Module;
 
@@ -173,49 +213,35 @@ impl PlruCache for ModuleCache {
     }
 }
 
-impl ModuleCache {
-    fn get_with_build_cache(
-        &mut self,
-        key: CacheKey,
-        wasm: &[u8],
-    ) -> Result<Arc<Module>, WasmError> {
-        let module = SERIALIZED_MODULE_CACHE.write().get(key, wasm)?;
-        // self.cache.insert(key, Arc::clone(&arc));
-        Ok(self.put_item(key, module))
+#[derive(Default)]
+pub struct InstanceCache {
+    plru: MicroCache,
+    key_map: PlruKeyMap,
+    cache: HashMap<CacheKey, Arc<Mutex<Instance>>>,
+}
+pub static INSTANCE_CACHE: Lazy<RwLock<InstanceCache>> =
+    Lazy::new(|| RwLock::new(InstanceCache::default()));
+
+impl PlruCache for InstanceCache {
+    type Item = Mutex<Instance>;
+
+    fn plru_mut(&mut self) -> &mut MicroCache {
+        &mut self.plru
     }
 
-    pub fn reset_leak_buster(&mut self) {
-        self.leak_buster
-            .store(0, std::sync::atomic::Ordering::SeqCst);
+    fn key_map_mut(&mut self) -> &mut PlruKeyMap {
+        &mut self.key_map
     }
 
-    pub fn should_bust_leak(&mut self) -> bool {
-        if self
-            .leak_buster
-            .fetch_add(1, std::sync::atomic::Ordering::SeqCst)
-            > 100
-        {
-            self.reset_leak_buster();
-            true
-        } else {
-            false
-        }
+    fn key_map(&self) -> &PlruKeyMap {
+        &self.key_map
     }
 
-    pub fn get(&mut self, key: CacheKey, wasm: &[u8]) -> Result<Arc<Module>, WasmError> {
-        match if self.should_bust_leak() {
-            self.remove_item(&key)
-        } else {
-            self.get_item(&key)
-        } {
-            Some(module) => Ok(module),
-            None => self.get_with_build_cache(key, wasm),
-        }
+    fn cache(&self) -> &HashMap<CacheKey, Arc<Self::Item>> {
+        &self.cache
+    }
+
+    fn cache_mut(&mut self) -> &mut HashMap<CacheKey, Arc<Self::Item>> {
+        &mut self.cache
     }
 }
-
-// #[derive(Default)]
-// pub struct InstanceCache(<Arc<Mutex<HashMap<ModuleCacheKey, (HashMap<u64, Arc<Mutex<Instance>>>, AtomicU64)>>>>;
-// static INSTANCE_CACHE: Lazy = Lazy::new(Default::default);
-
-// const INSTANCE_CACHE_SIZE: usize = 20;
