@@ -18,7 +18,7 @@ pub type CacheKey = [u8; 32];
 pub type PlruKeyMap = BiMap<usize, CacheKey>;
 pub type SerializedModule = Vec<u8>;
 
-trait PlruCache {
+pub trait PlruCache {
     type Item;
 
     fn plru_mut(&mut self) -> &mut MicroCache;
