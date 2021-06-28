@@ -27,17 +27,16 @@ pub trait PlruCache {
     fn cache(&self) -> &HashMap<CacheKey, Arc<Self::Item>>;
     fn cache_mut(&mut self) -> &mut HashMap<CacheKey, Arc<Self::Item>>;
 
-    fn put_item(&mut self, key: CacheKey, item: Self::Item) -> Arc<Self::Item> {
+    fn put_item(&mut self, key: CacheKey, item: Arc<Self::Item>) -> Arc<Self::Item> {
         let plru_key = self.plru_mut().replace();
         // if there is something in the cache for this plru slot already drop it.
         if let Some(stale_key) = self.key_map().get_by_left(&plru_key).cloned() {
             self.cache_mut().remove(&stale_key);
         }
-        let arc = Arc::new(item);
-        self.cache_mut().insert(key, Arc::clone(&arc));
+        self.cache_mut().insert(key, Arc::clone(&item));
         self.plru_mut().touch(plru_key);
         self.key_map_mut().insert(plru_key, key);
-        arc
+        item
     }
 
     fn plru_key(&self, key: &CacheKey) -> usize {
@@ -120,7 +119,7 @@ impl SerializedModuleCache {
         let serialized_module = module
             .serialize()
             .map_err(|e| WasmError::Compile(e.to_string()))?;
-        self.put_item(key, serialized_module);
+        self.put_item(key, Arc::new(serialized_module));
         Ok(module)
     }
 
@@ -174,7 +173,7 @@ impl ModuleCache {
         wasm: &[u8],
     ) -> Result<Arc<Module>, WasmError> {
         let module = SERIALIZED_MODULE_CACHE.write().get(key, wasm)?;
-        Ok(self.put_item(key, module))
+        Ok(self.put_item(key, Arc::new(module)))
     }
 
     pub fn get(&mut self, key: CacheKey, wasm: &[u8]) -> Result<Arc<Module>, WasmError> {
