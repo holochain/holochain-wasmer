@@ -463,7 +463,6 @@ dependencies = [
  "holochain_wasmer_common",
  "once_cell",
  "parking_lot",
- "plru",
  "rand 0.8.3",
  "serde",
  "tracing",
@@ -726,11 +725,6 @@ dependencies = [
  "wasm-bindgen",
  "web-sys",
 ]
-
-[[package]]
-name = "plru"
-version = "0.1.2"
-source = "git+https://github.com/crdumoul/plru#da1884ee2baa351bfa38bd9785b56d5b81daff00"
 
 [[package]]
 name = "ppv-lite86"

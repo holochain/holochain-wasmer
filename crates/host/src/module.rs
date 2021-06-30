@@ -1,10 +1,10 @@
+use crate::plru::MicroCache;
 use crate::prelude::Instance;
 use bimap::BiMap;
 use holochain_wasmer_common::WasmError;
 use once_cell::sync::Lazy;
 use parking_lot::Mutex;
 use parking_lot::RwLock;
-use plru::MicroCache;
 use std::collections::BTreeMap;
 use std::sync::atomic::AtomicUsize;
 use std::sync::Arc;
