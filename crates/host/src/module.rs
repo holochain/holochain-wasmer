@@ -150,13 +150,13 @@ pub static MODULE_CACHE: Lazy<RwLock<ModuleCache>> =
 impl ModuleCache {
     pub fn reset_leak_buster(&mut self) {
         self.leak_buster
-            .store(0, std::sync::atomic::Ordering::SeqCst);
+            .store(0, std::sync::atomic::Ordering::Relaxed);
     }
 
     pub fn should_bust_leak(&mut self) -> bool {
         if self
             .leak_buster
-            .fetch_add(1, std::sync::atomic::Ordering::SeqCst)
+            .fetch_add(1, std::sync::atomic::Ordering::Relaxed)
             > 100
         {
             self.reset_leak_buster();
