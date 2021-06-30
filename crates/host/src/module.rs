@@ -1,12 +1,11 @@
 use crate::prelude::Instance;
+use bimap::BiMap;
 use holochain_wasmer_common::WasmError;
 use once_cell::sync::Lazy;
 use parking_lot::Mutex;
 use parking_lot::RwLock;
 use plru::MicroCache;
-use std::collections::HashMap;
-// use std::sync::atomic::AtomicU64;
-use bimap::BiMap;
+use std::collections::BTreeMap;
 use std::sync::atomic::AtomicUsize;
 use std::sync::Arc;
 use wasmer::Cranelift;
@@ -24,8 +23,8 @@ pub trait PlruCache {
     fn plru_mut(&mut self) -> &mut MicroCache;
     fn key_map(&self) -> &PlruKeyMap;
     fn key_map_mut(&mut self) -> &mut PlruKeyMap;
-    fn cache(&self) -> &HashMap<CacheKey, Arc<Self::Item>>;
-    fn cache_mut(&mut self) -> &mut HashMap<CacheKey, Arc<Self::Item>>;
+    fn cache(&self) -> &BTreeMap<CacheKey, Arc<Self::Item>>;
+    fn cache_mut(&mut self) -> &mut BTreeMap<CacheKey, Arc<Self::Item>>;
 
     fn put_item(&mut self, key: CacheKey, item: Arc<Self::Item>) -> Arc<Self::Item> {
         let plru_key = self.plru_mut().replace();
@@ -81,7 +80,7 @@ pub trait PlruCache {
 pub struct SerializedModuleCache {
     plru: MicroCache,
     key_map: PlruKeyMap,
-    cache: HashMap<CacheKey, Arc<SerializedModule>>,
+    cache: BTreeMap<CacheKey, Arc<SerializedModule>>,
 }
 
 pub static SERIALIZED_MODULE_CACHE: Lazy<RwLock<SerializedModuleCache>> =
@@ -102,11 +101,11 @@ impl PlruCache for SerializedModuleCache {
         &self.key_map
     }
 
-    fn cache(&self) -> &HashMap<CacheKey, Arc<Self::Item>> {
+    fn cache(&self) -> &BTreeMap<CacheKey, Arc<Self::Item>> {
         &self.cache
     }
 
-    fn cache_mut(&mut self) -> &mut HashMap<CacheKey, Arc<Self::Item>> {
+    fn cache_mut(&mut self) -> &mut BTreeMap<CacheKey, Arc<Self::Item>> {
         &mut self.cache
     }
 }
@@ -141,7 +140,7 @@ impl SerializedModuleCache {
 pub struct ModuleCache {
     plru: MicroCache,
     key_map: PlruKeyMap,
-    cache: HashMap<CacheKey, Arc<Module>>,
+    cache: BTreeMap<CacheKey, Arc<Module>>,
     leak_buster: AtomicUsize,
 }
 
@@ -203,11 +202,11 @@ impl PlruCache for ModuleCache {
         &self.key_map
     }
 
-    fn cache(&self) -> &HashMap<CacheKey, Arc<Self::Item>> {
+    fn cache(&self) -> &BTreeMap<CacheKey, Arc<Self::Item>> {
         &self.cache
     }
 
-    fn cache_mut(&mut self) -> &mut HashMap<CacheKey, Arc<Self::Item>> {
+    fn cache_mut(&mut self) -> &mut BTreeMap<CacheKey, Arc<Self::Item>> {
         &mut self.cache
     }
 }
@@ -216,7 +215,7 @@ impl PlruCache for ModuleCache {
 pub struct InstanceCache {
     plru: MicroCache,
     key_map: PlruKeyMap,
-    cache: HashMap<CacheKey, Arc<Mutex<Instance>>>,
+    cache: BTreeMap<CacheKey, Arc<Mutex<Instance>>>,
 }
 pub static INSTANCE_CACHE: Lazy<RwLock<InstanceCache>> =
     Lazy::new(|| RwLock::new(InstanceCache::default()));
@@ -236,11 +235,11 @@ impl PlruCache for InstanceCache {
         &self.key_map
     }
 
-    fn cache(&self) -> &HashMap<CacheKey, Arc<Self::Item>> {
+    fn cache(&self) -> &BTreeMap<CacheKey, Arc<Self::Item>> {
         &self.cache
     }
 
-    fn cache_mut(&mut self) -> &mut HashMap<CacheKey, Arc<Self::Item>> {
+    fn cache_mut(&mut self) -> &mut BTreeMap<CacheKey, Arc<Self::Item>> {
         &mut self.cache
     }
 }
