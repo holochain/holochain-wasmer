@@ -62,7 +62,7 @@ impl TestWasm {
     }
 
     pub fn impair_leak_workaround() {
-        MODULE_CACHE.write().reset_counter();
+        MODULE_CACHE.write().reset_leak_buster();
     }
 
     pub fn reset_module_cache() {

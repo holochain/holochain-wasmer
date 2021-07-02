@@ -6,7 +6,7 @@ jobs:
    - image: holochain/holonix:latest.develop
   steps:
    - checkout
-   - run: nix-shell --run ./test.sh
+   - run: nix-shell --fallback --run ./test.sh
 
  deploy-crates:
   docker:
@@ -15,7 +15,7 @@ jobs:
    - checkout
    - run:
       no_output_timeout: 20m
-      command: nix-shell --run "hn-release-hook-publish-crates-io 'common host guest'"
+      command: nix-shell --fallback --run "hn-release-hook-publish-crates-io 'common host guest'"
 
 workflows:
  version: 2.1
