@@ -16,6 +16,22 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Security
 
+## [0.0.72] - 2021-07-02
+
+### Added
+
+- Support for 3 level serialized -> deserialized -> instance caching with PLRU
+
+### Changed
+
+### Deprecated
+
+### Removed
+
+### Fixed
+
+### Security
+
 ## [0.0.71] - 2021-06-23
 
 ### Added
