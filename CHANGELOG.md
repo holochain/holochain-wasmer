@@ -16,6 +16,22 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Security
 
+## [0.0.73] - 2021-07-20
+
+### Added
+
+### Changed
+
+- Bumped holochain_serialized_bytes version
+
+### Deprecated
+
+### Removed
+
+### Fixed
+
+### Security
+
 ## [0.0.72] - 2021-07-02
 
 ### Added

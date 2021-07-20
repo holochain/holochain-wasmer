@@ -2,14 +2,14 @@
 name = "holochain_wasmer_host"
 description = "wasm host code"
 license = "GPL-3.0-only"
-version = "0.0.72"
+version = "0.0.73"
 authors = [ "thedavidmeister", "thedavidmeister@gmail.com" ]
 edition = "2018"
 
 [dependencies]
 wasmer = "=2.0.0"
-holochain_wasmer_common = { version = "=0.0.72", path = "../common" }
-holochain_serialized_bytes = "=0.0.50"
+holochain_wasmer_common = { version = "=0.0.73", path = "../common" }
+holochain_serialized_bytes = "=0.0.51"
 serde = "=1.0.123"
 tracing = "0.1"
 parking_lot = "0.11.1"
