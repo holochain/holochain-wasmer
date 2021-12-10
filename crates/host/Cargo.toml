@@ -7,7 +7,7 @@ authors = [ "thedavidmeister", "thedavidmeister@gmail.com" ]
 edition = "2018"
 
 [dependencies]
-wasmer = "=2.0.0"
+wasmer = "=2.1.0"
 holochain_wasmer_common = { version = "=0.0.73", path = "../common" }
 holochain_serialized_bytes = "=0.0.51"
 serde = "=1.0.123"
