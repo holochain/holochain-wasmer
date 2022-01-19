@@ -14,7 +14,7 @@ criterion = "0.3"
 rand = "0.7"
 serde_bytes = "0.11"
 parking_lot = "0.11.1"
-wasmer = "=2.1.1"
+wasmer = "=2.0.0"
 
 [[bench]]
 name = "bench"

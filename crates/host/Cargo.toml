@@ -7,7 +7,7 @@ authors = [ "thedavidmeister", "thedavidmeister@gmail.com" ]
 edition = "2018"
 
 [dependencies]
-wasmer = "=2.1.1"
+wasmer = "=2.0.0"
 holochain_wasmer_common = { version = "=0.0.73", path = "../common" }
 holochain_serialized_bytes = "=0.0.51"
 serde = "=1.0.123"
@@ -18,14 +18,14 @@ rand = "0.8.3"
 bimap = "0.6"
 
 # TODO: remove these when updating to a version of wasmer that fixes these
-wasmer-compiler = "=2.1.1"
-wasmer-compiler-cranelift = "=2.1.1"
-wasmer-derive = "=2.1.1"
-wasmer-engine = "=2.1.1"
-wasmer-engine-dylib = "=2.1.1"
-wasmer-engine-universal = "=2.1.1"
-wasmer-types = "=2.1.1"
-wasmer-vm = "=2.1.1"
+wasmer-compiler = "=2.0.0"
+wasmer-compiler-cranelift = "=2.0.0"
+wasmer-derive = "=2.0.0"
+wasmer-engine = "=2.0.0"
+wasmer-engine-dylib = "=2.0.0"
+wasmer-engine-universal = "=2.0.0"
+wasmer-types = "=2.0.0"
+wasmer-vm = "=2.0.0"
 
 [lib]
 name = "holochain_wasmer_host"
