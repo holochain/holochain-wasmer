@@ -73,7 +73,7 @@ pub fn write_bytes(memory: &Memory, guest_ptr: GuestPtr, slice: &[u8]) -> Result
 
     // write the length prefix immediately before the slice at the guest pointer position
     for (byte, cell) in slice.iter().zip(
-        unsafe { ptr.deref_mut(memory, 0 as GuestPtr, slice.len() as Len) }
+        ptr.deref(memory, 0 as GuestPtr, slice.len() as Len)
             .ok_or(WasmError::Memory)?
             .iter(),
     ) {
