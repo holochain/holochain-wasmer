@@ -17,6 +17,16 @@ once_cell = "1.5.2"
 rand = "0.8.3"
 bimap = "0.6"
 
+# TODO: remove these when updating to a version of wasmer that fixes these
+wasmer-compiler = "=2.0.0"
+wasmer-compiler-cranelift = "=2.0.0"
+wasmer-derive = "=2.0.0"
+wasmer-engine = "=2.0.0"
+wasmer-engine-dylib = "=2.0.0"
+wasmer-engine-universal = "=2.0.0"
+wasmer-types = "=2.0.0"
+wasmer-vm = "=2.0.0"
+
 [lib]
 name = "holochain_wasmer_host"
 crate-type = [ "cdylib", "rlib" ]

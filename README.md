@@ -712,3 +712,12 @@ instance.context_mut().data_finalizer = Some(free_context_data);
 
 Generally though, you should just use `holochain_wasmer_host::instantiate::instantiate()`
 to build wasmer instances as it includes the `data_finalizer` logic for safety.
+
+## How to update holonix
+
+This repository uses `niv` to manage Nix dependencies.
+The following command will launch a transient shell with `niv` installed and update the holonix revision.
+
+```shell
+nix-shell -p niv --run "niv update"
+```
