@@ -2,7 +2,7 @@
 name = "holochain_wasmer_guest"
 description = "wasm guest code"
 license = "GPL-3.0-only"
-version = "0.0.73"
+version = "0.0.74"
 authors = [ "thedavidmeister", "thedavidmeister@gmail.com" ]
 edition = "2018"
 
@@ -15,7 +15,7 @@ path = "src/guest.rs"
 
 [dependencies]
 holochain_serialized_bytes = { version = "=0.0.51", features = [] }
-holochain_wasmer_common = { version = "=0.0.73", path = "../common" }
+holochain_wasmer_common = { version = "=0.0.74", path = "../common" }
 serde = "=1.0.123"
 tracing = "0.1"
 parking_lot = "0.11.1"
