@@ -2,7 +2,7 @@
 name = "holochain_wasmer_common"
 description = "commons for both host and guest"
 license = "GPL-3.0-only"
-version = "0.0.73"
+version = "0.0.74"
 authors = [ "thedavidmeister", "thedavidmeister@gmail.com" ]
 edition = "2018"
 
