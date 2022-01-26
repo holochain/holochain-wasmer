@@ -1,6 +1,6 @@
 [package]
 name = "test_wasm"
-version = "0.0.74"
+version = "0.0.75"
 authors = [ "thedavidmeister", "thedavidmeister@gmail.com" ]
 edition = "2018"
 
