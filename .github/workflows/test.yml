@@ -1,21 +1,25 @@
 name: run tests
 
-on: [ push, pull_request ]
+on:
+  push:
+    branches:
+      - develop
+  pull_request: {}
 
 jobs:
- test:
-  runs-on: ubuntu-latest
-  steps:
-   - uses: actions/checkout@v2
-   - uses: actions/cache@v2
-     with:
-      path: |
-       /nix/store
-      key: nix-store-${{ hashFiles('default.nix') }}-${{ hashFiles('config.nix') }}
-   - uses: cachix/install-nix-action@v12
-     with:
-       nix_path: nixpkgs=channel:nixos-unstable
-       extra_nix_config: |
-        substituters = https://cache.nixos.org/ https://cache.holo.host/
-        trusted-public-keys = cache.nixos.org-1:6NCHdD59X431o0gWypbMrAURkbJ16ZPMQFGspcDShjY= cache.holo.host-1:lNXIXtJgS9Iuw4Cu6X0HINLu9sTfcjEntnrgwMQIMcE= cache.holo.host-2:ZJCkX3AUYZ8soxTLfTb60g+F3MkWD7hkH9y8CgqwhDQ=
-   - run: nix-shell --fallback --run ./test.sh
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/cache@v2
+        with:
+          path: |
+            /nix/store
+          key: nix-store-${{ hashFiles('default.nix') }}-${{ hashFiles('config.nix') }}
+      - uses: cachix/install-nix-action@v12
+        with:
+          nix_path: nixpkgs=channel:nixos-unstable
+          extra_nix_config: |
+            substituters = https://cache.nixos.org/ https://cache.holo.host/
+            trusted-public-keys = cache.nixos.org-1:6NCHdD59X431o0gWypbMrAURkbJ16ZPMQFGspcDShjY= cache.holo.host-1:lNXIXtJgS9Iuw4Cu6X0HINLu9sTfcjEntnrgwMQIMcE= cache.holo.host-2:ZJCkX3AUYZ8soxTLfTb60g+F3MkWD7hkH9y8CgqwhDQ=
+      - run: nix-shell --fallback --run ./test.sh
