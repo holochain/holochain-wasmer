@@ -158,6 +158,8 @@ pub mod tests {
         };
     }
 
+    // FIXME: on macos, the leak detection doesn't work reliably
+    #[cfg(not(target_os = "macos"))]
     #[test]
     fn mem_leak() {
         let mut leaked = vec![];
