@@ -1,6 +1,6 @@
 name: run tests mac
 
-on: [ push, pull_request ]
+on: [push, pull_request]
 
 jobs:
   test:
