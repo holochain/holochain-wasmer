@@ -254,7 +254,8 @@ pub mod tests {
         );
 
         // on windows the leak seems to be less severe
-        #[cfg(not(target_os = "windows"))]
+        // FIXME: on macos, the leak detection doesn't work reliably
+        #[cfg(target_os = "linux")]
         assert!(
             leaked
                 .iter()
