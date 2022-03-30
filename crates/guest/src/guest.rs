@@ -35,7 +35,9 @@ where
         Ok(v) => Ok(v),
         Err(e) => {
             tracing::error!(input_type = std::any::type_name::<O>(), bytes = ?bytes, "{}", e);
-            Err(return_err_ptr(WasmError::Deserialize(bytes)))
+            Err(return_err_ptr(wasm_error!(WasmErrorInner::Deserialize(
+                bytes
+            ))))
         }
     }
 }
@@ -57,7 +59,8 @@ where
     O: serde::de::DeserializeOwned + std::fmt::Debug,
 {
     // Call the host function and receive the length of the serialized result.
-    let input_bytes = holochain_serialized_bytes::encode(&input)?;
+    let input_bytes =
+        holochain_serialized_bytes::encode(&input).map_err(|e| wasm_error!(e.into()))?;
     let input_len = input_bytes.len();
     let input_guest_ptr = crate::allocation::write_bytes(input_bytes);
 
@@ -75,7 +78,7 @@ where
         Ok(output) => Ok(output?),
         Err(e) => {
             tracing::error!(output_type = std::any::type_name::<O>(), ?bytes, "{}", e);
-            Err(WasmError::Deserialize(bytes))
+            Err(wasm_error!(WasmErrorInner::Deserialize(bytes)))
         }
     }
 }
@@ -92,7 +95,7 @@ where
             let len = bytes.len();
             merge_u64(write_bytes(bytes), len as Len)
         }
-        Err(e) => return_err_ptr(WasmError::Serialize(e)),
+        Err(e) => return_err_ptr(wasm_error!(WasmErrorInner::Serialize(e))),
     }
 }
 
@@ -105,7 +108,7 @@ pub fn return_err_ptr(wasm_error: WasmError) -> GuestPtrLen {
             merge_u64(write_bytes(bytes), len as Len)
         }
         Err(e) => match holochain_serialized_bytes::encode::<Result<(), WasmError>>(&Err(
-            WasmError::Serialize(e),
+            wasm_error!(WasmErrorInner::Serialize(e)),
         )) {
             Ok(bytes) => {
                 let len = bytes.len();
@@ -113,7 +116,7 @@ pub fn return_err_ptr(wasm_error: WasmError) -> GuestPtrLen {
             }
             // At this point we've errored while erroring
             Err(_) => match holochain_serialized_bytes::encode::<Result<(), WasmError>>(&Err(
-                WasmError::ErrorWhileError,
+                wasm_error!(WasmErrorInner::ErrorWhileError),
             )) {
                 Ok(bytes) => {
                     let len = bytes.len();
@@ -132,7 +135,12 @@ macro_rules! try_ptr {
     ( $e:expr, $fail:expr ) => {{
         match $e {
             Ok(v) => v,
-            Err(e) => return return_err_ptr(WasmError::Guest(format!("{}: {:?}", $fail, e))),
+            Err(e) => {
+                return return_err_ptr(wasm_error!(WasmErrorInner::Guest(format!(
+                    "{}: {:?}",
+                    $fail, e
+                ))))
+            }
         }
     }};
 }

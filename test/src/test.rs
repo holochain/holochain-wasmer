@@ -5,9 +5,10 @@ use holochain_wasmer_host::prelude::*;
 use test_common::SomeStruct;
 
 pub fn short_circuit(_: &Env, _: GuestPtr, _: Len) -> Result<(), WasmError> {
-    RuntimeError::raise(Box::new(WasmError::HostShortCircuit(
-        holochain_serialized_bytes::encode(&String::from("shorts"))?,
-    )));
+    RuntimeError::raise(Box::new(wasm_error!(WasmErrorInner::HostShortCircuit(
+        holochain_serialized_bytes::encode(&String::from("shorts"))
+            .map_err(|e| wasm_error!(e.into()))?,
+    ))));
 }
 
 pub fn test_process_string(env: &Env, guest_ptr: GuestPtr, len: Len) -> Result<(), WasmError> {
@@ -28,7 +29,11 @@ pub fn debug(_env: &Env, some_number: WasmSize) -> Result<(), WasmError> {
 }
 
 pub fn pages(env: &Env, _: WasmSize) -> Result<WasmSize, WasmError> {
-    Ok(env.memory_ref().ok_or(WasmError::Memory)?.size().0)
+    Ok(env
+        .memory_ref()
+        .ok_or(wasm_error!(WasmErrorInner::Memory))?
+        .size()
+        .0)
 }
 
 #[cfg(test)]
@@ -136,7 +141,14 @@ pub mod tests {
         let err: Result<SomeStruct, WasmError> =
             guest::call(TestWasm::Test.instance(), "some_ret_err", ());
         match err {
-            Err(wasm_error) => assert_eq!(WasmError::Guest("oh no!".into()), wasm_error,),
+            Err(wasm_error) => assert_eq!(
+                WasmError {
+                    file: "src/wasm.rs".into(),
+                    line: 103,
+                    error: WasmErrorInner::Guest("oh no!".into()),
+                },
+                wasm_error,
+            ),
             Ok(_) => unreachable!(),
         };
     }
@@ -152,7 +164,14 @@ pub mod tests {
 
         match fail_result {
             Err(wasm_error) => {
-                assert_eq!(WasmError::Guest("it fails!: ()".into()), wasm_error,);
+                assert_eq!(
+                    WasmError {
+                        file: "src/wasm.rs".into(),
+                        line: 132,
+                        error: WasmErrorInner::Guest("it fails!: ()".into()),
+                    },
+                    wasm_error,
+                );
             }
             Ok(_) => unreachable!(),
         };

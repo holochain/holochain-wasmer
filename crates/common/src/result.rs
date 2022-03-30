@@ -1,10 +1,8 @@
 use holochain_serialized_bytes::prelude::*;
 use thiserror::Error;
 
-/// Enum of all possible ERROR codes that a Zome API Function could return.
-#[derive(Clone, Debug, PartialEq, Eq, Hash, PartialOrd, Ord, Serialize, Deserialize, SerializedBytes, Error)]
-#[rustfmt::skip]
-pub enum WasmError {
+#[derive(Clone, Debug, PartialEq, Eq, Hash, PartialOrd, Ord, Serialize, Deserialize)]
+pub enum WasmErrorInner {
     /// while converting pointers and lengths between u64 and i64 across the host/guest
     /// we hit either a negative number (cannot fit in u64) or very large number (cannot fit in i64)
     /// negative pointers and lengths are almost certainly indicative of a critical bug somewhere
@@ -43,27 +41,47 @@ pub enum WasmError {
     CallError(String),
 }
 
-impl From<WasmError> for String {
-    fn from(e: WasmError) -> Self {
-        format!("{}", e)
-    }
-}
-
-impl From<std::num::TryFromIntError> for WasmError {
+impl From<std::num::TryFromIntError> for WasmErrorInner {
     fn from(_: std::num::TryFromIntError) -> Self {
         Self::PointerMap
     }
 }
 
-impl From<std::array::TryFromSliceError> for WasmError {
+impl From<std::array::TryFromSliceError> for WasmErrorInner {
     fn from(_: std::array::TryFromSliceError) -> Self {
         Self::Memory
     }
 }
 
-impl From<SerializedBytesError> for WasmError {
+impl From<SerializedBytesError> for WasmErrorInner {
     fn from(error: SerializedBytesError) -> Self {
         Self::Serialize(error)
+    }
+}
+
+/// Enum of all possible ERROR codes that a Zome API Function could return.
+#[derive(Clone, Debug, PartialEq, Eq, Hash, PartialOrd, Ord, Serialize, Deserialize, Error)]
+#[rustfmt::skip]
+pub struct WasmError {
+    pub file: String,
+    pub line: u32,
+    pub error: WasmErrorInner,
+}
+
+#[macro_export]
+macro_rules! wasm_error {
+    ($e:expr) => {
+        WasmError {
+            file: file!().to_string(),
+            line: line!(),
+            error: $e,
+        }
+    };
+}
+
+impl From<WasmError> for String {
+    fn from(e: WasmError) -> Self {
+        format!("{}", e)
     }
 }
 
