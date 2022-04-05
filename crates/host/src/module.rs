@@ -1,5 +1,5 @@
 use crate::plru::MicroCache;
-use crate::prelude::Instance;
+use crate::prelude::*;
 use bimap::BiMap;
 use holochain_wasmer_common::WasmError;
 use once_cell::sync::Lazy;
@@ -113,11 +113,11 @@ impl PlruCache for SerializedModuleCache {
 impl SerializedModuleCache {
     fn get_with_build_cache(&mut self, key: CacheKey, wasm: &[u8]) -> Result<Module, WasmError> {
         let store = Store::new(&Universal::new(Cranelift::default()).engine());
-        let module =
-            Module::from_binary(&store, wasm).map_err(|e| WasmError::Compile(e.to_string()))?;
+        let module = Module::from_binary(&store, wasm)
+            .map_err(|e| wasm_error!(WasmErrorInner::Compile(e.to_string())))?;
         let serialized_module = module
             .serialize()
-            .map_err(|e| WasmError::Compile(e.to_string()))?;
+            .map_err(|e| wasm_error!(WasmErrorInner::Compile(e.to_string())))?;
         self.put_item(key, Arc::new(serialized_module));
         Ok(module)
     }
@@ -127,7 +127,7 @@ impl SerializedModuleCache {
             Some(serialized_module) => {
                 let store = Store::new(&Universal::new(Cranelift::default()).engine());
                 let module = unsafe { Module::deserialize(&store, serialized_module) }
-                    .map_err(|e| WasmError::Compile(e.to_string()))?;
+                    .map_err(|e| wasm_error!(WasmErrorInner::Compile(e.to_string())))?;
                 self.touch(&key);
                 Ok(module)
             }

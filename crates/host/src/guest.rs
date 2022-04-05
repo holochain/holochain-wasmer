@@ -1,4 +1,5 @@
 use crate::prelude::*;
+use core::num::TryFromIntError;
 use holochain_serialized_bytes::prelude::*;
 use parking_lot::Mutex;
 use std::sync::Arc;
@@ -74,7 +75,7 @@ pub fn write_bytes(memory: &Memory, guest_ptr: GuestPtr, slice: &[u8]) -> Result
     // write the length prefix immediately before the slice at the guest pointer position
     for (byte, cell) in slice.iter().zip(
         ptr.deref(memory, 0 as GuestPtr, slice.len() as Len)
-            .ok_or(WasmError::Memory)?
+            .ok_or(wasm_error!(WasmErrorInner::Memory))?
             .iter(),
     ) {
         cell.set(*byte)
@@ -125,7 +126,7 @@ pub fn read_bytes(memory: &Memory, guest_ptr: GuestPtr, len: Len) -> Result<Vec<
     let ptr: WasmPtr<u8, Array> = WasmPtr::new(guest_ptr as _);
     Ok(ptr
         .deref(memory, 0, len as _)
-        .ok_or(WasmError::Memory)?
+        .ok_or(wasm_error!(WasmErrorInner::Memory))?
         .iter()
         .map(|cell| cell.get())
         .collect::<Vec<u8>>())
@@ -141,7 +142,7 @@ where
         Ok(v) => Ok(v),
         Err(e) => {
             tracing::error!(input_type = std::any::type_name::<O>(), bytes = ?bytes, "{}", e);
-            Err(e.into())
+            Err(wasm_error!(e.into()))
         }
     }
 }
@@ -159,15 +160,21 @@ where
 
     let instance = instance.lock();
     // The guest will use the same crate for decoding if it uses the wasm common crate.
-    let payload: Vec<u8> = holochain_serialized_bytes::encode(&input)?;
+    let payload: Vec<u8> =
+        holochain_serialized_bytes::encode(&input).map_err(|e| wasm_error!(e.into()))?;
 
     // Get a pre-allocated guest pointer to write the input into.
     let guest_input_ptr: GuestPtr = match instance
         .exports
         .get_function("__allocate")
-        .map_err(|e| WasmError::CallError(e.to_string()))?
-        .call(&[Value::I32(payload.len().try_into()?)])
-        .map_err(|e| WasmError::CallError(e.to_string()))?[0]
+        .map_err(|e| wasm_error!(WasmErrorInner::CallError(e.to_string())))?
+        .call(&[Value::I32(
+            payload
+                .len()
+                .try_into()
+                .map_err(|e: TryFromIntError| wasm_error!(e.into()))?,
+        )])
+        .map_err(|e| wasm_error!(WasmErrorInner::CallError(e.to_string())))?[0]
     {
         Value::I32(i) => i as GuestPtr,
         _ => unreachable!(),
@@ -178,7 +185,7 @@ where
         instance
             .exports
             .get_memory("memory")
-            .map_err(|_| WasmError::Memory)?,
+            .map_err(|_| wasm_error!(WasmErrorInner::Memory))?,
         guest_input_ptr,
         &payload,
     )?;
@@ -188,18 +195,27 @@ where
     let (guest_return_ptr, len): (GuestPtr, Len) = match instance
         .exports
         .get_function(f)
-        .map_err(|e| WasmError::CallError(e.to_string()))?
+        .map_err(|e| wasm_error!(WasmErrorInner::CallError(e.to_string())))?
         .call(&[
-            Value::I32(guest_input_ptr.try_into()?),
-            Value::I32(payload.len().try_into()?),
+            Value::I32(
+                guest_input_ptr
+                    .try_into()
+                    .map_err(|e: TryFromIntError| wasm_error!(e.into()))?,
+            ),
+            Value::I32(
+                payload
+                    .len()
+                    .try_into()
+                    .map_err(|e: TryFromIntError| wasm_error!(e.into()))?,
+            ),
         ]) {
         Ok(v) => match v[0] {
             Value::I64(i) => split_u64(i as _),
             _ => unreachable!(),
         },
         Err(e) => match e.downcast::<WasmError>() {
-            Ok(wasm_error) => match wasm_error {
-                WasmError::HostShortCircuit(encoded) => {
+            Ok(WasmError { file, line, error }) => match error {
+                WasmErrorInner::HostShortCircuit(encoded) => {
                     return match holochain_serialized_bytes::decode(&encoded) {
                         Ok(v) => Ok(v),
                         Err(e) => {
@@ -209,13 +225,13 @@ where
                                 "{}",
                                 e
                             );
-                            Err(e.into())
+                            Err(wasm_error!(e.into()))
                         }
                     }
                 }
-                _ => return Err(wasm_error),
+                _ => return Err(WasmError { file, line, error }),
             },
-            Err(e) => return Err(WasmError::CallError(e.to_string())),
+            Err(e) => return Err(wasm_error!(WasmErrorInner::CallError(e.to_string()))),
         },
     };
 
@@ -225,7 +241,7 @@ where
         instance
             .exports
             .get_memory("memory")
-            .map_err(|_| WasmError::Memory)?,
+            .map_err(|_| wasm_error!(WasmErrorInner::Memory))?,
         guest_return_ptr,
         len,
     )?;
@@ -234,12 +250,19 @@ where
     instance
         .exports
         .get_function("__deallocate")
-        .map_err(|e| WasmError::CallError(e.to_string()))?
+        .map_err(|e| wasm_error!(WasmErrorInner::CallError(e.to_string())))?
         .call(&[
-            Value::I32(guest_return_ptr.try_into()?),
-            Value::I32(len.try_into()?),
+            Value::I32(
+                guest_return_ptr
+                    .try_into()
+                    .map_err(|e: TryFromIntError| wasm_error!(e.into()))?,
+            ),
+            Value::I32(
+                len.try_into()
+                    .map_err(|e: TryFromIntError| wasm_error!(e.into()))?,
+            ),
         ])
-        .map_err(|e| WasmError::CallError(format!("{:?}", e)))?;
+        .map_err(|e| wasm_error!(WasmErrorInner::CallError(format!("{:?}", e))))?;
 
     return_value
 }

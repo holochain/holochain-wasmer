@@ -23,29 +23,31 @@ impl Env {
     where
         I: serde::Serialize + std::fmt::Debug,
     {
-        *self.data.write() = holochain_serialized_bytes::encode(&input)?;
+        *self.data.write() =
+            holochain_serialized_bytes::encode(&input).map_err(|e| wasm_error!(e.into()))?;
         Ok(())
     }
 
     pub fn move_data_to_guest(&self) -> Result<GuestPtrLen, WasmError> {
         let guest_ptr: GuestPtr = match self
             .allocate_ref()
-            .ok_or(WasmError::Memory)?
+            .ok_or(wasm_error!(WasmErrorInner::Memory))?
             .call(&[Value::I32(
                 self.data
                     .read()
                     .len()
                     .try_into()
-                    .map_err(|_| WasmError::PointerMap)?,
+                    .map_err(|_| wasm_error!(WasmErrorInner::PointerMap))?,
             )])
-            .map_err(|e| WasmError::Host(e.to_string()))?[0]
+            .map_err(|e| wasm_error!(WasmErrorInner::Host(e.to_string())))?[0]
         {
             Value::I32(guest_ptr) => guest_ptr as GuestPtr,
-            _ => return Err(WasmError::PointerMap),
+            _ => return Err(wasm_error!(WasmErrorInner::PointerMap)),
         };
         let len = self.data.read().len() as Len;
         crate::guest::write_bytes(
-            self.memory_ref().ok_or(WasmError::Memory)?,
+            self.memory_ref()
+                .ok_or(wasm_error!(WasmErrorInner::Memory))?,
             guest_ptr,
             &self.data.read(),
         )?;
@@ -57,19 +59,31 @@ impl Env {
     where
         O: serde::de::DeserializeOwned + std::fmt::Debug,
     {
-        let bytes = read_bytes(self.memory_ref().ok_or(WasmError::Memory)?, guest_ptr, len)?;
+        let bytes = read_bytes(
+            self.memory_ref()
+                .ok_or(wasm_error!(WasmErrorInner::Memory))?,
+            guest_ptr,
+            len,
+        )?;
         self.deallocate_ref()
-            .ok_or(WasmError::Memory)?
+            .ok_or(wasm_error!(WasmErrorInner::Memory))?
             .call(&[
-                Value::I32(guest_ptr.try_into().map_err(|_| WasmError::PointerMap)?),
-                Value::I32(len.try_into().map_err(|_| WasmError::PointerMap)?),
+                Value::I32(
+                    guest_ptr
+                        .try_into()
+                        .map_err(|_| wasm_error!(WasmErrorInner::PointerMap))?,
+                ),
+                Value::I32(
+                    len.try_into()
+                        .map_err(|_| wasm_error!(WasmErrorInner::PointerMap))?,
+                ),
             ])
-            .map_err(|e| WasmError::Host(e.to_string()))?;
+            .map_err(|e| wasm_error!(WasmErrorInner::Host(e.to_string())))?;
         match holochain_serialized_bytes::decode(&bytes) {
             Ok(v) => Ok(v),
             Err(e) => {
                 tracing::error!(input_type = std::any::type_name::<O>(), bytes = ?bytes, "{}", e);
-                Err(e.into())
+                Err(wasm_error!(e.into()))
             }
         }
     }
