@@ -5,10 +5,10 @@ use holochain_wasmer_host::prelude::*;
 use test_common::SomeStruct;
 
 pub fn short_circuit(_: &Env, _: GuestPtr, _: Len) -> Result<(), WasmError> {
-    RuntimeError::raise(Box::new(wasm_error!(WasmErrorInner::HostShortCircuit(
+    Err(wasm_error!(WasmErrorInner::HostShortCircuit(
         holochain_serialized_bytes::encode(&String::from("shorts"))
             .map_err(|e| wasm_error!(e.into()))?,
-    ))));
+    )))
 }
 
 pub fn test_process_string(env: &Env, guest_ptr: GuestPtr, len: Len) -> Result<(), WasmError> {
@@ -187,6 +187,7 @@ pub mod tests {
         let input = test_common::StringType::from(String::new());
 
         #[derive(Debug)]
+        #[allow(dead_code)]
         struct Leaked {
             runs: usize,
             num_threads: usize,

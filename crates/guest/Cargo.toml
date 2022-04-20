@@ -1,10 +1,10 @@
 [package]
 name = "holochain_wasmer_guest"
 description = "wasm guest code"
-license = "GPL-3.0-only"
+license = "Apache-2.0"
 version = "0.0.78"
 authors = [ "thedavidmeister", "thedavidmeister@gmail.com" ]
-edition = "2018"
+edition = "2021"
 
 [workspace]
 
