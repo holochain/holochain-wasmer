@@ -4,31 +4,40 @@ pub mod wasms;
 use holochain_wasmer_host::prelude::*;
 use test_common::SomeStruct;
 
-pub fn short_circuit(_: &Env, _: GuestPtr, _: Len) -> Result<(), WasmError> {
+pub fn short_circuit(_: &Env, _: GuestPtr, _: Len) -> Result<(), wasmer_engine::RuntimeError> {
     Err(wasm_error!(WasmErrorInner::HostShortCircuit(
         holochain_serialized_bytes::encode(&String::from("shorts"))
             .map_err(|e| wasm_error!(e.into()))?,
-    )))
+    ))
+    .into())
 }
 
-pub fn test_process_string(env: &Env, guest_ptr: GuestPtr, len: Len) -> Result<(), WasmError> {
+pub fn test_process_string(
+    env: &Env,
+    guest_ptr: GuestPtr,
+    len: Len,
+) -> Result<(), wasmer_engine::RuntimeError> {
     let string: String = env.consume_bytes_from_guest(guest_ptr, len)?;
     let processed_string = format!("host: {}", string);
     Ok(env.set_data(Ok::<String, WasmError>(processed_string))?)
 }
 
-pub fn test_process_struct(env: &Env, guest_ptr: GuestPtr, len: Len) -> Result<(), WasmError> {
+pub fn test_process_struct(
+    env: &Env,
+    guest_ptr: GuestPtr,
+    len: Len,
+) -> Result<(), wasmer_engine::RuntimeError> {
     let mut some_struct: SomeStruct = env.consume_bytes_from_guest(guest_ptr, len)?;
     some_struct.process();
     Ok(env.set_data(Ok::<SomeStruct, WasmError>(some_struct))?)
 }
 
-pub fn debug(_env: &Env, some_number: WasmSize) -> Result<(), WasmError> {
+pub fn debug(_env: &Env, some_number: WasmSize) -> Result<(), wasmer_engine::RuntimeError> {
     println!("debug {:?}", some_number);
     Ok(())
 }
 
-pub fn pages(env: &Env, _: WasmSize) -> Result<WasmSize, WasmError> {
+pub fn pages(env: &Env, _: WasmSize) -> Result<WasmSize, wasmer_engine::RuntimeError> {
     Ok(env
         .memory_ref()
         .ok_or(wasm_error!(WasmErrorInner::Memory))?
@@ -138,16 +147,16 @@ pub mod tests {
             guest::call(TestWasm::Test.instance(), "some_ret", ()).unwrap();
         assert_eq!(SomeStruct::new("foo".into()), some_struct,);
 
-        let err: Result<SomeStruct, WasmError> =
+        let err: Result<SomeStruct, wasmer_engine::RuntimeError> =
             guest::call(TestWasm::Test.instance(), "some_ret_err", ());
         match err {
-            Err(wasm_error) => assert_eq!(
+            Err(runtime_error) => assert_eq!(
                 WasmError {
                     file: "src/wasm.rs".into(),
                     line: 103,
                     error: WasmErrorInner::Guest("oh no!".into()),
                 },
-                wasm_error,
+                runtime_error.downcast().unwrap(),
             ),
             Ok(_) => unreachable!(),
         };
@@ -159,18 +168,18 @@ pub mod tests {
             guest::call(TestWasm::Test.instance(), "try_ptr_succeeds", ()).unwrap();
         assert_eq!(SomeStruct::new("foo".into()), success_result.unwrap());
 
-        let fail_result: Result<(), WasmError> =
+        let fail_result: Result<(), wasmer_engine::RuntimeError> =
             guest::call(TestWasm::Test.instance(), "try_ptr_fails_fast", ());
 
         match fail_result {
-            Err(wasm_error) => {
+            Err(runtime_error) => {
                 assert_eq!(
                     WasmError {
                         file: "src/wasm.rs".into(),
                         line: 132,
                         error: WasmErrorInner::Guest("it fails!: ()".into()),
                     },
-                    wasm_error,
+                    runtime_error.downcast().unwrap(),
                 );
             }
             Ok(_) => unreachable!(),

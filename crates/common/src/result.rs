@@ -97,3 +97,10 @@ impl From<core::convert::Infallible> for WasmError {
         unreachable!()
     }
 }
+
+#[cfg(not(target_arch = "wasm32"))]
+impl From<WasmError> for wasmer_engine::RuntimeError {
+    fn from(wasm_error: WasmError) -> wasmer_engine::RuntimeError {
+        wasmer_engine::RuntimeError::user(Box::new(wasm_error))
+    }
+}

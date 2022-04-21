@@ -19,7 +19,7 @@ pub struct Env {
 }
 
 impl Env {
-    pub fn set_data<I>(&self, input: I) -> Result<(), WasmError>
+    pub fn set_data<I>(&self, input: I) -> Result<(), wasmer_engine::RuntimeError>
     where
         I: serde::Serialize + std::fmt::Debug,
     {
@@ -28,7 +28,7 @@ impl Env {
         Ok(())
     }
 
-    pub fn move_data_to_guest(&self) -> Result<GuestPtrLen, WasmError> {
+    pub fn move_data_to_guest(&self) -> Result<GuestPtrLen, wasmer_engine::RuntimeError> {
         let guest_ptr: GuestPtr = match self
             .allocate_ref()
             .ok_or(wasm_error!(WasmErrorInner::Memory))?
@@ -42,7 +42,7 @@ impl Env {
             .map_err(|e| wasm_error!(WasmErrorInner::Host(e.to_string())))?[0]
         {
             Value::I32(guest_ptr) => guest_ptr as GuestPtr,
-            _ => return Err(wasm_error!(WasmErrorInner::PointerMap)),
+            _ => return Err(wasm_error!(WasmErrorInner::PointerMap).into()),
         };
         let len = self.data.read().len() as Len;
         crate::guest::write_bytes(
@@ -55,7 +55,11 @@ impl Env {
         Ok(merge_u64(guest_ptr, len))
     }
 
-    pub fn consume_bytes_from_guest<O>(&self, guest_ptr: GuestPtr, len: Len) -> Result<O, WasmError>
+    pub fn consume_bytes_from_guest<O>(
+        &self,
+        guest_ptr: GuestPtr,
+        len: Len,
+    ) -> Result<O, wasmer_engine::RuntimeError>
     where
         O: serde::de::DeserializeOwned + std::fmt::Debug,
     {
@@ -83,7 +87,7 @@ impl Env {
             Ok(v) => Ok(v),
             Err(e) => {
                 tracing::error!(input_type = std::any::type_name::<O>(), bytes = ?bytes, "{}", e);
-                Err(wasm_error!(e.into()))
+                Err(wasm_error!(e.into()).into())
             }
         }
     }

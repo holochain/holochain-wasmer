@@ -524,6 +524,8 @@ dependencies = [
  "serde",
  "serde_bytes",
  "thiserror",
+ "wasmer",
+ "wasmer-engine",
 ]
 
 [[package]]
@@ -1283,6 +1285,7 @@ dependencies = [
  "serde_bytes",
  "test_common",
  "wasmer",
+ "wasmer-engine",
 ]
 
 [[package]]

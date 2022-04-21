@@ -69,7 +69,11 @@ use holochain_wasmer_common::scopetracker::prelude::*;
 /// additional 4 byte prefix in order to read/write the real payload correctly
 ///
 /// @see read_bytes()
-pub fn write_bytes(memory: &Memory, guest_ptr: GuestPtr, slice: &[u8]) -> Result<(), WasmError> {
+pub fn write_bytes(
+    memory: &Memory,
+    guest_ptr: GuestPtr,
+    slice: &[u8],
+) -> Result<(), wasmer_engine::RuntimeError> {
     let ptr: WasmPtr<u8, Array> = WasmPtr::new(guest_ptr as _);
 
     // write the length prefix immediately before the slice at the guest pointer position
@@ -122,7 +126,11 @@ pub fn write_bytes(memory: &Memory, guest_ptr: GuestPtr, slice: &[u8]) -> Result
 ///
 /// we then read the length 3 bytes from position `5682` (ptr + 4) to get our originally written
 /// bytes of `[ 1_u8, 2_u8, 3_u8 ]`.
-pub fn read_bytes(memory: &Memory, guest_ptr: GuestPtr, len: Len) -> Result<Vec<u8>, WasmError> {
+pub fn read_bytes(
+    memory: &Memory,
+    guest_ptr: GuestPtr,
+    len: Len,
+) -> Result<Vec<u8>, wasmer_engine::RuntimeError> {
     let ptr: WasmPtr<u8, Array> = WasmPtr::new(guest_ptr as _);
     Ok(ptr
         .deref(memory, 0, len as _)
@@ -133,7 +141,11 @@ pub fn read_bytes(memory: &Memory, guest_ptr: GuestPtr, len: Len) -> Result<Vec<
 }
 
 /// Deserialize any DeserializeOwned type out of the guest from a guest pointer.
-pub fn from_guest_ptr<O>(memory: &Memory, guest_ptr: GuestPtr, len: Len) -> Result<O, WasmError>
+pub fn from_guest_ptr<O>(
+    memory: &Memory,
+    guest_ptr: GuestPtr,
+    len: Len,
+) -> Result<O, wasmer_engine::RuntimeError>
 where
     O: serde::de::DeserializeOwned + std::fmt::Debug,
 {
@@ -142,7 +154,7 @@ where
         Ok(v) => Ok(v),
         Err(e) => {
             tracing::error!(input_type = std::any::type_name::<O>(), bytes = ?bytes, "{}", e);
-            Err(wasm_error!(e.into()))
+            Err(wasm_error!(e.into()).into())
         }
     }
 }
@@ -150,7 +162,11 @@ where
 /// Host calling guest for the function named `call` with the given `payload` in a vector of bytes
 /// result is either a vector of bytes from the guest found at the location of the returned guest
 /// allocation pointer or a `WasmError`.
-pub fn call<I, O>(instance: Arc<Mutex<Instance>>, f: &str, input: I) -> Result<O, WasmError>
+pub fn call<I, O>(
+    instance: Arc<Mutex<Instance>>,
+    f: &str,
+    input: I,
+) -> Result<O, wasmer_engine::RuntimeError>
 where
     I: serde::Serialize + std::fmt::Debug,
     O: serde::de::DeserializeOwned + std::fmt::Debug,
@@ -225,18 +241,19 @@ where
                                 "{}",
                                 e
                             );
-                            Err(wasm_error!(e.into()))
+                            Err(wasm_error!(e.into()).into())
                         }
                     }
                 }
-                _ => return Err(WasmError { file, line, error }),
+                _ => return Err(WasmError { file, line, error }.into()),
             },
-            Err(e) => return Err(wasm_error!(WasmErrorInner::CallError(e.to_string()))),
+            Err(e) => return Err(wasm_error!(WasmErrorInner::CallError(e.to_string())).into()),
         },
     };
 
     // We ? here to return early WITHOUT calling deallocate.
     // The host MUST discard any wasm instance that errors at this point to avoid memory leaks.
+    // The WasmError in the result type here is for deserializing out of the guest.
     let return_value: Result<O, WasmError> = from_guest_ptr(
         instance
             .exports
@@ -264,5 +281,5 @@ where
         ])
         .map_err(|e| wasm_error!(WasmErrorInner::CallError(format!("{:?}", e))))?;
 
-    return_value
+    return_value.map_err(|e| e.into())
 }

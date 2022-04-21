@@ -111,7 +111,11 @@ impl PlruCache for SerializedModuleCache {
 }
 
 impl SerializedModuleCache {
-    fn get_with_build_cache(&mut self, key: CacheKey, wasm: &[u8]) -> Result<Module, WasmError> {
+    fn get_with_build_cache(
+        &mut self,
+        key: CacheKey,
+        wasm: &[u8],
+    ) -> Result<Module, wasmer_engine::RuntimeError> {
         let store = Store::new(&Universal::new(Cranelift::default()).engine());
         let module = Module::from_binary(&store, wasm)
             .map_err(|e| wasm_error!(WasmErrorInner::Compile(e.to_string())))?;
@@ -122,7 +126,11 @@ impl SerializedModuleCache {
         Ok(module)
     }
 
-    pub fn get(&mut self, key: CacheKey, wasm: &[u8]) -> Result<Module, WasmError> {
+    pub fn get(
+        &mut self,
+        key: CacheKey,
+        wasm: &[u8],
+    ) -> Result<Module, wasmer_engine::RuntimeError> {
         match self.cache.get(&key) {
             Some(serialized_module) => {
                 let store = Store::new(&Universal::new(Cranelift::default()).engine());
@@ -170,12 +178,16 @@ impl ModuleCache {
         &mut self,
         key: CacheKey,
         wasm: &[u8],
-    ) -> Result<Arc<Module>, WasmError> {
+    ) -> Result<Arc<Module>, wasmer_engine::RuntimeError> {
         let module = SERIALIZED_MODULE_CACHE.write().get(key, wasm)?;
         Ok(self.put_item(key, Arc::new(module)))
     }
 
-    pub fn get(&mut self, key: CacheKey, wasm: &[u8]) -> Result<Arc<Module>, WasmError> {
+    pub fn get(
+        &mut self,
+        key: CacheKey,
+        wasm: &[u8],
+    ) -> Result<Arc<Module>, wasmer_engine::RuntimeError> {
         match if self.should_bust_leak() {
             self.remove_item(&key)
         } else {
