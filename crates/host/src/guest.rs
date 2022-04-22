@@ -198,9 +198,11 @@ where
 
     // Write the input payload into the guest at the offset specified by the allocation.
     write_bytes(
-        instance
+        &instance
             .exports
-            .get_memory("memory")
+            // potentially snake oil
+            // https://github.com/wasmerio/wasmer/issues/2780#issuecomment-1054452629
+            .get_with_generics_weak("memory")
             .map_err(|_| wasm_error!(WasmErrorInner::Memory))?,
         guest_input_ptr,
         &payload,
@@ -255,9 +257,11 @@ where
     // The host MUST discard any wasm instance that errors at this point to avoid memory leaks.
     // The WasmError in the result type here is for deserializing out of the guest.
     let return_value: Result<O, WasmError> = from_guest_ptr(
-        instance
+        &instance
             .exports
-            .get_memory("memory")
+            // maybe snake oil but:
+            // https://github.com/wasmerio/wasmer/issues/2780#issuecomment-1054452629
+            .get_with_generics_weak("memory")
             .map_err(|_| wasm_error!(WasmErrorInner::Memory))?,
         guest_return_ptr,
         len,

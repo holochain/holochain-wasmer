@@ -162,16 +162,17 @@ impl ModuleCache {
     }
 
     pub fn should_bust_leak(&mut self) -> bool {
-        if self
-            .leak_buster
-            .fetch_add(1, std::sync::atomic::Ordering::Relaxed)
-            > 100
-        {
-            self.reset_leak_buster();
-            true
-        } else {
-            false
-        }
+        false
+        // if self
+        //     .leak_buster
+        //     .fetch_add(1, std::sync::atomic::Ordering::Relaxed)
+        //     > 100
+        // {
+        //     self.reset_leak_buster();
+        //     true
+        // } else {
+        //     false
+        // }
     }
 
     fn get_with_build_cache(
