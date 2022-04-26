@@ -4,7 +4,7 @@ pub mod wasms;
 use holochain_wasmer_host::prelude::*;
 use test_common::SomeStruct;
 
-pub fn short_circuit(_: &Env, _: GuestPtr, _: Len) -> Result<(), wasmer_engine::RuntimeError> {
+pub fn short_circuit(_: &Env, _: GuestPtr, _: Len) -> Result<u64, wasmer_engine::RuntimeError> {
     Err(wasm_error!(WasmErrorInner::HostShortCircuit(
         holochain_serialized_bytes::encode(&String::from("shorts"))
             .map_err(|e| wasm_error!(e.into()))?,
@@ -16,25 +16,25 @@ pub fn test_process_string(
     env: &Env,
     guest_ptr: GuestPtr,
     len: Len,
-) -> Result<(), wasmer_engine::RuntimeError> {
+) -> Result<u64, wasmer_engine::RuntimeError> {
     let string: String = env.consume_bytes_from_guest(guest_ptr, len)?;
     let processed_string = format!("host: {}", string);
-    Ok(env.set_data(Ok::<String, WasmError>(processed_string))?)
+    Ok(env.move_data_to_guest(Ok::<String, WasmError>(processed_string))?)
 }
 
 pub fn test_process_struct(
     env: &Env,
     guest_ptr: GuestPtr,
     len: Len,
-) -> Result<(), wasmer_engine::RuntimeError> {
+) -> Result<u64, wasmer_engine::RuntimeError> {
     let mut some_struct: SomeStruct = env.consume_bytes_from_guest(guest_ptr, len)?;
     some_struct.process();
-    Ok(env.set_data(Ok::<SomeStruct, WasmError>(some_struct))?)
+    Ok(env.move_data_to_guest(Ok::<SomeStruct, WasmError>(some_struct))?)
 }
 
-pub fn debug(_env: &Env, some_number: WasmSize) -> Result<(), wasmer_engine::RuntimeError> {
+pub fn debug(env: &Env, some_number: WasmSize) -> Result<u64, wasmer_engine::RuntimeError> {
     println!("debug {:?}", some_number);
-    Ok(())
+    Ok(env.move_data_to_guest(())?)
 }
 
 pub fn pages(env: &Env, _: WasmSize) -> Result<WasmSize, wasmer_engine::RuntimeError> {

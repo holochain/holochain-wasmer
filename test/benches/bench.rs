@@ -42,11 +42,6 @@ pub fn wasm_instance(c: &mut Criterion) {
                 let env = Env::default();
                 let import_object: wasmer::ImportObject = imports! {
                     "env" => {
-                        "__import_data" => Function::new_native_with_env(
-                            module.store(),
-                            env.clone(),
-                            holochain_wasmer_host::import::__import_data
-                        ),
                         "__short_circuit" => Function::new_native_with_env(
                             module.store(),
                             env.clone(),

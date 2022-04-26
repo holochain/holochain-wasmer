@@ -6,15 +6,11 @@ pub use holochain_wasmer_common::*;
 use crate::allocation::consume_bytes;
 use crate::allocation::write_bytes;
 
-extern "C" {
-    fn __import_data() -> u64;
-}
-
 #[macro_export]
 macro_rules! host_externs {
     ( $( $func_name:ident ),* ) => {
         extern "C" {
-            $( pub fn $func_name(guest_allocation_ptr: $crate::GuestPtr, len: $crate::Len); )*
+            $( pub fn $func_name(guest_allocation_ptr: $crate::GuestPtr, len: $crate::Len) -> u64; )*
         }
     };
 }
@@ -51,7 +47,7 @@ where
 /// - Return a Result of the deserialized output type O
 #[inline(always)]
 pub fn host_call<I, O>(
-    f: unsafe extern "C" fn(GuestPtr, Len),
+    f: unsafe extern "C" fn(GuestPtr, Len) -> u64,
     input: I,
 ) -> Result<O, crate::WasmError>
 where
@@ -64,13 +60,11 @@ where
     let input_len = input_bytes.len();
     let input_guest_ptr = crate::allocation::write_bytes(input_bytes);
 
-    let (output_guest_ptr, output_len): (GuestPtr, Len) = unsafe {
+    let (output_guest_ptr, output_len): (GuestPtr, Len) = split_u64(unsafe {
         // This is unsafe because all host function calls in wasm are unsafe.
         // The host will call __deallocate for us to free the leaked bytes from the input.
-        f(input_guest_ptr, input_len as Len);
-        // Get the guest pointer to the result of calling the above function on the host.
-        split_u64(__import_data())
-    };
+        f(input_guest_ptr, input_len as Len)
+    });
 
     // Deserialize the host bytes into the output type.
     let bytes: Vec<u8> = crate::allocation::consume_bytes(output_guest_ptr, output_len);
