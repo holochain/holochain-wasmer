@@ -6,7 +6,6 @@ use once_cell::sync::Lazy;
 use parking_lot::Mutex;
 use parking_lot::RwLock;
 use std::collections::BTreeMap;
-use std::sync::atomic::AtomicUsize;
 use std::sync::Arc;
 use wasmer::Cranelift;
 use wasmer::Module;
@@ -149,32 +148,12 @@ pub struct ModuleCache {
     plru: MicroCache,
     key_map: PlruKeyMap,
     cache: BTreeMap<CacheKey, Arc<Module>>,
-    leak_buster: AtomicUsize,
 }
 
 pub static MODULE_CACHE: Lazy<RwLock<ModuleCache>> =
     Lazy::new(|| RwLock::new(ModuleCache::default()));
 
 impl ModuleCache {
-    pub fn reset_leak_buster(&mut self) {
-        self.leak_buster
-            .store(0, std::sync::atomic::Ordering::Relaxed);
-    }
-
-    pub fn should_bust_leak(&mut self) -> bool {
-        false
-        // if self
-        //     .leak_buster
-        //     .fetch_add(1, std::sync::atomic::Ordering::Relaxed)
-        //     > 100
-        // {
-        //     self.reset_leak_buster();
-        //     true
-        // } else {
-        //     false
-        // }
-    }
-
     fn get_with_build_cache(
         &mut self,
         key: CacheKey,
@@ -189,11 +168,8 @@ impl ModuleCache {
         key: CacheKey,
         wasm: &[u8],
     ) -> Result<Arc<Module>, wasmer_engine::RuntimeError> {
-        match if self.should_bust_leak() {
-            self.remove_item(&key)
-        } else {
-            self.get_item(&key)
-        } {
+        match self.get_item(&key)
+        {
             Some(module) => Ok(module),
             None => self.get_with_build_cache(key, wasm),
         }

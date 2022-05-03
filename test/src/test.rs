@@ -52,6 +52,11 @@ pub mod tests {
     use test_common::StringType;
     use wasms::TestWasm;
 
+    #[ctor::ctor]
+    fn before() {
+        env_logger::init();
+    }
+
     #[test]
     fn short_circuit() {
         let result: String = guest::call(TestWasm::Test.instance(), "short_circuit", ()).unwrap();

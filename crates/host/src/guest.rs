@@ -71,15 +71,14 @@ pub fn write_bytes(
     guest_ptr: GuestPtr,
     slice: &[u8],
 ) -> Result<(), wasmer_engine::RuntimeError> {
-    let ptr: WasmPtr<u8, Array> = WasmPtr::new(guest_ptr as _);
-
     #[cfg(feature = "debug_memory")]
-    trace!(
+    tracing::debug!(
         "writing bytes from host to guest at: {} {}",
         guest_ptr as u32,
         slice.len() as u32
     );
 
+    let ptr: WasmPtr<u8, Array> = WasmPtr::new(guest_ptr as _);
     // write the length prefix immediately before the slice at the guest pointer position
     for (byte, cell) in slice.iter().zip(
         ptr.deref(memory, 0 as GuestPtr, slice.len() as Len)
@@ -135,6 +134,13 @@ pub fn read_bytes(
     guest_ptr: GuestPtr,
     len: Len,
 ) -> Result<Vec<u8>, wasmer_engine::RuntimeError> {
+    #[cfg(feature = "debug_memory")]
+    tracing::debug!(
+        "reading bytes from guest to host at: {} {}",
+        guest_ptr as u32,
+        len as u32
+    );
+
     let ptr: WasmPtr<u8, Array> = WasmPtr::new(guest_ptr as _);
     Ok(ptr
         .deref(memory, 0, len as _)
