@@ -550,7 +550,7 @@ dependencies = [
 
 [[package]]
 name = "holochain_wasmer_common"
-version = "0.0.78"
+version = "0.0.79"
 dependencies = [
  "holochain_serialized_bytes",
  "serde",
@@ -562,7 +562,7 @@ dependencies = [
 
 [[package]]
 name = "holochain_wasmer_host"
-version = "0.0.78"
+version = "0.0.79"
 dependencies = [
  "bimap",
  "holochain_serialized_bytes",
@@ -1323,7 +1323,7 @@ dependencies = [
 
 [[package]]
 name = "test"
-version = "0.0.78"
+version = "0.0.79"
 dependencies = [
  "criterion",
  "ctor",
@@ -1342,7 +1342,7 @@ dependencies = [
 
 [[package]]
 name = "test_common"
-version = "0.0.78"
+version = "0.0.79"
 dependencies = [
  "holochain_wasmer_common",
  "serde",

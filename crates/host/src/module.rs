@@ -168,8 +168,7 @@ impl ModuleCache {
         key: CacheKey,
         wasm: &[u8],
     ) -> Result<Arc<Module>, wasmer_engine::RuntimeError> {
-        match self.get_item(&key)
-        {
+        match self.get_item(&key) {
             Some(module) => Ok(module),
             None => self.get_with_build_cache(key, wasm),
         }
