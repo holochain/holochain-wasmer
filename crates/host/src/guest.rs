@@ -7,9 +7,6 @@ use wasmer::Instance;
 use wasmer::Memory;
 use wasmer::Value;
 
-#[cfg(feature = "debug_memory_leak")]
-use holochain_wasmer_common::scopetracker::prelude::*;
-
 /// write a slice of bytes to the guest in a safe-ish way
 ///
 /// a naive approach would look like this:
@@ -75,6 +72,13 @@ pub fn write_bytes(
     slice: &[u8],
 ) -> Result<(), wasmer_engine::RuntimeError> {
     let ptr: WasmPtr<u8, Array> = WasmPtr::new(guest_ptr as _);
+
+    #[cfg(feature = "debug_memory")]
+    trace!(
+        "writing bytes from host to guest at: {} {}",
+        guest_ptr as u32,
+        slice.len() as u32
+    );
 
     // write the length prefix immediately before the slice at the guest pointer position
     for (byte, cell) in slice.iter().zip(
@@ -171,9 +175,6 @@ where
     I: serde::Serialize + std::fmt::Debug,
     O: serde::de::DeserializeOwned + std::fmt::Debug,
 {
-    #[cfg(feature = "debug_memory_leak")]
-    mem_guard!("host::guest::call");
-
     let instance = instance.lock();
     // The guest will use the same crate for decoding if it uses the wasm common crate.
     let payload: Vec<u8> =

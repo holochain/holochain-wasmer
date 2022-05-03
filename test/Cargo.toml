@@ -5,7 +5,7 @@ authors = [ "thedavidmeister", "thedavidmeister@gmail.com" ]
 edition = "2021"
 
 [dependencies]
-holochain_wasmer_common = { path = "../crates/common", features = [ "scopetracker_allocator" ]}
+holochain_wasmer_common = { path = "../crates/common", features = []}
 holochain_wasmer_host = { path = "../crates/host" }
 holochain_serialized_bytes = "=0.0.51"
 serde = "1.0.136"

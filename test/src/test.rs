@@ -49,7 +49,6 @@ pub fn pages(env: &Env, _: WasmSize) -> Result<WasmSize, wasmer_engine::RuntimeE
 pub mod tests {
     use super::*;
     use crate::wasms;
-    use holochain_wasmer_common::scopetracker::ScopeTracker;
     use test_common::StringType;
     use wasms::TestWasm;
 
@@ -184,116 +183,5 @@ pub mod tests {
             }
             Ok(_) => unreachable!(),
         };
-    }
-
-    // FIXME: on macos, the leak detection doesn't work reliably
-    #[cfg(not(target_os = "macos"))]
-    #[test]
-    fn mem_leak() {
-        let mut leaked = vec![];
-        let mut leaked_workaround = vec![];
-
-        let input = test_common::StringType::from(String::new());
-
-        #[derive(Debug)]
-        #[allow(dead_code)]
-        struct Leaked {
-            runs: usize,
-            num_threads: usize,
-            bytes: isize,
-            // kb: isize,
-            mb: f64,
-            workaround_leak: bool,
-        }
-
-        let outer_guard = mem_guard!("test::mem_leak::outer");
-        let _instance = TestWasm::Test.instance();
-
-        for num_thread in &[20] {
-            for runs in &[100, 400] {
-                for workaround_leak in &[true, false] {
-                    let guard = mem_guard!("test::mem_leak::inner");
-
-                    for _ in 0..*runs {
-                        {
-                            if !*workaround_leak {
-                                TestWasm::impair_leak_workaround();
-                            }
-
-                            let mut threads = vec![];
-
-                            for _ in 0..*num_thread {
-                                let input = input.clone();
-                                threads.push(std::thread::spawn(move || {
-                                    let _: test_common::StringType =
-                                        holochain_wasmer_host::guest::call(
-                                            TestWasm::Test.instance(),
-                                            "process_string",
-                                            &input,
-                                        )
-                                        .unwrap();
-                                }));
-                            }
-
-                            for thread in threads {
-                                thread.join().unwrap();
-                            }
-                        }
-                    }
-
-                    let leaked_bytes = guard.leaked();
-                    let leaked_struct = Leaked {
-                        runs: *runs,
-                        num_threads: *num_thread,
-                        bytes: leaked_bytes,
-                        mb: leaked_bytes as f64 / 1_000_000.0,
-                        workaround_leak: *workaround_leak,
-                    };
-                    println!("{:?}", leaked_struct);
-
-                    if *workaround_leak {
-                        leaked_workaround.push(leaked_struct);
-                    } else {
-                        leaked.push(leaked_struct);
-                    }
-
-                    TestWasm::reset_module_cache();
-                }
-            }
-        }
-
-        TestWasm::reset_module_cache();
-
-        println!(
-            "overall leaked despite module cache reset: {}",
-            outer_guard.leaked() as f64 / 1_000_000.0
-        );
-
-        let threshold = 20.0;
-        let max_leak_with_workaround = leaked_workaround
-            .iter()
-            .max_by(|a, b| a.bytes.cmp(&b.bytes))
-            .unwrap()
-            .mb;
-
-        assert!(
-            max_leak_with_workaround < threshold,
-            "expected all cases with the workaround to leak less than {}mb",
-            threshold
-        );
-
-        // on windows the leak seems to be less severe
-        // FIXME: on macos, the leak detection doesn't work reliably
-        #[cfg(target_os = "linux")]
-        assert!(
-            leaked
-                .iter()
-                .min_by(|a, b| a.bytes.cmp(&b.bytes))
-                .unwrap()
-                .mb
-                > threshold,
-            "expected all cases without the workaround to leak more than {}mb",
-            threshold
-        );
     }
 }

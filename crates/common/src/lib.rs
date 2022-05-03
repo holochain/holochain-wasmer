@@ -1,6 +1,4 @@
 pub mod result;
-#[cfg(feature = "scopetracker_allocator")]
-pub mod scopetracker;
 
 pub use holochain_serialized_bytes::prelude::*;
 pub use result::*;
