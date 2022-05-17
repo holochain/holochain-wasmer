@@ -39,6 +39,8 @@ pub enum WasmErrorInner {
     Compile(String),
 
     CallError(String),
+
+    UninitializedSerializedModuleCache,
 }
 
 impl From<std::num::TryFromIntError> for WasmErrorInner {

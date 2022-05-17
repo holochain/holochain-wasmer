@@ -58,6 +58,14 @@ pub mod tests {
     }
 
     #[test]
+    fn infinite_loop() {
+        // Instead of looping forever we want the metering to kick in and trap
+        // the execution into an unreachable error.
+        let result: Result<(), _> = guest::call(TestWasm::Test.instance(), "loop_forever", ());
+        assert!(result.is_err());
+    }
+
+    #[test]
     fn short_circuit() {
         let result: String = guest::call(TestWasm::Test.instance(), "short_circuit", ()).unwrap();
         assert_eq!(result, String::from("shorts"));

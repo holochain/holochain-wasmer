@@ -1338,6 +1338,7 @@ dependencies = [
  "test_common",
  "wasmer",
  "wasmer-engine",
+ "wasmer-middlewares",
 ]
 
 [[package]]
@@ -1668,6 +1669,18 @@ dependencies = [
  "wasmer-types",
  "wasmer-vm",
  "winapi",
+]
+
+[[package]]
+name = "wasmer-middlewares"
+version = "2.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "be816528dd62f037ae935977b643bb4237e10be9e32826e2f3eb1f911eaccc97"
+dependencies = [
+ "loupe",
+ "wasmer",
+ "wasmer-types",
+ "wasmer-vm",
 ]
 
 [[package]]

@@ -1,7 +1,11 @@
 use crate::import::import_object;
+use crate::wasmparser::Operator;
+use holochain_wasmer_host::module::SerializedModuleCache;
+use holochain_wasmer_host::module::SERIALIZED_MODULE_CACHE;
 use holochain_wasmer_host::prelude::*;
 use parking_lot::Mutex;
 use std::sync::Arc;
+use wasmer_middlewares::Metering;
 
 pub enum TestWasm {
     Empty,
@@ -51,7 +55,40 @@ impl TestWasm {
     }
 
     pub fn module(&self) -> Arc<Module> {
-        MODULE_CACHE.write().get(self.key(), self.bytes()).unwrap()
+        match MODULE_CACHE.write().get(self.key(), self.bytes()) {
+            Ok(v) => v,
+            Err(runtime_error) => match runtime_error.downcast::<WasmError>() {
+                Ok(WasmError { error, .. }) => match error {
+                    WasmErrorInner::UninitializedSerializedModuleCache => {
+                        {
+                            let cranelift_fn = || {
+                                let cost_function = |_operator: &Operator| -> u64 { 1 };
+                                let metering = Arc::new(Metering::new(9000000000, cost_function));
+                                let mut cranelift = Cranelift::default();
+                                cranelift.push_middleware(metering);
+                                cranelift
+                            };
+
+                            assert!(SERIALIZED_MODULE_CACHE
+                                .set(parking_lot::RwLock::new(
+                                    SerializedModuleCache::default_with_cranelift(cranelift_fn)
+                                ))
+                                .is_ok());
+                        }
+                        Arc::new(
+                            SERIALIZED_MODULE_CACHE
+                                .get()
+                                .unwrap()
+                                .write()
+                                .get(self.key(), self.bytes())
+                                .unwrap(),
+                        )
+                    }
+                    _ => unreachable!(),
+                },
+                _ => unreachable!(),
+            },
+        }
     }
 
     pub fn instance(&self) -> Arc<Mutex<Instance>> {
@@ -59,9 +96,5 @@ impl TestWasm {
         let env = Env::default();
         let import_object: ImportObject = import_object(&module.store(), &env);
         Arc::new(Mutex::new(Instance::new(&module, &import_object).unwrap()))
-    }
-
-    pub fn reset_module_cache() {
-        *MODULE_CACHE.write() = Default::default();
     }
 }

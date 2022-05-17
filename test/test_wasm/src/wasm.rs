@@ -132,3 +132,8 @@ pub extern "C" fn try_ptr_fails_fast(guest_ptr: GuestPtr, len: Len) -> GuestPtrL
     let result: Result<(), WasmError> = Ok(try_ptr!(Err(()), "it fails!"));
     return_ptr(result)
 }
+
+#[no_mangle]
+pub extern "C" fn loop_forever(_guest_ptr: GuestPtr, _len: Len) -> GuestPtrLen {
+    loop {}
+}
