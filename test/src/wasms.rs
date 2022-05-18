@@ -63,7 +63,7 @@ impl TestWasm {
                         {
                             let cranelift_fn = || {
                                 let cost_function = |_operator: &Operator| -> u64 { 1 };
-                                let metering = Arc::new(Metering::new(9000000000, cost_function));
+                                let metering = Arc::new(Metering::new(10000000000, cost_function));
                                 let mut cranelift = Cranelift::default();
                                 cranelift.canonicalize_nans(true).push_middleware(metering);
                                 cranelift
