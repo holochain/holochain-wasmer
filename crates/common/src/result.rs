@@ -39,6 +39,8 @@ pub enum WasmErrorInner {
     Compile(String),
 
     CallError(String),
+
+    UninitializedSerializedModuleCache,
 }
 
 impl From<std::num::TryFromIntError> for WasmErrorInner {
@@ -95,5 +97,12 @@ impl std::fmt::Display for WasmError {
 impl From<core::convert::Infallible> for WasmError {
     fn from(_: core::convert::Infallible) -> WasmError {
         unreachable!()
+    }
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+impl From<WasmError> for wasmer_engine::RuntimeError {
+    fn from(wasm_error: WasmError) -> wasmer_engine::RuntimeError {
+        wasmer_engine::RuntimeError::user(Box::new(wasm_error))
     }
 }

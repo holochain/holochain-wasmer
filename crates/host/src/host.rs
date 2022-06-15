@@ -1,6 +1,5 @@
 pub mod env;
 pub mod guest;
-pub mod import;
 pub mod module;
 /// Adapted from: https://raw.githubusercontent.com/ticki/plru/master/src/lib.rs
 /// Updated for latest stable rust.

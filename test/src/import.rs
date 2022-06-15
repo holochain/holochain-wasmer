@@ -5,26 +5,9 @@ use crate::test_process_string;
 use crate::test_process_struct;
 use holochain_wasmer_host::prelude::*;
 
-pub fn memory_only(store: &Store, env: &Env) -> ImportObject {
-    imports! {
-        "env" => {
-            "__import_data" => Function::new_native_with_env(
-                store,
-                env.to_owned(),
-                holochain_wasmer_host::import::__import_data
-            ),
-        },
-    }
-}
-
 pub fn import_object(store: &Store, env: &Env) -> ImportObject {
     imports! {
         "env" => {
-            "__import_data" => Function::new_native_with_env(
-                store,
-                env.clone(),
-                holochain_wasmer_host::import::__import_data
-            ),
             "__short_circuit" => Function::new_native_with_env(
                 store,
                 env.clone(),

@@ -4,31 +4,40 @@ pub mod wasms;
 use holochain_wasmer_host::prelude::*;
 use test_common::SomeStruct;
 
-pub fn short_circuit(_: &Env, _: GuestPtr, _: Len) -> Result<(), WasmError> {
-    RuntimeError::raise(Box::new(wasm_error!(WasmErrorInner::HostShortCircuit(
+pub fn short_circuit(_: &Env, _: GuestPtr, _: Len) -> Result<u64, wasmer_engine::RuntimeError> {
+    Err(wasm_error!(WasmErrorInner::HostShortCircuit(
         holochain_serialized_bytes::encode(&String::from("shorts"))
             .map_err(|e| wasm_error!(e.into()))?,
-    ))));
+    ))
+    .into())
 }
 
-pub fn test_process_string(env: &Env, guest_ptr: GuestPtr, len: Len) -> Result<(), WasmError> {
+pub fn test_process_string(
+    env: &Env,
+    guest_ptr: GuestPtr,
+    len: Len,
+) -> Result<u64, wasmer_engine::RuntimeError> {
     let string: String = env.consume_bytes_from_guest(guest_ptr, len)?;
     let processed_string = format!("host: {}", string);
-    Ok(env.set_data(Ok::<String, WasmError>(processed_string))?)
+    Ok(env.move_data_to_guest(Ok::<String, WasmError>(processed_string))?)
 }
 
-pub fn test_process_struct(env: &Env, guest_ptr: GuestPtr, len: Len) -> Result<(), WasmError> {
+pub fn test_process_struct(
+    env: &Env,
+    guest_ptr: GuestPtr,
+    len: Len,
+) -> Result<u64, wasmer_engine::RuntimeError> {
     let mut some_struct: SomeStruct = env.consume_bytes_from_guest(guest_ptr, len)?;
     some_struct.process();
-    Ok(env.set_data(Ok::<SomeStruct, WasmError>(some_struct))?)
+    Ok(env.move_data_to_guest(Ok::<SomeStruct, WasmError>(some_struct))?)
 }
 
-pub fn debug(_env: &Env, some_number: WasmSize) -> Result<(), WasmError> {
+pub fn debug(env: &Env, some_number: WasmSize) -> Result<u64, wasmer_engine::RuntimeError> {
     println!("debug {:?}", some_number);
-    Ok(())
+    Ok(env.move_data_to_guest(())?)
 }
 
-pub fn pages(env: &Env, _: WasmSize) -> Result<WasmSize, WasmError> {
+pub fn pages(env: &Env, _: WasmSize) -> Result<WasmSize, wasmer_engine::RuntimeError> {
     Ok(env
         .memory_ref()
         .ok_or(wasm_error!(WasmErrorInner::Memory))?
@@ -40,9 +49,21 @@ pub fn pages(env: &Env, _: WasmSize) -> Result<WasmSize, WasmError> {
 pub mod tests {
     use super::*;
     use crate::wasms;
-    use holochain_wasmer_common::scopetracker::ScopeTracker;
     use test_common::StringType;
     use wasms::TestWasm;
+
+    #[ctor::ctor]
+    fn before() {
+        env_logger::init();
+    }
+
+    #[test]
+    fn infinite_loop() {
+        // Instead of looping forever we want the metering to kick in and trap
+        // the execution into an unreachable error.
+        let result: Result<(), _> = guest::call(TestWasm::Test.instance(), "loop_forever", ());
+        assert!(result.is_err());
+    }
 
     #[test]
     fn short_circuit() {
@@ -138,16 +159,16 @@ pub mod tests {
             guest::call(TestWasm::Test.instance(), "some_ret", ()).unwrap();
         assert_eq!(SomeStruct::new("foo".into()), some_struct,);
 
-        let err: Result<SomeStruct, WasmError> =
+        let err: Result<SomeStruct, wasmer_engine::RuntimeError> =
             guest::call(TestWasm::Test.instance(), "some_ret_err", ());
         match err {
-            Err(wasm_error) => assert_eq!(
+            Err(runtime_error) => assert_eq!(
                 WasmError {
                     file: "src/wasm.rs".into(),
                     line: 103,
                     error: WasmErrorInner::Guest("oh no!".into()),
                 },
-                wasm_error,
+                runtime_error.downcast().unwrap(),
             ),
             Ok(_) => unreachable!(),
         };
@@ -159,131 +180,21 @@ pub mod tests {
             guest::call(TestWasm::Test.instance(), "try_ptr_succeeds", ()).unwrap();
         assert_eq!(SomeStruct::new("foo".into()), success_result.unwrap());
 
-        let fail_result: Result<(), WasmError> =
+        let fail_result: Result<(), wasmer_engine::RuntimeError> =
             guest::call(TestWasm::Test.instance(), "try_ptr_fails_fast", ());
 
         match fail_result {
-            Err(wasm_error) => {
+            Err(runtime_error) => {
                 assert_eq!(
                     WasmError {
                         file: "src/wasm.rs".into(),
                         line: 132,
                         error: WasmErrorInner::Guest("it fails!: ()".into()),
                     },
-                    wasm_error,
+                    runtime_error.downcast().unwrap(),
                 );
             }
             Ok(_) => unreachable!(),
         };
-    }
-
-    // FIXME: on macos, the leak detection doesn't work reliably
-    #[cfg(not(target_os = "macos"))]
-    #[test]
-    fn mem_leak() {
-        let mut leaked = vec![];
-        let mut leaked_workaround = vec![];
-
-        let input = test_common::StringType::from(String::new());
-
-        #[derive(Debug)]
-        struct Leaked {
-            runs: usize,
-            num_threads: usize,
-            bytes: isize,
-            // kb: isize,
-            mb: f64,
-            workaround_leak: bool,
-        }
-
-        let outer_guard = mem_guard!("test::mem_leak::outer");
-        let _instance = TestWasm::Test.instance();
-
-        for num_thread in &[20] {
-            for runs in &[100, 400] {
-                for workaround_leak in &[true, false] {
-                    let guard = mem_guard!("test::mem_leak::inner");
-
-                    for _ in 0..*runs {
-                        {
-                            if !*workaround_leak {
-                                TestWasm::impair_leak_workaround();
-                            }
-
-                            let mut threads = vec![];
-
-                            for _ in 0..*num_thread {
-                                let input = input.clone();
-                                threads.push(std::thread::spawn(move || {
-                                    let _: test_common::StringType =
-                                        holochain_wasmer_host::guest::call(
-                                            TestWasm::Test.instance(),
-                                            "process_string",
-                                            &input,
-                                        )
-                                        .unwrap();
-                                }));
-                            }
-
-                            for thread in threads {
-                                thread.join().unwrap();
-                            }
-                        }
-                    }
-
-                    let leaked_bytes = guard.leaked();
-                    let leaked_struct = Leaked {
-                        runs: *runs,
-                        num_threads: *num_thread,
-                        bytes: leaked_bytes,
-                        mb: leaked_bytes as f64 / 1_000_000.0,
-                        workaround_leak: *workaround_leak,
-                    };
-                    println!("{:?}", leaked_struct);
-
-                    if *workaround_leak {
-                        leaked_workaround.push(leaked_struct);
-                    } else {
-                        leaked.push(leaked_struct);
-                    }
-
-                    TestWasm::reset_module_cache();
-                }
-            }
-        }
-
-        TestWasm::reset_module_cache();
-
-        println!(
-            "overall leaked despite module cache reset: {}",
-            outer_guard.leaked() as f64 / 1_000_000.0
-        );
-
-        let threshold = 20.0;
-        let max_leak_with_workaround = leaked_workaround
-            .iter()
-            .max_by(|a, b| a.bytes.cmp(&b.bytes))
-            .unwrap()
-            .mb;
-
-        assert!(
-            max_leak_with_workaround < threshold,
-            "expected all cases with the workaround to leak less than {}mb",
-            threshold
-        );
-
-        // on windows the leak seems to be less severe
-        // FIXME: on macos, the leak detection doesn't work reliably
-        #[cfg(target_os = "linux")]
-        assert!(
-            leaked
-                .iter()
-                .min_by(|a, b| a.bytes.cmp(&b.bytes))
-                .unwrap()
-                .mb
-                > threshold,
-            "expected all cases without the workaround to leak more than {}mb",
-            threshold
-        );
     }
 }

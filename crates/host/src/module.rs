@@ -2,13 +2,11 @@ use crate::plru::MicroCache;
 use crate::prelude::*;
 use bimap::BiMap;
 use holochain_wasmer_common::WasmError;
-use once_cell::sync::Lazy;
+use once_cell::sync::{Lazy, OnceCell};
 use parking_lot::Mutex;
 use parking_lot::RwLock;
 use std::collections::BTreeMap;
-use std::sync::atomic::AtomicUsize;
 use std::sync::Arc;
-use wasmer::Cranelift;
 use wasmer::Module;
 use wasmer::Store;
 use wasmer::Universal;
@@ -76,15 +74,14 @@ pub trait PlruCache {
     }
 }
 
-#[derive(Default)]
 pub struct SerializedModuleCache {
     plru: MicroCache,
     key_map: PlruKeyMap,
     cache: BTreeMap<CacheKey, Arc<SerializedModule>>,
+    cranelift: fn() -> Cranelift,
 }
 
-pub static SERIALIZED_MODULE_CACHE: Lazy<RwLock<SerializedModuleCache>> =
-    Lazy::new(|| RwLock::new(SerializedModuleCache::default()));
+pub static SERIALIZED_MODULE_CACHE: OnceCell<RwLock<SerializedModuleCache>> = OnceCell::new();
 
 impl PlruCache for SerializedModuleCache {
     type Item = SerializedModule;
@@ -111,8 +108,20 @@ impl PlruCache for SerializedModuleCache {
 }
 
 impl SerializedModuleCache {
-    fn get_with_build_cache(&mut self, key: CacheKey, wasm: &[u8]) -> Result<Module, WasmError> {
-        let store = Store::new(&Universal::new(Cranelift::default()).engine());
+    pub fn default_with_cranelift(cranelift: fn() -> Cranelift) -> Self {
+        Self {
+            cranelift,
+            plru: MicroCache::default(),
+            key_map: PlruKeyMap::default(),
+            cache: BTreeMap::default(),
+        }
+    }
+    fn get_with_build_cache(
+        &mut self,
+        key: CacheKey,
+        wasm: &[u8],
+    ) -> Result<Module, wasmer_engine::RuntimeError> {
+        let store = Store::new(&Universal::new((self.cranelift)()).engine());
         let module = Module::from_binary(&store, wasm)
             .map_err(|e| wasm_error!(WasmErrorInner::Compile(e.to_string())))?;
         let serialized_module = module
@@ -122,10 +131,14 @@ impl SerializedModuleCache {
         Ok(module)
     }
 
-    pub fn get(&mut self, key: CacheKey, wasm: &[u8]) -> Result<Module, WasmError> {
+    pub fn get(
+        &mut self,
+        key: CacheKey,
+        wasm: &[u8],
+    ) -> Result<Module, wasmer_engine::RuntimeError> {
         match self.cache.get(&key) {
             Some(serialized_module) => {
-                let store = Store::new(&Universal::new(Cranelift::default()).engine());
+                let store = Store::new(&Universal::new((self.cranelift)()).engine());
                 let module = unsafe { Module::deserialize(&store, serialized_module) }
                     .map_err(|e| wasm_error!(WasmErrorInner::Compile(e.to_string())))?;
                 self.touch(&key);
@@ -141,46 +154,34 @@ pub struct ModuleCache {
     plru: MicroCache,
     key_map: PlruKeyMap,
     cache: BTreeMap<CacheKey, Arc<Module>>,
-    leak_buster: AtomicUsize,
 }
 
 pub static MODULE_CACHE: Lazy<RwLock<ModuleCache>> =
     Lazy::new(|| RwLock::new(ModuleCache::default()));
 
 impl ModuleCache {
-    pub fn reset_leak_buster(&mut self) {
-        self.leak_buster
-            .store(0, std::sync::atomic::Ordering::Relaxed);
-    }
-
-    pub fn should_bust_leak(&mut self) -> bool {
-        if self
-            .leak_buster
-            .fetch_add(1, std::sync::atomic::Ordering::Relaxed)
-            > 100
-        {
-            self.reset_leak_buster();
-            true
-        } else {
-            false
-        }
-    }
-
     fn get_with_build_cache(
         &mut self,
         key: CacheKey,
         wasm: &[u8],
-    ) -> Result<Arc<Module>, WasmError> {
-        let module = SERIALIZED_MODULE_CACHE.write().get(key, wasm)?;
+    ) -> Result<Arc<Module>, wasmer_engine::RuntimeError> {
+        let module = match SERIALIZED_MODULE_CACHE.get() {
+            Some(serialized_module_cache) => serialized_module_cache.write().get(key, wasm)?,
+            None => {
+                return Err(wasmer_engine::RuntimeError::user(Box::new(wasm_error!(
+                    WasmErrorInner::UninitializedSerializedModuleCache
+                ))))
+            }
+        };
         Ok(self.put_item(key, Arc::new(module)))
     }
 
-    pub fn get(&mut self, key: CacheKey, wasm: &[u8]) -> Result<Arc<Module>, WasmError> {
-        match if self.should_bust_leak() {
-            self.remove_item(&key)
-        } else {
-            self.get_item(&key)
-        } {
+    pub fn get(
+        &mut self,
+        key: CacheKey,
+        wasm: &[u8],
+    ) -> Result<Arc<Module>, wasmer_engine::RuntimeError> {
+        match self.get_item(&key) {
             Some(module) => Ok(module),
             None => self.get_with_build_cache(key, wasm),
         }

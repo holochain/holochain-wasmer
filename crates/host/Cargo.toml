@@ -1,14 +1,14 @@
 [package]
 name = "holochain_wasmer_host"
 description = "wasm host code"
-license = "GPL-3.0-only"
-version = "0.0.78"
+license = "Apache-2.0"
+version = "0.0.80"
 authors = [ "thedavidmeister", "thedavidmeister@gmail.com" ]
-edition = "2018"
+edition = "2021"
 
 [dependencies]
-wasmer = "=2.0.0"
-holochain_wasmer_common = { version = "=0.0.78", path = "../common" }
+wasmer = "=2.2.0"
+holochain_wasmer_common = { version = "=0.0.80", path = "../common" }
 holochain_serialized_bytes = "=0.0.51"
 serde = "1.0.136"
 tracing = "0.1"
@@ -18,14 +18,14 @@ rand = "0.8.3"
 bimap = "=0.6.1"
 
 # TODO: remove these when updating to a version of wasmer that fixes these
-wasmer-compiler = "=2.0.0"
-wasmer-compiler-cranelift = "=2.0.0"
-wasmer-derive = "=2.0.0"
-wasmer-engine = "=2.0.0"
-wasmer-engine-dylib = "=2.0.0"
-wasmer-engine-universal = "=2.0.0"
-wasmer-types = "=2.0.0"
-wasmer-vm = "=2.0.0"
+wasmer-compiler = "=2.2.0"
+wasmer-compiler-cranelift = "=2.2.0"
+wasmer-derive = "=2.2.0"
+wasmer-engine = "=2.2.0"
+wasmer-engine-dylib = "=2.2.0"
+wasmer-engine-universal = "=2.2.0"
+wasmer-types = "=2.2.0"
+wasmer-vm = "=2.2.0"
 
 [lib]
 name = "holochain_wasmer_host"
@@ -34,4 +34,4 @@ path = "src/host.rs"
 
 [features]
 default = []
-debug_memory_leak = ["holochain_wasmer_common/scopetracker_allocator"]
+debug_memory = []
