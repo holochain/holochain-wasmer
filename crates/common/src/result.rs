@@ -1,6 +1,9 @@
 use holochain_serialized_bytes::prelude::*;
 use thiserror::Error;
 
+/// Enum of all possible ERROR codes that a Zome API Function could return.
+/// 
+/// Used in [`wasm_error!`] for specifying the error type and message.
 #[derive(Clone, Debug, PartialEq, Eq, Hash, PartialOrd, Ord, Serialize, Deserialize)]
 pub enum WasmErrorInner {
     /// while converting pointers and lengths between u64 and i64 across the host/guest
@@ -61,7 +64,6 @@ impl From<SerializedBytesError> for WasmErrorInner {
     }
 }
 
-/// Enum of all possible ERROR codes that a Zome API Function could return.
 #[derive(Clone, Debug, PartialEq, Eq, Hash, PartialOrd, Ord, Serialize, Deserialize, Error)]
 #[rustfmt::skip]
 pub struct WasmError {
@@ -70,6 +72,18 @@ pub struct WasmError {
     pub error: WasmErrorInner,
 }
 
+/// Helper macro for returning an error from a WASM.
+/// 
+/// Automatically included in the error are the file and the line number where the
+/// error occurred. The error type is one of the [`WasmErrorInner`] variants.
+/// 
+/// This macro is the recommended way of returning an error from a Zome function.
+/// 
+/// # Example
+/// 
+/// ```ignore
+/// Err(wasm_error!(WasmErrorInner::Guest("entry not found".to_string())))
+/// ```
 #[macro_export]
 macro_rules! wasm_error {
     ($e:expr) => {
