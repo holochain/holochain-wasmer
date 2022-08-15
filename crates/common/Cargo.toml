@@ -16,5 +16,5 @@ serde_bytes = "0.11"
 default = []
 
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
-wasmer = "=2.2.0"
-wasmer-engine = "=2.2.0"
+wasmer = "=2.3.0"
+wasmer-engine = "=2.3.0"
