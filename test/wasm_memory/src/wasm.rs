@@ -11,12 +11,12 @@ extern "C" {
 #[no_mangle]
 pub extern "C" fn bytes_round_trip(_: GuestPtr, _: Len) -> GuestPtrLen {
 
-    let old_pages: WasmSize = unsafe { __pages(0) };
-    let _current_pages: WasmSize = old_pages;
+    let mut old_pages: WasmSize = unsafe { __pages(0) };
+    let mut current_pages: WasmSize = old_pages;
 
     // thrash this more times than there are bytes in a wasm page so that if even one byte leaks
     // we will see it in the page count
-    for _i in 0..100_000 {
+    for i in 0..100_000 {
 
         // thrash a bunch of little chunks of bytes so that we can be reasonably sure the
         // allocations are in the correct position and not overlapping
@@ -34,12 +34,12 @@ pub extern "C" fn bytes_round_trip(_: GuestPtr, _: Len) -> GuestPtrLen {
             );
         };
 
-        // // if we forget to deallocate properly then the number of allocated pages will grow
-        // old_pages = current_pages;
-        // current_pages = unsafe { __pages(0) };
-        // if i > 0 {
-        //     assert_eq!(old_pages, current_pages);
-        // }
+        // if we forget to deallocate properly then the number of allocated pages will grow
+        old_pages = current_pages;
+        current_pages = unsafe { __pages(0) };
+        if i > 0 {
+            assert_eq!(old_pages, current_pages);
+        }
     }
 
     return_ptr(())
