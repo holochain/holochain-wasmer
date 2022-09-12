@@ -2,7 +2,7 @@ use holochain_serialized_bytes::prelude::*;
 use thiserror::Error;
 
 /// Enum of all possible ERROR codes that a Zome API Function could return.
-/// 
+///
 /// Used in [`wasm_error!`] for specifying the error type and message.
 #[derive(Clone, Debug, PartialEq, Eq, Hash, PartialOrd, Ord, Serialize, Deserialize)]
 pub enum WasmErrorInner {
@@ -15,7 +15,7 @@ pub enum WasmErrorInner {
     /// These bytes failed to deserialize.
     /// The host should provide nice debug info and context that the wasm guest won't have.
     #[serde(with = "serde_bytes")]
-    Deserialize(Vec<u8>),
+    Deserialize(Box<[u8]>),
     /// Something failed to serialize.
     /// This should be rare or impossible for basically everything that implements Serialize.
     Serialize(SerializedBytesError),
@@ -73,14 +73,14 @@ pub struct WasmError {
 }
 
 /// Helper macro for returning an error from a WASM.
-/// 
+///
 /// Automatically included in the error are the file and the line number where the
 /// error occurred. The error type is one of the [`WasmErrorInner`] variants.
-/// 
+///
 /// This macro is the recommended way of returning an error from a Zome function.
-/// 
+///
 /// # Example
-/// 
+///
 /// ```ignore
 /// Err(wasm_error!(WasmErrorInner::Guest("entry not found".to_string())))
 /// ```

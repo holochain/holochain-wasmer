@@ -5,10 +5,7 @@ use holochain_wasmer_common::*;
 #[no_mangle]
 #[inline(always)]
 pub extern "C" fn __allocate(len: Len) -> GuestPtr {
-    let dummy: Vec<u8> = Vec::with_capacity(len as usize);
-    let ptr = dummy.as_ptr() as GuestPtr;
-    let _ = core::mem::ManuallyDrop::new(dummy);
-    ptr
+    write_bytes(Vec::with_capacity(len as usize))
 }
 
 /// Free an allocation.
@@ -16,8 +13,7 @@ pub extern "C" fn __allocate(len: Len) -> GuestPtr {
 #[no_mangle]
 #[inline(always)]
 pub extern "C" fn __deallocate(guest_ptr: GuestPtr, len: Len) {
-    let _: Vec<u8> =
-        unsafe { Vec::from_raw_parts(guest_ptr as *mut u8, len as usize, len as usize) };
+    let _ = consume_bytes(guest_ptr, len);
 }
 
 /// Attempt to consume bytes from a known guest_ptr and len.
@@ -27,17 +23,12 @@ pub extern "C" fn __deallocate(guest_ptr: GuestPtr, len: Len) {
 /// This needs to work for bytes written into the guest from the host and for bytes written with
 /// the write_bytes() function within the guest.
 #[inline(always)]
-pub fn consume_bytes(guest_ptr: GuestPtr, len: Len) -> Vec<u8> {
-    unsafe {
-        Vec::from_raw_parts(
-            // must match the pointer produced by the original allocation exactly
-            guest_ptr as *mut u8,
-            // this is the full length of the allocation as we want all the bytes
-            len as usize,
-            // must match the capacity set during the original allocation exactly
-            len as usize,
-        )
-    }
+pub fn consume_bytes<'a>(guest_ptr: GuestPtr, len: Len) -> Vec<u8> {
+    // This must be a Vec and not only a slice because slices will fail to
+    // deallocate memory properly when dropped.
+    // Assumes length and capacity are the same which is true if __allocate is
+    // used to allocate memory for the vector.
+    unsafe { std::vec::Vec::from_raw_parts(guest_ptr as *mut u8, len as usize, len as usize) }
 }
 
 /// Attempt to write a slice of bytes.
@@ -59,7 +50,5 @@ pub fn consume_bytes(guest_ptr: GuestPtr, len: Len) -> Vec<u8> {
 /// The host MUST ensure either __deallocate is called or the entire wasm memory is dropped.
 #[inline(always)]
 pub fn write_bytes(v: Vec<u8>) -> GuestPtr {
-    let ptr: GuestPtr = v.as_ptr() as GuestPtr;
-    let _ = core::mem::ManuallyDrop::new(v);
-    ptr
+    v.leak().as_ptr() as GuestPtr
 }

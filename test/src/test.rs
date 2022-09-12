@@ -73,7 +73,12 @@ pub mod tests {
 
     #[test]
     fn bytes_round_trip() {
-        let _: () = guest::call(TestWasm::Memory.instance(), "bytes_round_trip", ()).unwrap();
+        let _: () = dbg!(guest::call(
+            TestWasm::Memory.instance(),
+            "bytes_round_trip",
+            ()
+        ))
+        .unwrap();
     }
 
     #[test]

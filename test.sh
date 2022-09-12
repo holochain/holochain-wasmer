@@ -10,4 +10,4 @@ cargo test -- --nocapture
 # cargo build --release --manifest-path test/test_wasm/Cargo.toml --target wasm32-unknown-unknown -Z unstable-options
 
 # build wasm and run the "full" tests
-cargo test --manifest-path test/Cargo.toml ${1} -- --nocapture
+cargo test --release --manifest-path test/Cargo.toml ${1} -- --nocapture

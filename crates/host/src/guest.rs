@@ -187,29 +187,40 @@ where
         holochain_serialized_bytes::encode(&input).map_err(|e| wasm_error!(e.into()))?;
 
     // Get a pre-allocated guest pointer to write the input into.
-    let guest_input_ptr: GuestPtr = match instance
+    let guest_input_length = payload
+        .len()
+        .try_into()
+        .map_err(|e: TryFromIntError| wasm_error!(WasmErrorInner::CallError(e.to_string())))?;
+    let guest_input_length_value: Value = Value::I32(guest_input_length);
+    let (guest_input_ptr, guest_input_ptr_value) = match instance
         .exports
         .get_function("__allocate")
         .map_err(|e| wasm_error!(WasmErrorInner::CallError(e.to_string())))?
-        .call(&[Value::I32(
-            payload
-                .len()
-                .try_into()
-                .map_err(|e: TryFromIntError| wasm_error!(e.into()))?,
-        )])
+        .call(&[guest_input_length_value.clone()])
         .map_err(|e| wasm_error!(WasmErrorInner::CallError(e.to_string())))?[0]
     {
-        Value::I32(i) => i as GuestPtr,
-        _ => unreachable!(),
+        Value::I32(guest_input_ptr) => (
+            guest_input_ptr.try_into().map_err(|e: TryFromIntError| {
+                wasm_error!(WasmErrorInner::CallError(e.to_string()))
+            })?,
+            Value::I32(guest_input_ptr),
+        ),
+        _ => {
+            return Err(wasm_error!(WasmErrorInner::CallError(
+                "Not I32 return from __allocate".to_string()
+            ))
+            .into())
+        }
     };
 
     // Write the input payload into the guest at the offset specified by the allocation.
     write_bytes(
-        &instance
+        instance
             .exports
             // potentially snake oil
             // https://github.com/wasmerio/wasmer/issues/2780#issuecomment-1054452629
-            .get_with_generics_weak("memory")
+            // .get_with_generics_weak("memory")
+            .get_memory("memory")
             .map_err(|_| wasm_error!(WasmErrorInner::Memory))?,
         guest_input_ptr,
         &payload,
@@ -221,19 +232,8 @@ where
         .exports
         .get_function(f)
         .map_err(|e| wasm_error!(WasmErrorInner::CallError(e.to_string())))?
-        .call(&[
-            Value::I32(
-                guest_input_ptr
-                    .try_into()
-                    .map_err(|e: TryFromIntError| wasm_error!(e.into()))?,
-            ),
-            Value::I32(
-                payload
-                    .len()
-                    .try_into()
-                    .map_err(|e: TryFromIntError| wasm_error!(e.into()))?,
-            ),
-        ]) {
+        .call(&[guest_input_ptr_value, guest_input_length_value])
+    {
         Ok(v) => match v[0] {
             Value::I64(i) => split_u64(i as _),
             _ => unreachable!(),
@@ -264,11 +264,12 @@ where
     // The host MUST discard any wasm instance that errors at this point to avoid memory leaks.
     // The WasmError in the result type here is for deserializing out of the guest.
     let return_value: Result<O, WasmError> = from_guest_ptr(
-        &instance
+        instance
             .exports
             // maybe snake oil but:
             // https://github.com/wasmerio/wasmer/issues/2780#issuecomment-1054452629
-            .get_with_generics_weak("memory")
+            // .get_with_generics_weak("memory")
+            .get_memory("memory")
             .map_err(|_| wasm_error!(WasmErrorInner::Memory))?,
         guest_return_ptr,
         len,
