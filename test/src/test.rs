@@ -6,8 +6,7 @@ use test_common::SomeStruct;
 
 pub fn short_circuit(_: &Env, _: GuestPtr, _: Len) -> Result<u64, wasmer_engine::RuntimeError> {
     Err(wasm_error!(WasmErrorInner::HostShortCircuit(
-        holochain_serialized_bytes::encode(&String::from("shorts"))
-            .map_err(|e| wasm_error!(e.into()))?,
+        holochain_serialized_bytes::encode(&String::from("shorts")).map_err(|e| wasm_error!(e))?,
     ))
     .into())
 }

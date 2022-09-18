@@ -23,7 +23,7 @@ impl Env {
     where
         I: serde::Serialize + std::fmt::Debug,
     {
-        let data = holochain_serialized_bytes::encode(&input).map_err(|e| wasm_error!(e.into()))?;
+        let data = holochain_serialized_bytes::encode(&input).map_err(|e| wasm_error!(e))?;
         let guest_ptr: GuestPtr = match self
             .allocate_ref()
             .ok_or(wasm_error!(WasmErrorInner::Memory))?
@@ -79,7 +79,7 @@ impl Env {
             Ok(v) => Ok(v),
             Err(e) => {
                 tracing::error!(input_type = std::any::type_name::<O>(), bytes = ?bytes, "{}", e);
-                Err(wasm_error!(e.into()).into())
+                Err(wasm_error!(e).into())
             }
         }
     }

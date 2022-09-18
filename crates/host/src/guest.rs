@@ -164,7 +164,7 @@ where
         Ok(v) => Ok(v),
         Err(e) => {
             tracing::error!(input_type = std::any::type_name::<O>(), bytes = ?bytes, "{}", e);
-            Err(wasm_error!(e.into()).into())
+            Err(wasm_error!(e).into())
         }
     }
 }
@@ -184,7 +184,7 @@ where
     let instance = instance.lock();
     // The guest will use the same crate for decoding if it uses the wasm common crate.
     let payload: Vec<u8> =
-        holochain_serialized_bytes::encode(&input).map_err(|e| wasm_error!(e.into()))?;
+        holochain_serialized_bytes::encode(&input).map_err(|e| wasm_error!(e))?;
 
     // Get a pre-allocated guest pointer to write the input into.
     let guest_input_length = payload
@@ -250,7 +250,7 @@ where
                                 "{}",
                                 e
                             );
-                            Err(wasm_error!(e.into()).into())
+                            Err(wasm_error!(e).into())
                         }
                     }
                 }
@@ -284,11 +284,11 @@ where
             Value::I32(
                 guest_return_ptr
                     .try_into()
-                    .map_err(|e: TryFromIntError| wasm_error!(e.into()))?,
+                    .map_err(|e: TryFromIntError| wasm_error!(e))?,
             ),
             Value::I32(
                 len.try_into()
-                    .map_err(|e: TryFromIntError| wasm_error!(e.into()))?,
+                    .map_err(|e: TryFromIntError| wasm_error!(e))?,
             ),
         ])
         .map_err(|e| wasm_error!(WasmErrorInner::CallError(format!("{:?}", e))))?;

@@ -10,7 +10,7 @@ use crate::allocation::write_bytes;
 macro_rules! host_externs {
     ( $( $func_name:ident ),* ) => {
         extern "C" {
-            $( pub fn $func_name(guest_allocation_ptr: $crate::GuestPtr, len: $crate::Len) -> u64; )*
+            $( pub fn $func_name(guest_allocation_ptr: $crate::GuestPtr, len: $crate::Len) -> $crate::GuestPtrLen; )*
         }
     };
 }
@@ -47,7 +47,7 @@ where
 /// - Return a Result of the deserialized output type O
 #[inline(always)]
 pub fn host_call<I, O>(
-    f: unsafe extern "C" fn(GuestPtr, Len) -> u64,
+    f: unsafe extern "C" fn(GuestPtr, Len) -> GuestPtrLen,
     input: I,
 ) -> Result<O, crate::WasmError>
 where
@@ -55,8 +55,7 @@ where
     O: serde::de::DeserializeOwned + std::fmt::Debug,
 {
     // Call the host function and receive the length of the serialized result.
-    let input_bytes =
-        holochain_serialized_bytes::encode(&input).map_err(|e| wasm_error!(e.into()))?;
+    let input_bytes = holochain_serialized_bytes::encode(&input).map_err(|e| wasm_error!(e))?;
     let input_len = input_bytes.len();
     let input_guest_ptr = crate::allocation::write_bytes(input_bytes);
 
@@ -93,7 +92,9 @@ where
     }
 }
 
-/// Convert a WasmError to a GuestPtrLen as best we can.
+/// Convert a `WasmError` to a `GuestPtrLen` as best we can. This is not
+/// necessarily straightforward as the serialization process can error recursively.
+/// In the worst case we can't even serialize an enum variant, in which case we panic.
 #[inline(always)]
 pub fn return_err_ptr(wasm_error: WasmError) -> GuestPtrLen {
     match holochain_serialized_bytes::encode::<Result<(), WasmError>>(&Err(wasm_error)) {
@@ -116,8 +117,8 @@ pub fn return_err_ptr(wasm_error: WasmError) -> GuestPtrLen {
                     let len = bytes.len();
                     merge_u64(write_bytes(bytes), len as Len)
                 }
-                // At this point we failed to serialize a unit struct so IDK ¯\_(ツ)_/¯
-                Err(_) => unreachable!(),
+                // At this point we failed to serialize a unit varaint so IDK ¯\_(ツ)_/¯
+                Err(_) => panic!("Failed to error"),
             },
         },
     }
@@ -129,12 +130,7 @@ macro_rules! try_ptr {
     ( $e:expr, $fail:expr ) => {{
         match $e {
             Ok(v) => v,
-            Err(e) => {
-                return return_err_ptr(wasm_error!(WasmErrorInner::Guest(format!(
-                    "{}: {:?}",
-                    $fail, e
-                ))))
-            }
+            Err(e) => return return_err_ptr(wasm_error!("{}: {:?}", $fail, e)),
         }
     }};
 }
