@@ -13,15 +13,15 @@ pub use serde_bytes;
 /// on the size of an offset/length or the host will not be able to directly
 /// manipulate the guest memory as it needs to.
 ///
-/// wasmer itself uses `u32` in the `WasmPtr` abstraction etc.
+/// Wasmer itself uses `u32` in the `WasmPtr` abstraction etc.
 /// @see https://docs.rs/wasmer-runtime/0.17.0/wasmer_runtime/struct.WasmPtr.html
 pub type WasmSize = u32;
 
-/// A WasmSize that points to a position in wasm linear memory that the host and guest are
-/// sharing to communicate across function calls.
+/// A `WasmSize` that points to a position in wasm linear memory that the host
+/// and guest are sharing to communicate across function calls.
 pub type GuestPtr = WasmSize;
 
-/// A WasmSize integer that represents the size of bytes to read/write to memory.
+/// A `WasmSize` integer that represents the size of bytes to read/write to memory.
 pub type Len = WasmSize;
 
 /// Enough bits to fit a pointer and length into so we can return it. The externs

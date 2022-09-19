@@ -20,11 +20,10 @@ pub enum WasmErrorInner {
     /// For example, maybe we failed to serialize an error while attempting to serialize an error.
     ErrorWhileError,
     /// Something went wrong while writing or reading bytes to/from wasm memory.
-    /// Whatever this is it is very bad and probably not recoverable. The host should
-    /// treat the guest memory as corrupt when encountering this error.
+    /// Whatever this is it is very bad and probably not recoverable.
     Memory,
     /// Host failed to take bytes out of the guest and do something with it.
-    /// The string is whatever error message comes back from the interal process.
+    /// The string is whatever error message comes back from the internal process.
     GuestResultHandling(String),
     /// Error with guest logic that the host doesn't know about.
     Guest(String),
@@ -32,7 +31,7 @@ pub enum WasmErrorInner {
     Host(String),
     /// Something to do with host logic that the guest doesn't know about
     /// AND wasm execution MUST immediately halt.
-    /// The Vec<u8> holds the encoded data as though the guest had returned.
+    /// The `Vec<u8>` holds the encoded data as though the guest had returned.
     HostShortCircuit(Vec<u8>),
     /// Wasmer failed to compile machine code from wasm byte code.
     Compile(String),
@@ -40,6 +39,24 @@ pub enum WasmErrorInner {
     CallError(String),
     /// Host attempted to interact with the module cache before it was initialized.
     UninitializedSerializedModuleCache,
+}
+
+impl WasmErrorInner {
+    /// Some errors indicate the wasm guest is potentially corrupt and so the
+    /// host MUST NOT reuse it (e.g. in a cache of wasm instances). Other errors
+    /// MAY NOT invalidate an instance cache on the host.
+    pub fn maybe_corrupt(&self) -> bool {
+        match self {
+            Self::PointerMap
+            | Self::ErrorWhileError
+            | Self::Memory
+            | Self::GuestResultHandling(_)
+            | Self::Compile(_)
+            | Self::CallError(_)
+            | Self::UninitializedSerializedModuleCache => true,
+            _ => false,
+        }
+    }
 }
 
 impl From<std::num::TryFromIntError> for WasmErrorInner {
