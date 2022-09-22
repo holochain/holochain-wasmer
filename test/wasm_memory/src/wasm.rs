@@ -30,7 +30,7 @@ pub extern "C" fn bytes_round_trip(_: GuestPtr, _: Len) -> GuestPtrLen {
             // consuming the bytes should give a vector of the same bytes as the original bytes
             assert_eq!(
                 bytes[i].to_vec(),
-                allocation::consume_bytes(ptrs[i], 5 as Len),
+                allocation::consume_bytes(ptrs[i], 5),
             );
         };
 

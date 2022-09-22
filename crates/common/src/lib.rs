@@ -33,14 +33,21 @@ pub type GuestPtrLen = u64;
 /// Works via. a simple bitwise shift to move the pointer to high bits then OR
 /// the length into the low bits.
 pub fn merge_u64(guest_ptr: GuestPtr, len: Len) -> GuestPtrLen {
-    (guest_ptr as u64) << 32 | (len as u64)
+    // It should be impossible to hit these unwrap/panic conditions but it's more
+    // conservative to define them than rely on an `as uX` cast.
+    (u64::try_from(guest_ptr).unwrap() << 32) | u64::try_from(len).unwrap()
 }
 
 /// Given a merged `GuestPtrLen` split out a `u32` pointer and length.
 /// Performs the inverse of `merge_u64`. Takes the low `u32` bits as the length
 /// then shifts the 32 high bits down and takes those as the pointer.
 pub fn split_u64(u: GuestPtrLen) -> (GuestPtr, Len) {
-    ((u >> 32) as u32, u as u32)
+    // It should be impossible to hit these unwrap/panic conditions but it's more
+    // conservative to define them than rely on an `as uX` cast.
+    (
+        u32::try_from(u >> 32).unwrap(),
+        u32::try_from(u & u64::try_from(u32::MAX).unwrap()).unwrap(),
+    )
 }
 
 #[cfg(test)]
@@ -49,8 +56,8 @@ pub mod tests {
 
     #[test]
     fn round_trip() {
-        let guest_ptr = 9000000 as GuestPtr;
-        let len = 1000 as GuestPtr;
+        let guest_ptr = 9000000;
+        let len = 1000;
 
         let (out_guest_ptr, out_len) = split_u64(merge_u64(guest_ptr, len));
 
