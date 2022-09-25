@@ -18,6 +18,9 @@ pub struct Env {
 }
 
 impl Env {
+    /// Given some input I that can be serialized, request an allocation from the
+    /// guest and copy the serialized bytes to the allocated pointer. The guest
+    /// MUST subsequently take ownership of these bytes or it will leak memory.
     pub fn move_data_to_guest<I>(
         &self,
         input: I,
@@ -34,7 +37,7 @@ impl Env {
                     .try_into()
                     .map_err(|_| wasm_error!(WasmErrorInner::PointerMap))?,
             )])
-            .map_err(|e| wasm_error!(WasmErrorInner::Host(e.to_string())))?
+            .map_err(|e| wasm_error!(e.to_string()))?
             .get(0)
         {
             Some(Value::I32(guest_ptr)) => (*guest_ptr)
@@ -55,6 +58,10 @@ impl Env {
         Ok(merge_u64(guest_ptr, len))
     }
 
+    /// Given a pointer and length for a region of memory in the guest, copy the
+    /// bytes to the host and attempt to deserialize type `O` from the data. The
+    /// guest will be asked to deallocate the copied bytes whether or not the
+    /// deserialization is successful.
     pub fn consume_bytes_from_guest<O>(
         &self,
         guest_ptr: GuestPtr,
@@ -82,7 +89,7 @@ impl Env {
                         .map_err(|_| wasm_error!(WasmErrorInner::PointerMap))?,
                 ),
             ])
-            .map_err(|e| wasm_error!(WasmErrorInner::Host(e.to_string())))?;
+            .map_err(|e| wasm_error!(e.to_string()))?;
         match holochain_serialized_bytes::decode(&bytes) {
             Ok(v) => Ok(v),
             Err(e) => {
