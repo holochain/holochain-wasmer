@@ -54,7 +54,11 @@ impl WasmErrorInner {
             | Self::Compile(_)
             | Self::CallError(_)
             | Self::UninitializedSerializedModuleCache => true,
-            _ => false,
+            Self::Deserialize(_)
+            | Self::Serialize(_)
+            | Self::Guest(_)
+            | Self::Host(_)
+            | Self::HostShortCircuit(_) => false,
         }
     }
 }
