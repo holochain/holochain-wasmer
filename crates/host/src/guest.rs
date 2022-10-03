@@ -40,7 +40,7 @@ use wasmer::Value;
 /// This is still not completely safe in the face of shared memory and threads, etc.
 ///
 /// The guest needs to provide a pointer to a pre-allocated (e.g. by leaking a Vec<u8>) region
-/// of the guest's memory that it is safe for the host to write to.
+/// of the guest's memory that is safe for the host to write to.
 ///
 /// It is the host's responsibility to tell the guest the length of the allocation that is needed
 /// and the guest's responsibility to correctly reserve an allocation to be written into.
