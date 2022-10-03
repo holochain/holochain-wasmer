@@ -20,7 +20,7 @@ pub enum WasmErrorInner {
     /// For example, maybe we failed to serialize an error while attempting to serialize an error.
     ErrorWhileError,
     /// Something went wrong while writing or reading bytes to/from wasm memory.
-    /// Whatever this is it is very bad and probably not recoverable.
+    /// Whatever this is, it is very bad and probably not recoverable.
     Memory,
     /// Host failed to take bytes out of the guest and do something with it.
     /// The string is whatever error message comes back from the internal process.
