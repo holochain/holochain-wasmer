@@ -10,7 +10,7 @@ pub use serde_bytes;
 /// When rust compiles to the `wasm32-unknown-unknown` target `usize` will be `u32` in
 /// wasm, but the host could interpret `usize` as either `u32` or `u64`. For that reason
 /// we specify `u32` everywhere we need the host and the guest to have a shared agreement
-/// on the size of an offset/length or the host will not be able to directly
+/// on the size of an offset/length, or the host will not be able to directly
 /// manipulate the guest memory as it needs to.
 ///
 /// Wasmer itself uses `u32` in the `WasmPtr` abstraction etc.
