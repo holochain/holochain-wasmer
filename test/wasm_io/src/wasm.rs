@@ -87,5 +87,5 @@ macro_rules! _n {
     }
 }
 
-_n!(Bytes; n; vec![0; u32::from(n) as usize]; vec![];);
-_n!(String; n; ".".repeat(u32::from(n) as usize).to_string(); "".to_string(););
+_n!(Bytes; n; vec![0; u32::from(n).try_into().unwrap()]; vec![];);
+_n!(String; n; ".".repeat(u32::from(n).try_into().unwrap()).to_string(); "".to_string(););

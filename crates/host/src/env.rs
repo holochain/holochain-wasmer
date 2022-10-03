@@ -1,3 +1,5 @@
+use std::num::TryFromIntError;
+
 use crate::guest::read_bytes;
 use crate::prelude::*;
 use wasmer::Function;
@@ -35,12 +37,18 @@ impl Env {
                     .try_into()
                     .map_err(|_| wasm_error!(WasmErrorInner::PointerMap))?,
             )])
-            .map_err(|e| wasm_error!(e.to_string()))?[0]
+            .map_err(|e| wasm_error!(e.to_string()))?
+            .get(0)
         {
-            Value::I32(guest_ptr) => guest_ptr as GuestPtr,
+            Some(Value::I32(guest_ptr)) => (*guest_ptr)
+                .try_into()
+                .map_err(|e: TryFromIntError| wasm_error!(e))?,
             _ => return Err(wasm_error!(WasmErrorInner::PointerMap).into()),
         };
-        let len = data.len() as Len;
+        let len: Len = match data.len().try_into() {
+            Ok(len) => len,
+            Err(e) => return Err(wasm_error!(e).into()),
+        };
         crate::guest::write_bytes(
             self.memory_ref()
                 .ok_or(wasm_error!(WasmErrorInner::Memory))?,

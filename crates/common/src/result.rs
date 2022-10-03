@@ -174,26 +174,3 @@ impl From<&str> for WasmErrorInner {
         s.to_string().into()
     }
 }
-
-#[cfg(test)]
-pub mod tests {
-    use super::*;
-
-    #[test]
-    fn wasm_error_macro() {
-        assert_eq!(
-            wasm_error!("foo").error,
-            WasmErrorInner::Guest("foo".into()),
-        );
-
-        assert_eq!(
-            wasm_error!("{} {}", "foo", "bar").error,
-            WasmErrorInner::Guest("foo bar".into())
-        );
-
-        assert_eq!(
-            wasm_error!(WasmErrorInner::Host("foo".into())).error,
-            WasmErrorInner::Host("foo".into()),
-        );
-    }
-}

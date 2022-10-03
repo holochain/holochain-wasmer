@@ -56,13 +56,16 @@ where
 {
     // Call the host function and receive the length of the serialized result.
     let input_bytes = holochain_serialized_bytes::encode(&input).map_err(|e| wasm_error!(e))?;
-    let input_len = input_bytes.len();
+    let input_len: Len = match input_bytes.len().try_into() {
+        Ok(len) => len,
+        Err(e) => return Err(wasm_error!(e)),
+    };
     let input_guest_ptr = crate::allocation::write_bytes(input_bytes);
 
     let (output_guest_ptr, output_len): (GuestPtr, Len) = split_u64(unsafe {
         // This is unsafe because all host function calls in wasm are unsafe.
-        // The host MUST call `__deallocate` for us to free the leaked bytes from the input.
-        f(input_guest_ptr, input_len as Len)
+        // The host will call `__deallocate` for us to free the leaked bytes from the input.
+        f(input_guest_ptr, input_len)
     });
 
     // Deserialize the host bytes into the output type.
@@ -85,8 +88,11 @@ where
 {
     match holochain_serialized_bytes::encode::<Result<R, WasmError>>(&Ok(return_value)) {
         Ok(bytes) => {
-            let len = bytes.len();
-            merge_u64(write_bytes(bytes), len as Len)
+            let len: Len = match bytes.len().try_into() {
+                Ok(len) => len,
+                Err(e) => return return_err_ptr(wasm_error!(e)),
+            };
+            merge_u64(write_bytes(bytes), len)
         }
         Err(e) => return_err_ptr(wasm_error!(WasmErrorInner::Serialize(e))),
     }
@@ -101,23 +107,32 @@ where
 pub fn return_err_ptr(wasm_error: WasmError) -> GuestPtrLen {
     match holochain_serialized_bytes::encode::<Result<(), WasmError>>(&Err(wasm_error)) {
         Ok(bytes) => {
-            let len = bytes.len();
-            merge_u64(write_bytes(bytes), len as Len)
+            let len: Len = match bytes.len().try_into() {
+                Ok(len) => len,
+                Err(e) => return return_err_ptr(wasm_error!(e)),
+            };
+            merge_u64(write_bytes(bytes), len)
         }
         Err(e) => match holochain_serialized_bytes::encode::<Result<(), WasmError>>(&Err(
             wasm_error!(WasmErrorInner::Serialize(e)),
         )) {
             Ok(bytes) => {
-                let len = bytes.len();
-                merge_u64(write_bytes(bytes), len as Len)
+                let len: Len = match bytes.len().try_into() {
+                    Ok(len) => len,
+                    Err(e) => return return_err_ptr(wasm_error!(e)),
+                };
+                merge_u64(write_bytes(bytes), len)
             }
             // At this point we've errored while erroring
             Err(_) => match holochain_serialized_bytes::encode::<Result<(), WasmError>>(&Err(
                 wasm_error!(WasmErrorInner::ErrorWhileError),
             )) {
                 Ok(bytes) => {
-                    let len = bytes.len();
-                    merge_u64(write_bytes(bytes), len as Len)
+                    let len: Len = match bytes.len().try_into() {
+                        Ok(len) => len,
+                        Err(e) => return return_err_ptr(wasm_error!(e)),
+                    };
+                    merge_u64(write_bytes(bytes), len)
                 }
                 // At this point we failed to serialize a unit varaint so IDK ¯\_(ツ)_/¯
                 Err(_) => panic!("Failed to error"),
@@ -135,4 +150,27 @@ macro_rules! try_ptr {
             Err(e) => return return_err_ptr(wasm_error!("{}: {:?}", $fail, e)),
         }
     }};
+}
+
+#[cfg(test)]
+pub mod tests {
+    use super::*;
+
+    #[test]
+    fn wasm_error_macro_guest() {
+        assert_eq!(
+            wasm_error!("foo").error,
+            WasmErrorInner::Guest("foo".into()),
+        );
+
+        assert_eq!(
+            wasm_error!("{} {}", "foo", "bar").error,
+            WasmErrorInner::Guest("foo bar".into())
+        );
+
+        assert_eq!(
+            wasm_error!(WasmErrorInner::Host("foo".into())).error,
+            WasmErrorInner::Host("foo".into()),
+        );
+    }
 }

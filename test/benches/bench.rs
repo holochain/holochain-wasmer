@@ -91,7 +91,7 @@ pub fn wasm_call(c: &mut Criterion) {
 
             for f in fs {
                 for $n in vec![0, 1, 1_000, 1_000_000] {
-                    group.throughput(Throughput::Bytes($n as _));
+                    group.throughput(Throughput::Bytes($n));
                     group.sample_size(10);
 
                     let input = test_common::$t::from($build);
@@ -153,7 +153,7 @@ pub fn wasm_call_n(c: &mut Criterion) {
 
             for f in fs {
                 for n in vec![0, 1, 1_000, 1_000_000] {
-                    group.throughput(Throughput::Bytes(n as _));
+                    group.throughput(Throughput::Bytes(n));
                     group.sample_size(10);
 
                     group.bench_with_input(
@@ -188,7 +188,7 @@ pub fn test_process_string(c: &mut Criterion) {
     let instance = TestWasm::Test.instance();
 
     for n in vec![0, 1, 1_000, 1_000_000] {
-        group.throughput(Throughput::Bytes(n as _));
+        group.throughput(Throughput::Bytes(n));
         group.sample_size(10);
         let input = test_common::StringType::from(".".repeat(n));
         group.bench_with_input(BenchmarkId::new("test_process_string", n), &n, |b, _| {
@@ -208,7 +208,7 @@ pub fn test_process_string(c: &mut Criterion) {
 
 pub fn test_instances(c: &mut Criterion) {
     let mut group = c.benchmark_group("test_instances");
-    group.throughput(Throughput::Bytes(1_000 as _));
+    group.throughput(Throughput::Bytes(1_000));
     group.sample_size(100);
     let input = test_common::StringType::from(".".repeat(1000));
     group.bench_with_input(BenchmarkId::new("test_instances", 1000), &1000, |b, _| {

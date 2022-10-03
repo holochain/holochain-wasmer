@@ -7,10 +7,10 @@ pub use serde_bytes;
 /// Something like `usize` for wasm.
 /// Wasm has a memory limit of 4GB so offsets and lengths fit in `u32`.
 ///
-/// When rust compiles to the `wasm32-unknown-unknown` target `usize` will be `u32` in
-/// wasm but the host could interpret `usize` as either `u32` or `u64`. For that reason
+/// When rust compiles to the `wasm32-unknown-unknown` target, `usize` will be `u32` in
+/// wasm, but the host could interpret `usize` as either `u32` or `u64`. For that reason
 /// we specify `u32` everywhere we need the host and the guest to have a shared agreement
-/// on the size of an offset/length or the host will not be able to directly
+/// on the size of an offset/length, or the host will not be able to directly
 /// manipulate the guest memory as it needs to.
 ///
 /// Wasmer itself uses `u32` in the `WasmPtr` abstraction etc.
@@ -30,17 +30,24 @@ pub type Len = WasmSize;
 pub type GuestPtrLen = u64;
 
 /// Given a pointer and a length, return a `u64` merged `GuestPtrLen`.
-/// Works via. a simple bitwise shift to move the pointer to high bits then OR
+/// Works via a simple bitwise shift to move the pointer to high bits then OR
 /// the length into the low bits.
 pub fn merge_u64(guest_ptr: GuestPtr, len: Len) -> GuestPtrLen {
-    (guest_ptr as u64) << 32 | (len as u64)
+    // It should be impossible to hit these unwrap/panic conditions but it's more
+    // conservative to define them than rely on an `as uX` cast.
+    (u64::try_from(guest_ptr).unwrap() << 32) | u64::try_from(len).unwrap()
 }
 
-/// Given a merged `GuestPtrLen` split out a `u32` pointer and length.
+/// Given a merged `GuestPtrLen`, split out a `u32` pointer and length.
 /// Performs the inverse of `merge_u64`. Takes the low `u32` bits as the length
 /// then shifts the 32 high bits down and takes those as the pointer.
 pub fn split_u64(u: GuestPtrLen) -> (GuestPtr, Len) {
-    ((u >> 32) as u32, u as u32)
+    // It should be impossible to hit these verbose unwrap/panic conditions but it's more
+    // conservative to define them than rely on an `as uX` cast that could silently truncate bits.
+    (
+        u32::try_from(u >> 32).unwrap(),
+        u32::try_from(u & u64::try_from(u32::MAX).unwrap()).unwrap(),
+    )
 }
 
 #[cfg(test)]
@@ -49,8 +56,8 @@ pub mod tests {
 
     #[test]
     fn round_trip() {
-        let guest_ptr = 9000000 as GuestPtr;
-        let len = 1000 as GuestPtr;
+        let guest_ptr = 9000000;
+        let len = 1000;
 
         let (out_guest_ptr, out_len) = split_u64(merge_u64(guest_ptr, len));
 
