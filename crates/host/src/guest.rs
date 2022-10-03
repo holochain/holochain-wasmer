@@ -23,7 +23,7 @@ use wasmer::Value;
 /// ```
 ///
 /// The guest memory is part of the host memory, so we get the host's pointer to the start of the
-/// guest's memory with `view.as_ptr()` then we add the guest's pointer to where it wants to see the
+/// guest's memory with `view.as_ptr()`, then we add the guest's pointer to where it wants to see the
 /// written bytes then copy the slice directly across.
 ///
 /// The problem with this approach is that the `guest_ptr` typically needs to be provided by the
