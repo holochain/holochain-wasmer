@@ -116,13 +116,13 @@ pub fn wasm_call(c: &mut Criterion) {
 
     bench_call!(
         vec![
-            "string_input_ignored_empty_ret",
+            // "string_input_ignored_empty_ret",
             "string_input_args_empty_ret",
             "string_input_args_echo_ret",
         ];
         StringType;
         n;
-        ".".repeat(n);
+        ".".repeat(n.try_into().unwrap());
     );
 
     bench_call!(
@@ -133,7 +133,7 @@ pub fn wasm_call(c: &mut Criterion) {
         ];
         BytesType;
         n;
-        vec![0; n];
+        vec![0; n.try_into().unwrap()];
     );
 
     group.finish();
@@ -152,8 +152,8 @@ pub fn wasm_call_n(c: &mut Criterion) {
             fs.shuffle(&mut thread_rng());
 
             for f in fs {
-                for n in vec![0, 1, 1_000, 1_000_000] {
-                    group.throughput(Throughput::Bytes(n));
+                for n in vec![0_u32, 1, 1_000, 1_000_000] {
+                    group.throughput(Throughput::Bytes(n.try_into().unwrap()));
                     group.sample_size(10);
 
                     group.bench_with_input(
@@ -190,7 +190,7 @@ pub fn test_process_string(c: &mut Criterion) {
     for n in vec![0, 1, 1_000, 1_000_000] {
         group.throughput(Throughput::Bytes(n));
         group.sample_size(10);
-        let input = test_common::StringType::from(".".repeat(n));
+        let input = test_common::StringType::from(".".repeat(n.try_into().unwrap()));
         group.bench_with_input(BenchmarkId::new("test_process_string", n), &n, |b, _| {
             b.iter(|| {
                 let _: test_common::StringType = holochain_wasmer_host::guest::call(
