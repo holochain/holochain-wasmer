@@ -28,7 +28,7 @@ pub extern "C" fn __deallocate(guest_ptr: GuestPtr, len: Len) {
 /// the `write_bytes` function within the guest.
 #[inline(always)]
 pub fn consume_bytes<'a>(guest_ptr: GuestPtr, len: Len) -> Vec<u8> {
-    // If `usize` is smaller than `u32` the host cannot support that so we
+    // If `usize` is smaller than `u32`, the host cannot support that so we
     // panic/unwrap.
     let len_usize: usize = len.try_into().unwrap();
     // This must be a Vec and not only a slice because slices will fail to
