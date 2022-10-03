@@ -1,7 +1,7 @@
 use holochain_serialized_bytes::prelude::*;
 use thiserror::Error;
 
-/// Enum of all possible ERROR states that wasm can can encounter.
+/// Enum of all possible ERROR states that wasm can encounter.
 ///
 /// Used in [`wasm_error!`] for specifying the error type and message.
 #[derive(Clone, Debug, PartialEq, Eq, Hash, PartialOrd, Ord, Serialize, Deserialize)]
