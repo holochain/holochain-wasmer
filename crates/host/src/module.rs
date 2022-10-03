@@ -165,7 +165,7 @@ impl SerializedModuleCache {
     }
 
     /// Given a wasm, attempts to get the serialized module for it from the cache.
-    /// If the cache misses a new serialized module will be built from the wasm.
+    /// If the cache misses a new serialized module, will be built from the wasm.
     pub fn get(
         &mut self,
         key: CacheKey,
