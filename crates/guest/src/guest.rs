@@ -134,7 +134,7 @@ pub fn return_err_ptr(wasm_error: WasmError) -> GuestPtrLen {
                     };
                     merge_u64(write_bytes(bytes), len)
                 }
-                // At this point we failed to serialize a unit varaint so IDK ¯\_(ツ)_/¯
+                // At this point we failed to serialize a unit variant so IDK ¯\_(ツ)_/¯
                 Err(_) => panic!("Failed to error"),
             },
         },
