@@ -30,7 +30,7 @@ pub type Len = WasmSize;
 pub type GuestPtrLen = u64;
 
 /// Given a pointer and a length, return a `u64` merged `GuestPtrLen`.
-/// Works via. a simple bitwise shift to move the pointer to high bits then OR
+/// Works via a simple bitwise shift to move the pointer to high bits then OR
 /// the length into the low bits.
 pub fn merge_u64(guest_ptr: GuestPtr, len: Len) -> GuestPtrLen {
     // It should be impossible to hit these unwrap/panic conditions but it's more
