@@ -38,7 +38,7 @@ pub trait PlruCache {
     /// Mutable accessor to the cache key addressable cache of items.
     fn cache_mut(&mut self) -> &mut BTreeMap<CacheKey, Arc<Self::Item>>;
     /// Put an item in both the plru cache and the item cache by its cache key.
-    /// If the cache is full the roughly most stale plru will be evicted from the
+    /// If the cache is full, the roughly most stale plru will be evicted from the
     /// item cache and reassigned to the new item.
     fn put_item(&mut self, key: CacheKey, item: Arc<Self::Item>) -> Arc<Self::Item> {
         let plru_key = self.plru_mut().replace();
