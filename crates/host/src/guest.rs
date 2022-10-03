@@ -29,7 +29,7 @@ use wasmer::Value;
 /// The problem with this approach is that the `guest_ptr` typically needs to be provided by the
 /// allocator in the guest wasm in order to be safe for the guest's consumption, but a malicious
 /// guest could provide bogus `guest_ptr` values that point outside the bounds of the guest memory.
-/// the naive host would then corrupt its own memory by copying bytes... wherever, basically.
+/// The naive host would then corrupt its own memory by copying bytes... wherever, basically.
 ///
 /// A better approach is to use wasmer's `WasmPtr` abstraction, which checks against the memory
 /// bounds of the guest based on the input type and can be dereferenced to a [Cell] slice that we
