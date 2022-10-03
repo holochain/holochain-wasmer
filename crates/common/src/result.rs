@@ -101,7 +101,7 @@ pub struct WasmError {
 /// This macro is the recommended way of returning an error from a Zome function.
 ///
 /// If a single expression is passed to `wasm_error!` the result will be converted
-/// to a `WasmErrorInner` via. `into()` so string and `WasmErrorInner` values are
+/// to a `WasmErrorInner` via `into()` so string and `WasmErrorInner` values are
 /// both supported directly.
 ///
 /// If a list of arguments is passed to `wasm_error!` it will first be forwarded
