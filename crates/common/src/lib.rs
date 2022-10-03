@@ -38,7 +38,7 @@ pub fn merge_u64(guest_ptr: GuestPtr, len: Len) -> GuestPtrLen {
     (u64::try_from(guest_ptr).unwrap() << 32) | u64::try_from(len).unwrap()
 }
 
-/// Given a merged `GuestPtrLen` split out a `u32` pointer and length.
+/// Given a merged `GuestPtrLen`, split out a `u32` pointer and length.
 /// Performs the inverse of `merge_u64`. Takes the low `u32` bits as the length
 /// then shifts the 32 high bits down and takes those as the pointer.
 pub fn split_u64(u: GuestPtrLen) -> (GuestPtr, Len) {
