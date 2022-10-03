@@ -46,7 +46,7 @@ pub fn consume_bytes<'a>(guest_ptr: GuestPtr, len: Len) -> Vec<u8> {
 /// functions so that the host can read the output of guest logic from a pointer.
 ///
 /// The host MUST ensure either `__deallocate` is called or the entire wasm memory is dropped.
-/// If the host fails to tell the guest where and how many bytes to deallocate then this leak
+/// If the host fails to tell the guest where and how many bytes to deallocate, then this leak
 /// becomes permanent to the guest.
 #[inline(always)]
 pub fn write_bytes(v: Vec<u8>) -> GuestPtr {
