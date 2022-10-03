@@ -33,7 +33,7 @@ pub fn consume_bytes<'a>(guest_ptr: GuestPtr, len: Len) -> Vec<u8> {
     let len_usize: usize = len.try_into().unwrap();
     // This must be a Vec and not only a slice, because slices will fail to
     // deallocate memory properly when dropped.
-    // Assumes length and capacity are the same which is true if `__allocate` is
+    // Assumes length and capacity are the same, which is true if `__allocate` is
     // used to allocate memory for the vector.
     unsafe { std::vec::Vec::from_raw_parts(guest_ptr as *mut u8, len_usize, len_usize) }
 }
