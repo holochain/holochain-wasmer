@@ -6,7 +6,7 @@ use thiserror::Error;
 /// Used in [`wasm_error!`] for specifying the error type and message.
 #[derive(Clone, Debug, PartialEq, Eq, Hash, PartialOrd, Ord, Serialize, Deserialize)]
 pub enum WasmErrorInner {
-    /// While moving pointers and lengths across the host/guest we hit an unsafe
+    /// While moving pointers and lengths across the host/guest, we hit an unsafe
     /// conversion such as a negative pointer or out of bounds value.
     PointerMap,
     /// These bytes failed to deserialize.
