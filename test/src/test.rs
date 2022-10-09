@@ -6,8 +6,7 @@ use test_common::SomeStruct;
 
 pub fn short_circuit(_: &Env, _: GuestPtr, _: Len) -> Result<u64, wasmer_engine::RuntimeError> {
     Err(wasm_error!(WasmErrorInner::HostShortCircuit(
-        holochain_serialized_bytes::encode(&String::from("shorts"))
-            .map_err(|e| wasm_error!(e.into()))?,
+        holochain_serialized_bytes::encode(&String::from("shorts")).map_err(|e| wasm_error!(e))?,
     ))
     .into())
 }
@@ -73,7 +72,12 @@ pub mod tests {
 
     #[test]
     fn bytes_round_trip() {
-        let _: () = guest::call(TestWasm::Memory.instance(), "bytes_round_trip", ()).unwrap();
+        let _: () = dbg!(guest::call(
+            TestWasm::Memory.instance(),
+            "bytes_round_trip",
+            ()
+        ))
+        .unwrap();
     }
 
     #[test]
@@ -108,7 +112,8 @@ pub mod tests {
     fn process_string_test() {
         // use a "crazy" string that is much longer than a single wasm page to show that pagination
         // and utf-8 are both working OK
-        let starter_string = "╰▐ ✖ 〜 ✖ ▐╯".repeat((10_u32 * std::u16::MAX as u32) as _);
+        let starter_string = "╰▐ ✖ 〜 ✖ ▐╯"
+            .repeat(usize::try_from(10_u32 * u32::try_from(std::u16::MAX).unwrap()).unwrap());
         let result: StringType = guest::call(
             TestWasm::Test.instance(),
             "process_string",

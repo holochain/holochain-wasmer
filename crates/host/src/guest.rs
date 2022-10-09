@@ -7,63 +7,47 @@ use wasmer::Instance;
 use wasmer::Memory;
 use wasmer::Value;
 
-/// write a slice of bytes to the guest in a safe-ish way
+/// Write a slice of bytes to the guest in a safe-ish way.
 ///
-/// a naive approach would look like this:
+/// A naive approach would look like this:
 ///
 /// ```ignore
 /// let view: MemoryView<u8> = ctx.memory(0).view();
 /// unsafe {
 ///       std::ptr::copy_nonoverlapping(
 ///         slice.as_ptr(),
-///         view.as_ptr().add(guest_ptr as usize) as *mut u8,
+///         view.as_ptr().add(guest_ptr) as *mut u8,
 ///         slice.len(),
 ///     );
 /// }
 /// ```
 ///
-/// the guest memory is part of the host memory, so we get the host's pointer to the start of the
-/// guest's memory with view.as_ptr() then we add the guest's pointer to where it wants to see the
-/// written bytes then copy the slice directly across.
+/// The guest memory is part of the host memory, so we get the host's pointer to the start of the
+/// guest's memory with `view.as_ptr()`, then we add the guest's pointer to where it wants to see the
+/// written bytes, then copy the slice directly across.
 ///
-/// the problem with this approach is that the guest_ptr typically needs to be provided by the
+/// The problem with this approach is that the `guest_ptr` typically needs to be provided by the
 /// allocator in the guest wasm in order to be safe for the guest's consumption, but a malicious
-/// guest could provide bogus guest_ptr values that point outside the bounds of the guest memory.
-/// the naive host would then corrupt its own memory by copying bytes... wherever, basically.
+/// guest could provide bogus `guest_ptr` values that point outside the bounds of the guest memory.
+/// The naive host would then corrupt its own memory by copying bytes... wherever, basically.
 ///
-/// a better approach is to use wasmer's WasmPtr abstraction, which checks against the memory
+/// A better approach is to use wasmer's `WasmPtr` abstraction, which checks against the memory
 /// bounds of the guest based on the input type and can be dereferenced to a [Cell] slice that we
 /// can write to more safely.
 ///
 /// @see https://docs.rs/wasmer-runtime-core/0.17.0/src/wasmer_runtime_core/memory/ptr.rs.html#120
 ///
-/// this is still not completely safe in the face of shared memory and threads, etc.
+/// This is still not completely safe in the face of shared memory and threads, etc.
 ///
-/// the guest needs to provide a pointer to a pre-allocated (e.g. by forgetting a Vec<u8>) region
-/// of the guest's memory that it is safe for the host to write to.
+/// The guest needs to provide a pointer to a pre-allocated (e.g. by leaking a Vec<u8>) region
+/// of the guest's memory that is safe for the host to write to.
 ///
-/// it is the host's responsibility to tell the guest the length of the allocation that is needed
+/// It is the host's responsibility to tell the guest the length of the allocation that is needed
 /// and the guest's responsibility to correctly reserve an allocation to be written into.
 ///
-/// write_bytes() takes a slice of bytes and writes it to the position at the guest pointer
+/// `write_bytes()` takes a slice of bytes and writes it to the position at the guest pointer.
 ///
-/// as the byte slice cannot be co-ordinated by the compiler (because the host and guest have
-/// different compilers and allocators) we prefix the allocation with a WasmSize length value.
-///
-/// for example, if we wanted to write the slice &[1, 2, 3] then we'd take the length of the slice,
-/// 3 as a WasmSize, which is u32, i.e. a 3_u32 and convert it to an array of u8 bytes as
-/// [ 3_u8, 0_u8, 0_u8, 0_u8 ] and concatenate it to our original [ 1_u8, 2_u8, 3_u8 ].
-/// this gives the full array of bytes to write as:
-///
-/// ```ignore
-/// [ 3_u8, 0_u8, 0_u8, 0_u8, 1_u8, 2_u8, 3_u8 ]
-/// ```
-///
-/// this allows us to read back the byte slice given only a GuestPtr because the read operation
-/// can do the inverse in a single step by reading the length inline
-///
-/// it also requires the host and the guest to both adopt this convention and read/write the
-/// additional 4 byte prefix in order to read/write the real payload correctly
+/// The guest and the host negotiate the length of the bytes separately.
 ///
 /// @see read_bytes()
 pub fn write_bytes(
@@ -71,17 +55,17 @@ pub fn write_bytes(
     guest_ptr: GuestPtr,
     slice: &[u8],
 ) -> Result<(), wasmer_engine::RuntimeError> {
+    let len: Len = match slice.len().try_into() {
+        Ok(len) => len,
+        Err(e) => return Err(wasm_error!(e).into()),
+    };
     #[cfg(feature = "debug_memory")]
-    tracing::debug!(
-        "writing bytes from host to guest at: {} {}",
-        guest_ptr as u32,
-        slice.len() as u32
-    );
+    tracing::debug!("writing bytes from host to guest at: {} {}", guest_ptr, len);
 
-    let ptr: WasmPtr<u8, Array> = WasmPtr::new(guest_ptr as _);
-    // write the length prefix immediately before the slice at the guest pointer position
+    let ptr: WasmPtr<u8, Array> = WasmPtr::new(guest_ptr);
+    // Write the length prefix immediately before the slice at the guest pointer position.
     for (byte, cell) in slice.iter().zip(
-        ptr.deref(memory, 0 as GuestPtr, slice.len() as Len)
+        ptr.deref(memory, 0, len)
             .ok_or(wasm_error!(WasmErrorInner::Memory))?
             .iter(),
     ) {
@@ -91,59 +75,36 @@ pub fn write_bytes(
     Ok(())
 }
 
-/// read a slice of bytes from the guest in a safe-ish way
+/// Read a slice of bytes from the guest in a safe-ish way.
 ///
-/// a naive approach would look like this:
+/// A naive approach would look like this:
 ///
 /// ```ignore
 /// let view: MemoryView<u8> = ctx.memory(0).view();
 /// unsafe {
 ///     std::slice::from_raw_parts::<u8>(
-///         view.as_ptr().add(guest_ptr as usize) as _,
-///         len as _
+///         view.as_ptr().add(guest_ptr),
+///         len
 ///     )
 /// }.to_vec()
 /// ```
 ///
-/// this is similar to the naive write_slice approach and has similar problems
+/// This is similar to the naive write_slice approach and has similar problems.
 /// @see write_slice()
 ///
-/// a better approach is to use an immutable deref from a WasmPtr, which checks against memory
-/// bounds for the guest, and map over the whole thing to a Vec<u8>
-///
-/// this does the inverse of write_bytes to read a vector of arbitrary length given only a single
-/// GuestPtr value
-///
-/// it reads the first 4 u8 bytes at the GuestPtr position and interprets them as a single u32
-/// value representing a Len which is the length of the return Vec<u8> to read at position
-/// GuestPtr + 4
-///
-/// using the example in write_bytes(), if we had written
-///
-/// ```ignore
-/// [ 3_u8, 0_u8, 0_u8, 0_u8, 1_u8, 2_u8, 3_u8 ]
-/// ```
-///
-/// and this returned a GuestPtr to `5678` then we would read it back by taking the first 4 bytes
-/// at `5678` which would be `[ 3_u8, 0_u8, 0_u8, 0_u8 ]` which we interpret as the length `3_u32`.
-///
-/// we then read the length 3 bytes from position `5682` (ptr + 4) to get our originally written
-/// bytes of `[ 1_u8, 2_u8, 3_u8 ]`.
+/// A better approach is to use an immutable deref from a `WasmPtr`, which checks against memory
+/// bounds for the guest, and map over the whole thing to a `Vec<u8>`.
 pub fn read_bytes(
     memory: &Memory,
     guest_ptr: GuestPtr,
     len: Len,
 ) -> Result<Vec<u8>, wasmer_engine::RuntimeError> {
     #[cfg(feature = "debug_memory")]
-    tracing::debug!(
-        "reading bytes from guest to host at: {} {}",
-        guest_ptr as u32,
-        len as u32
-    );
+    tracing::debug!("reading bytes from guest to host at: {} {}", guest_ptr, len);
 
-    let ptr: WasmPtr<u8, Array> = WasmPtr::new(guest_ptr as _);
+    let ptr: WasmPtr<u8, Array> = WasmPtr::new(guest_ptr);
     Ok(ptr
-        .deref(memory, 0, len as _)
+        .deref(memory, 0, len)
         .ok_or(wasm_error!(WasmErrorInner::Memory))?
         .iter()
         .map(|cell| cell.get())
@@ -164,14 +125,14 @@ where
         Ok(v) => Ok(v),
         Err(e) => {
             tracing::error!(input_type = std::any::type_name::<O>(), bytes = ?bytes, "{}", e);
-            Err(wasm_error!(e.into()).into())
+            Err(wasm_error!(e).into())
         }
     }
 }
 
 /// Host calling guest for the function named `call` with the given `payload` in a vector of bytes
 /// result is either a vector of bytes from the guest found at the location of the returned guest
-/// allocation pointer or a `WasmError`.
+/// allocation pointer or a `RuntimeError` built from a `WasmError`.
 pub fn call<I, O>(
     instance: Arc<Mutex<Instance>>,
     f: &str,
@@ -184,32 +145,43 @@ where
     let instance = instance.lock();
     // The guest will use the same crate for decoding if it uses the wasm common crate.
     let payload: Vec<u8> =
-        holochain_serialized_bytes::encode(&input).map_err(|e| wasm_error!(e.into()))?;
+        holochain_serialized_bytes::encode(&input).map_err(|e| wasm_error!(e))?;
 
     // Get a pre-allocated guest pointer to write the input into.
-    let guest_input_ptr: GuestPtr = match instance
+    let guest_input_length = payload
+        .len()
+        .try_into()
+        .map_err(|e: TryFromIntError| wasm_error!(WasmErrorInner::CallError(e.to_string())))?;
+    let guest_input_length_value: Value = Value::I32(guest_input_length);
+    let (guest_input_ptr, guest_input_ptr_value) = match instance
         .exports
         .get_function("__allocate")
         .map_err(|e| wasm_error!(WasmErrorInner::CallError(e.to_string())))?
-        .call(&[Value::I32(
-            payload
-                .len()
-                .try_into()
-                .map_err(|e: TryFromIntError| wasm_error!(e.into()))?,
-        )])
-        .map_err(|e| wasm_error!(WasmErrorInner::CallError(e.to_string())))?[0]
+        .call(&[guest_input_length_value.clone()])
+        .map_err(|e| wasm_error!(WasmErrorInner::CallError(e.to_string())))?
+        .get(0)
     {
-        Value::I32(i) => i as GuestPtr,
-        _ => unreachable!(),
+        Some(Value::I32(guest_input_ptr)) => (
+            (*guest_input_ptr)
+                .try_into()
+                .map_err(|e: TryFromIntError| {
+                    wasm_error!(WasmErrorInner::CallError(e.to_string()))
+                })?,
+            Value::I32(*guest_input_ptr),
+        ),
+        _ => {
+            return Err(wasm_error!(WasmErrorInner::CallError(
+                "Not I32 return from __allocate".to_string()
+            ))
+            .into())
+        }
     };
 
     // Write the input payload into the guest at the offset specified by the allocation.
     write_bytes(
-        &instance
+        instance
             .exports
-            // potentially snake oil
-            // https://github.com/wasmerio/wasmer/issues/2780#issuecomment-1054452629
-            .get_with_generics_weak("memory")
+            .get_memory("memory")
             .map_err(|_| wasm_error!(WasmErrorInner::Memory))?,
         guest_input_ptr,
         &payload,
@@ -221,22 +193,16 @@ where
         .exports
         .get_function(f)
         .map_err(|e| wasm_error!(WasmErrorInner::CallError(e.to_string())))?
-        .call(&[
-            Value::I32(
-                guest_input_ptr
+        .call(&[guest_input_ptr_value, guest_input_length_value])
+    {
+        Ok(v) => match v.get(0) {
+            Some(Value::I64(i)) => {
+                let u: GuestPtrLen = (*i)
                     .try_into()
-                    .map_err(|e: TryFromIntError| wasm_error!(e.into()))?,
-            ),
-            Value::I32(
-                payload
-                    .len()
-                    .try_into()
-                    .map_err(|e: TryFromIntError| wasm_error!(e.into()))?,
-            ),
-        ]) {
-        Ok(v) => match v[0] {
-            Value::I64(i) => split_u64(i as _),
-            _ => unreachable!(),
+                    .map_err(|e: TryFromIntError| wasm_error!(e))?;
+                split_u64(u)
+            }
+            _ => return Err(wasm_error!(WasmErrorInner::PointerMap).into()),
         },
         Err(e) => match e.downcast::<WasmError>() {
             Ok(WasmError { file, line, error }) => match error {
@@ -250,7 +216,7 @@ where
                                 "{}",
                                 e
                             );
-                            Err(wasm_error!(e.into()).into())
+                            Err(wasm_error!(e).into())
                         }
                     }
                 }
@@ -264,11 +230,9 @@ where
     // The host MUST discard any wasm instance that errors at this point to avoid memory leaks.
     // The WasmError in the result type here is for deserializing out of the guest.
     let return_value: Result<O, WasmError> = from_guest_ptr(
-        &instance
+        instance
             .exports
-            // maybe snake oil but:
-            // https://github.com/wasmerio/wasmer/issues/2780#issuecomment-1054452629
-            .get_with_generics_weak("memory")
+            .get_memory("memory")
             .map_err(|_| wasm_error!(WasmErrorInner::Memory))?,
         guest_return_ptr,
         len,
@@ -283,14 +247,34 @@ where
             Value::I32(
                 guest_return_ptr
                     .try_into()
-                    .map_err(|e: TryFromIntError| wasm_error!(e.into()))?,
+                    .map_err(|e: TryFromIntError| wasm_error!(e))?,
             ),
             Value::I32(
                 len.try_into()
-                    .map_err(|e: TryFromIntError| wasm_error!(e.into()))?,
+                    .map_err(|e: TryFromIntError| wasm_error!(e))?,
             ),
         ])
         .map_err(|e| wasm_error!(WasmErrorInner::CallError(format!("{:?}", e))))?;
 
     return_value.map_err(|e| e.into())
+}
+
+#[cfg(test)]
+pub mod tests {
+    use super::*;
+
+    #[test]
+    fn wasm_error_macro_host() {
+        assert_eq!(wasm_error!("foo").error, WasmErrorInner::Host("foo".into()),);
+
+        assert_eq!(
+            wasm_error!("{} {}", "foo", "bar").error,
+            WasmErrorInner::Host("foo bar".into())
+        );
+
+        assert_eq!(
+            wasm_error!(WasmErrorInner::Host("foo".into())).error,
+            WasmErrorInner::Host("foo".into()),
+        );
+    }
 }

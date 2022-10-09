@@ -5,10 +5,11 @@ use holochain_wasmer_common::*;
 #[no_mangle]
 #[inline(always)]
 pub extern "C" fn __allocate(len: Len) -> GuestPtr {
-    let dummy: Vec<u8> = Vec::with_capacity(len as usize);
-    let ptr = dummy.as_ptr() as GuestPtr;
-    let _ = core::mem::ManuallyDrop::new(dummy);
-    ptr
+    write_bytes(Vec::with_capacity(
+        // If `usize` is smaller than `u32` the host cannot support that so we
+        // panic/unwrap.
+        len.try_into().unwrap(),
+    ))
 }
 
 /// Free an allocation.
@@ -16,50 +17,41 @@ pub extern "C" fn __allocate(len: Len) -> GuestPtr {
 #[no_mangle]
 #[inline(always)]
 pub extern "C" fn __deallocate(guest_ptr: GuestPtr, len: Len) {
-    let _: Vec<u8> =
-        unsafe { Vec::from_raw_parts(guest_ptr as *mut u8, len as usize, len as usize) };
+    let _ = consume_bytes(guest_ptr, len);
 }
 
-/// Attempt to consume bytes from a known guest_ptr and len.
+/// Attempt to consume bytes from a known `guest_ptr` and `len`.
 ///
 /// Consume in this context means take ownership of previously forgotten data.
 ///
 /// This needs to work for bytes written into the guest from the host and for bytes written with
-/// the write_bytes() function within the guest.
+/// the `write_bytes` function within the guest.
 #[inline(always)]
-pub fn consume_bytes(guest_ptr: GuestPtr, len: Len) -> Vec<u8> {
-    unsafe {
-        Vec::from_raw_parts(
-            // must match the pointer produced by the original allocation exactly
-            guest_ptr as *mut u8,
-            // this is the full length of the allocation as we want all the bytes
-            len as usize,
-            // must match the capacity set during the original allocation exactly
-            len as usize,
-        )
-    }
+pub fn consume_bytes<'a>(guest_ptr: GuestPtr, len: Len) -> Vec<u8> {
+    // If `usize` is smaller than `u32`, the host cannot support that so we
+    // panic/unwrap.
+    let len_usize: usize = len.try_into().unwrap();
+    // This must be a Vec and not only a slice, because slices will fail to
+    // deallocate memory properly when dropped.
+    // Assumes length and capacity are the same, which is true if `__allocate` is
+    // used to allocate memory for the vector.
+    unsafe { std::vec::Vec::from_raw_parts(guest_ptr as *mut u8, len_usize, len_usize) }
 }
 
-/// Attempt to write a slice of bytes.
+/// Given an owned vector of bytes, leaks it and returns a pointer the host can
+/// use to read the bytes. This does NOT handle the length of the bytes, so the
+/// guest will need to track the length separately from leaking the vector.
 ///
-/// This is identical to the following:
-/// - host has some slice of bytes
-/// - host calls __allocate with the slice length
-/// - guest returns GuestPtr to the host
-/// - host writes the bytes into the guest at GuestPtr location
-/// - host hands the GuestPtr back to the guest
+/// This facilitates the guest handing a `GuestPtr` back to the host as the return value of guest
+/// functions so that the host can read the output of guest logic from a pointer.
 ///
-/// In this case everything happens within the guest and a GuestPtr is returned if successful.
-///
-/// This also leaks the written bytes, exactly like the above process.
-///
-/// This facilitates the guest handing a GuestPtr back to the host as the _return_ value of guest
-/// functions so that the host can read the _output_ of guest logic from a pointer.
-///
-/// The host MUST ensure either __deallocate is called or the entire wasm memory is dropped.
+/// The host MUST ensure either `__deallocate` is called or the entire wasm memory is dropped.
+/// If the host fails to tell the guest where and how many bytes to deallocate, then this leak
+/// becomes permanent to the guest.
 #[inline(always)]
 pub fn write_bytes(v: Vec<u8>) -> GuestPtr {
-    let ptr: GuestPtr = v.as_ptr() as GuestPtr;
-    let _ = core::mem::ManuallyDrop::new(v);
-    ptr
+    // This *const u8 cast to u32 is safe and the only way to get a raw pointer as a u32 afaik.
+    // > e has type *T and U is a numeric type, while T: Sized; ptr-addr-cast
+    // https://web.mit.edu/rust-lang_v1.25/arch/amd64_ubuntu1404/share/doc/rust/html/book/first-edition/casting-between-types.html#pointer-casts
+    v.leak().as_ptr() as u32
 }

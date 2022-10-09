@@ -18,7 +18,7 @@ pub fn wasm_module(c: &mut Criterion) {
     ] {
         group.bench_function(BenchmarkId::new("wasm_module", wasm.name()), |b| {
             b.iter(|| {
-                wasm.module();
+                wasm.module(false);
             })
         });
     }
@@ -38,7 +38,7 @@ pub fn wasm_instance(c: &mut Criterion) {
     ] {
         group.bench_function(BenchmarkId::new("wasm_instance", wasm.name()), |b| {
             b.iter(|| {
-                let module = wasm.module();
+                let module = wasm.module(false);
                 let env = Env::default();
                 let import_object: wasmer::ImportObject = imports! {
                     "env" => {
@@ -81,7 +81,7 @@ pub fn wasm_instance(c: &mut Criterion) {
 pub fn wasm_call(c: &mut Criterion) {
     let mut group = c.benchmark_group("wasm_call");
 
-    let instance = TestWasm::Io.instance();
+    let instance = TestWasm::Io.unmetered_instance();
 
     macro_rules! bench_call {
         ( $fs:expr; $t:tt; $n:ident; $build:expr; ) => {
@@ -91,7 +91,7 @@ pub fn wasm_call(c: &mut Criterion) {
 
             for f in fs {
                 for $n in vec![0, 1, 1_000, 1_000_000] {
-                    group.throughput(Throughput::Bytes($n as _));
+                    group.throughput(Throughput::Bytes($n));
                     group.sample_size(10);
 
                     let input = test_common::$t::from($build);
@@ -122,7 +122,7 @@ pub fn wasm_call(c: &mut Criterion) {
         ];
         StringType;
         n;
-        ".".repeat(n);
+        ".".repeat(n.try_into().unwrap());
     );
 
     bench_call!(
@@ -133,7 +133,7 @@ pub fn wasm_call(c: &mut Criterion) {
         ];
         BytesType;
         n;
-        vec![0; n];
+        vec![0; n.try_into().unwrap()];
     );
 
     group.finish();
@@ -152,8 +152,8 @@ pub fn wasm_call_n(c: &mut Criterion) {
             fs.shuffle(&mut thread_rng());
 
             for f in fs {
-                for n in vec![0, 1, 1_000, 1_000_000] {
-                    group.throughput(Throughput::Bytes(n as _));
+                for n in vec![0_u32, 1, 1_000, 1_000_000] {
+                    group.throughput(Throughput::Bytes(n.try_into().unwrap()));
                     group.sample_size(10);
 
                     group.bench_with_input(
@@ -188,9 +188,9 @@ pub fn test_process_string(c: &mut Criterion) {
     let instance = TestWasm::Test.instance();
 
     for n in vec![0, 1, 1_000, 1_000_000] {
-        group.throughput(Throughput::Bytes(n as _));
+        group.throughput(Throughput::Bytes(n));
         group.sample_size(10);
-        let input = test_common::StringType::from(".".repeat(n));
+        let input = test_common::StringType::from(".".repeat(n.try_into().unwrap()));
         group.bench_with_input(BenchmarkId::new("test_process_string", n), &n, |b, _| {
             b.iter(|| {
                 let _: test_common::StringType = holochain_wasmer_host::guest::call(
@@ -208,7 +208,7 @@ pub fn test_process_string(c: &mut Criterion) {
 
 pub fn test_instances(c: &mut Criterion) {
     let mut group = c.benchmark_group("test_instances");
-    group.throughput(Throughput::Bytes(1_000 as _));
+    group.throughput(Throughput::Bytes(1_000));
     group.sample_size(100);
     let input = test_common::StringType::from(".".repeat(1000));
     group.bench_with_input(BenchmarkId::new("test_instances", 1000), &1000, |b, _| {
