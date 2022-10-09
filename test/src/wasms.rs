@@ -54,7 +54,7 @@ impl TestWasm {
         }
     }
 
-    pub fn module(&self) -> Arc<Module> {
+    pub fn module(&self, metered: bool) -> Arc<Module> {
         match MODULE_CACHE.write().get(self.key(), self.bytes()) {
             Ok(v) => v,
             Err(runtime_error) => match runtime_error.downcast::<WasmError>() {
@@ -69,9 +69,19 @@ impl TestWasm {
                                 cranelift
                             };
 
+                            let cranelift_fn_unmetered = || {
+                                let mut cranelift = Cranelift::default();
+                                cranelift.canonicalize_nans(true);
+                                cranelift
+                            };
+
                             assert!(SERIALIZED_MODULE_CACHE
                                 .set(parking_lot::RwLock::new(
-                                    SerializedModuleCache::default_with_cranelift(cranelift_fn)
+                                    SerializedModuleCache::default_with_cranelift(if metered {
+                                        cranelift_fn
+                                    } else {
+                                        cranelift_fn_unmetered
+                                    })
                                 ))
                                 .is_ok());
                         }
@@ -91,10 +101,18 @@ impl TestWasm {
         }
     }
 
-    pub fn instance(&self) -> Arc<Mutex<Instance>> {
-        let module = self.module();
+    pub fn _instance(&self, metered: bool) -> Arc<Mutex<Instance>> {
+        let module = self.module(metered);
         let env = Env::default();
         let import_object: ImportObject = import_object(&module.store(), &env);
         Arc::new(Mutex::new(Instance::new(&module, &import_object).unwrap()))
+    }
+
+    pub fn instance(&self) -> Arc<Mutex<Instance>> {
+        self._instance(true)
+    }
+
+    pub fn unmetered_instance(&self) -> Arc<Mutex<Instance>> {
+        self._instance(false)
     }
 }

@@ -18,7 +18,7 @@ pub fn wasm_module(c: &mut Criterion) {
     ] {
         group.bench_function(BenchmarkId::new("wasm_module", wasm.name()), |b| {
             b.iter(|| {
-                wasm.module();
+                wasm.module(false);
             })
         });
     }
@@ -38,7 +38,7 @@ pub fn wasm_instance(c: &mut Criterion) {
     ] {
         group.bench_function(BenchmarkId::new("wasm_instance", wasm.name()), |b| {
             b.iter(|| {
-                let module = wasm.module();
+                let module = wasm.module(false);
                 let env = Env::default();
                 let import_object: wasmer::ImportObject = imports! {
                     "env" => {
@@ -81,7 +81,7 @@ pub fn wasm_instance(c: &mut Criterion) {
 pub fn wasm_call(c: &mut Criterion) {
     let mut group = c.benchmark_group("wasm_call");
 
-    let instance = TestWasm::Io.instance();
+    let instance = TestWasm::Io.unmetered_instance();
 
     macro_rules! bench_call {
         ( $fs:expr; $t:tt; $n:ident; $build:expr; ) => {
@@ -116,7 +116,7 @@ pub fn wasm_call(c: &mut Criterion) {
 
     bench_call!(
         vec![
-            // "string_input_ignored_empty_ret",
+            "string_input_ignored_empty_ret",
             "string_input_args_empty_ret",
             "string_input_args_echo_ret",
         ];
