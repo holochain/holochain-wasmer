@@ -9,10 +9,13 @@ on:
 jobs:
   test:
     runs-on: macos-latest
+    strategy:
+      matrix:
+        script: ["./test.sh", "./bench.sh"]
     steps:
       - uses: actions/checkout@v2
       - uses: actions-rs/toolchain@v1
         with:
           toolchain: stable
           target: wasm32-unknown-unknown
-      - run: ./test.sh
+      - run: ${{ matrix.script }}
