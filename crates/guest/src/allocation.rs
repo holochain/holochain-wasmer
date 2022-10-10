@@ -27,7 +27,7 @@ pub extern "C" fn __deallocate(guest_ptr: GuestPtr, len: Len) {
 /// This needs to work for bytes written into the guest from the host and for bytes written with
 /// the `write_bytes` function within the guest.
 #[inline(always)]
-pub fn consume_bytes<'a>(guest_ptr: GuestPtr, len: Len) -> Vec<u8> {
+pub fn consume_bytes(guest_ptr: GuestPtr, len: Len) -> Vec<u8> {
     // If `usize` is smaller than `u32`, the host cannot support that so we
     // panic/unwrap.
     let len_usize: usize = len.try_into().unwrap();

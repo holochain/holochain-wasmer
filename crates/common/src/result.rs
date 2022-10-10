@@ -12,7 +12,7 @@ pub enum WasmErrorInner {
     /// These bytes failed to deserialize.
     /// The host should provide nice debug info and context that the wasm guest won't have.
     #[serde(with = "serde_bytes")]
-    Deserialize(Box<[u8]>),
+    Deserialize(Vec<u8>),
     /// Something failed to serialize.
     /// This should be rare or impossible for almost everything that implements `Serialize`.
     Serialize(SerializedBytesError),
@@ -22,9 +22,6 @@ pub enum WasmErrorInner {
     /// Something went wrong while writing or reading bytes to/from wasm memory.
     /// Whatever this is, it is very bad and probably not recoverable.
     Memory,
-    /// Host failed to take bytes out of the guest and do something with it.
-    /// The string is whatever error message comes back from the internal process.
-    GuestResultHandling(String),
     /// Error with guest logic that the host doesn't know about.
     Guest(String),
     /// Error with host logic that the guest doesn't know about.
@@ -47,18 +44,32 @@ impl WasmErrorInner {
     /// MAY NOT invalidate an instance cache on the host.
     pub fn maybe_corrupt(&self) -> bool {
         match self {
+            // Similar to bad memory errors.
             Self::PointerMap
+            // Should never happen but best not to cache this.
             | Self::ErrorWhileError
+            // Bad memory is bad memory.
             | Self::Memory
-            | Self::GuestResultHandling(_)
+            // Failing to compile means we cannot reuse.
             | Self::Compile(_)
+            // This is ambiguous so best to treat as potentially corrupt.
             | Self::CallError(_)
-            | Self::UninitializedSerializedModuleCache => true,
+            // We have no cache so cannot cache.
+            | Self::UninitializedSerializedModuleCache
+             => true,
+            // (De)serialization simply means some input/output data was
+            // unrecognisable somehow, it doesn't corrupt the guest memory.
             Self::Deserialize(_)
             | Self::Serialize(_)
+            // Guest/host errors are regular errors that simply pass through the
+            // guest as any other data as some `Result` value, it doesn't corrupt
+            // guest memory.
             | Self::Guest(_)
             | Self::Host(_)
-            | Self::HostShortCircuit(_) => false,
+            // As long as `consume_bytes_from_guest` is used by the host it will
+            // have already cleaned up all memory leaks in the guest before the
+            // host can even run something that may fail and short circuit.
+            | Self::HostShortCircuit(_)=> false,
         }
     }
 }

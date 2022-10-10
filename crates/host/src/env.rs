@@ -72,7 +72,8 @@ impl Env {
                 .ok_or(wasm_error!(WasmErrorInner::Memory))?,
             guest_ptr,
             len,
-        )?;
+        )
+        .map_err(|_| wasm_error!(WasmErrorInner::Memory))?;
         self.deallocate_ref()
             .ok_or(wasm_error!(WasmErrorInner::Memory))?
             .call(&[

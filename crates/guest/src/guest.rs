@@ -32,7 +32,7 @@ where
         Err(e) => {
             tracing::error!(input_type = std::any::type_name::<O>(), bytes = ?bytes, "{}", e);
             Err(return_err_ptr(wasm_error!(WasmErrorInner::Deserialize(
-                bytes.into()
+                bytes
             ))))
         }
     }
@@ -74,7 +74,7 @@ where
         Ok(output) => Ok(output?),
         Err(e) => {
             tracing::error!(output_type = std::any::type_name::<O>(), ?bytes, "{}", e);
-            Err(wasm_error!(WasmErrorInner::Deserialize(bytes.into())))
+            Err(wasm_error!(WasmErrorInner::Deserialize(bytes)))
         }
     }
 }
