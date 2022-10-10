@@ -54,7 +54,7 @@ pub fn write_bytes(
     memory: &Memory,
     guest_ptr: GuestPtr,
     slice: &[u8],
-) -> Result<(), wasmer_engine::RuntimeError> {
+) -> Result<(), wasmer::RuntimeError> {
     let len: Len = match slice.len().try_into() {
         Ok(len) => len,
         Err(e) => return Err(wasm_error!(e).into()),
@@ -98,7 +98,7 @@ pub fn read_bytes(
     memory: &Memory,
     guest_ptr: GuestPtr,
     len: Len,
-) -> Result<Vec<u8>, wasmer_engine::RuntimeError> {
+) -> Result<Vec<u8>, wasmer::RuntimeError> {
     #[cfg(feature = "debug_memory")]
     tracing::debug!("reading bytes from guest to host at: {} {}", guest_ptr, len);
 
@@ -116,7 +116,7 @@ pub fn from_guest_ptr<O>(
     memory: &Memory,
     guest_ptr: GuestPtr,
     len: Len,
-) -> Result<O, wasmer_engine::RuntimeError>
+) -> Result<O, wasmer::RuntimeError>
 where
     O: serde::de::DeserializeOwned + std::fmt::Debug,
 {
@@ -137,7 +137,7 @@ pub fn call<I, O>(
     instance: Arc<Mutex<Instance>>,
     f: &str,
     input: I,
-) -> Result<O, wasmer_engine::RuntimeError>
+) -> Result<O, wasmer::RuntimeError>
 where
     I: serde::Serialize + std::fmt::Debug,
     O: serde::de::DeserializeOwned + std::fmt::Debug,

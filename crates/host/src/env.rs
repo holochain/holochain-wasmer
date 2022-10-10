@@ -21,10 +21,7 @@ impl Env {
     /// Given some input I that can be serialized, request an allocation from the
     /// guest and copy the serialized bytes to the allocated pointer. The guest
     /// MUST subsequently take ownership of these bytes or it will leak memory.
-    pub fn move_data_to_guest<I>(
-        &self,
-        input: I,
-    ) -> Result<GuestPtrLen, wasmer_engine::RuntimeError>
+    pub fn move_data_to_guest<I>(&self, input: I) -> Result<GuestPtrLen, wasmer::RuntimeError>
     where
         I: serde::Serialize + std::fmt::Debug,
     {
@@ -66,7 +63,7 @@ impl Env {
         &self,
         guest_ptr: GuestPtr,
         len: Len,
-    ) -> Result<O, wasmer_engine::RuntimeError>
+    ) -> Result<O, wasmer::RuntimeError>
     where
         O: serde::de::DeserializeOwned + std::fmt::Debug,
     {
