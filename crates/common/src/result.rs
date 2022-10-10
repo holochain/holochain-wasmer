@@ -153,9 +153,9 @@ impl From<core::convert::Infallible> for WasmError {
 }
 
 #[cfg(not(target_arch = "wasm32"))]
-impl From<WasmError> for wasmer_engine::RuntimeError {
-    fn from(wasm_error: WasmError) -> wasmer_engine::RuntimeError {
-        wasmer_engine::RuntimeError::user(Box::new(wasm_error))
+impl From<WasmError> for wasmer::RuntimeError {
+    fn from(wasm_error: WasmError) -> wasmer::RuntimeError {
+        wasmer::RuntimeError::user(Box::new(wasm_error))
     }
 }
 

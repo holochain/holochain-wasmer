@@ -8,14 +8,13 @@ edition = "2021"
 holochain_wasmer_common = { path = "../crates/common", features = []}
 holochain_wasmer_host = { path = "../crates/host" }
 holochain_serialized_bytes = "=0.0.51"
-serde = "1.0.136"
+serde = "1"
 test_common = { path = "./common" }
 criterion = "0.3"
-rand = "0.7"
+rand = "0.8"
 serde_bytes = "0.11"
-parking_lot = "0.11.1"
+parking_lot = "0.12"
 wasmer = "=2.3.0"
-wasmer-engine = "=2.3.0"
 wasmer-middlewares = "=2.3.0"
 
 [dev-dependencies]
