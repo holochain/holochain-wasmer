@@ -12,7 +12,7 @@ pub enum WasmErrorInner {
     /// These bytes failed to deserialize.
     /// The host should provide nice debug info and context that the wasm guest won't have.
     #[serde(with = "serde_bytes")]
-    Deserialize(Box<[u8]>),
+    Deserialize(Vec<u8>),
     /// Something failed to serialize.
     /// This should be rare or impossible for almost everything that implements `Serialize`.
     Serialize(SerializedBytesError),

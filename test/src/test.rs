@@ -18,7 +18,7 @@ pub fn test_process_string(
 ) -> Result<u64, wasmer::RuntimeError> {
     let string: String = env.consume_bytes_from_guest(guest_ptr, len)?;
     let processed_string = format!("host: {}", string);
-    Ok(env.move_data_to_guest(Ok::<String, WasmError>(processed_string))?)
+    env.move_data_to_guest(Ok::<String, WasmError>(processed_string))
 }
 
 pub fn test_process_struct(
@@ -28,12 +28,12 @@ pub fn test_process_struct(
 ) -> Result<u64, wasmer::RuntimeError> {
     let mut some_struct: SomeStruct = env.consume_bytes_from_guest(guest_ptr, len)?;
     some_struct.process();
-    Ok(env.move_data_to_guest(Ok::<SomeStruct, WasmError>(some_struct))?)
+    env.move_data_to_guest(Ok::<SomeStruct, WasmError>(some_struct))
 }
 
 pub fn debug(env: &Env, some_number: WasmSize) -> Result<u64, wasmer::RuntimeError> {
     println!("debug {:?}", some_number);
-    Ok(env.move_data_to_guest(())?)
+    env.move_data_to_guest(())
 }
 
 pub fn pages(env: &Env, _: WasmSize) -> Result<WasmSize, wasmer::RuntimeError> {
@@ -193,7 +193,7 @@ pub mod tests {
                 assert_eq!(
                     WasmError {
                         file: "src/wasm.rs".into(),
-                        line: 132,
+                        line: 133,
                         error: WasmErrorInner::Guest("it fails!: ()".into()),
                     },
                     runtime_error.downcast().unwrap(),

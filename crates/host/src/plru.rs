@@ -158,7 +158,7 @@ impl<B: AsRef<[AtomicU64]>> Cache<B> {
     /// ```
     pub fn new(bulks: B) -> Cache<B> {
         Cache {
-            bulks: bulks,
+            bulks,
             counter: AtomicU8::default(),
         }
     }
@@ -272,6 +272,11 @@ impl<B: AsRef<[AtomicU64]>> Cache<B> {
     /// ```
     pub fn len(&self) -> usize {
         self.bulks.as_ref().len() * 64
+    }
+
+    /// Clippy wants this in addition to `len`.
+    pub fn is_empty(&self) -> bool {
+        self.len() == 0
     }
 
     /// Is the n'th cache line hot?

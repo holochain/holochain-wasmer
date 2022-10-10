@@ -58,44 +58,45 @@ impl TestWasm {
         match MODULE_CACHE.write().get(self.key(), self.bytes()) {
             Ok(v) => v,
             Err(runtime_error) => match runtime_error.downcast::<WasmError>() {
-                Ok(WasmError { error, .. }) => match error {
-                    WasmErrorInner::UninitializedSerializedModuleCache => {
-                        {
-                            let cranelift_fn = || {
-                                let cost_function = |_operator: &Operator| -> u64 { 1 };
-                                let metering = Arc::new(Metering::new(10000000000, cost_function));
-                                let mut cranelift = Cranelift::default();
-                                cranelift.canonicalize_nans(true).push_middleware(metering);
-                                cranelift
-                            };
+                Ok(WasmError {
+                    error: WasmErrorInner::UninitializedSerializedModuleCache,
+                    ..
+                }) => {
+                    {
+                        let cranelift_fn = || {
+                            let cost_function = |_operator: &Operator| -> u64 { 1 };
+                            let metering = Arc::new(Metering::new(10000000000, cost_function));
+                            let mut cranelift = Cranelift::default();
+                            cranelift.canonicalize_nans(true).push_middleware(metering);
+                            cranelift
+                        };
 
-                            let cranelift_fn_unmetered = || {
-                                let mut cranelift = Cranelift::default();
-                                cranelift.canonicalize_nans(true);
-                                cranelift
-                            };
+                        let cranelift_fn_unmetered = || {
+                            let mut cranelift = Cranelift::default();
+                            cranelift.canonicalize_nans(true);
+                            cranelift
+                        };
 
-                            assert!(SERIALIZED_MODULE_CACHE
-                                .set(parking_lot::RwLock::new(
-                                    SerializedModuleCache::default_with_cranelift(if metered {
-                                        cranelift_fn
-                                    } else {
-                                        cranelift_fn_unmetered
-                                    })
-                                ))
-                                .is_ok());
-                        }
-                        Arc::new(
-                            SERIALIZED_MODULE_CACHE
-                                .get()
-                                .unwrap()
-                                .write()
-                                .get(self.key(), self.bytes())
-                                .unwrap(),
-                        )
+                        assert!(SERIALIZED_MODULE_CACHE
+                            .set(parking_lot::RwLock::new(
+                                SerializedModuleCache::default_with_cranelift(if metered {
+                                    cranelift_fn
+                                } else {
+                                    cranelift_fn_unmetered
+                                })
+                            ))
+                            .is_ok());
                     }
-                    _ => unreachable!(),
-                },
+                    Arc::new(
+                        SERIALIZED_MODULE_CACHE
+                            .get()
+                            .unwrap()
+                            .write()
+                            .get(self.key(), self.bytes())
+                            .unwrap(),
+                    )
+                }
+
                 _ => unreachable!(),
             },
         }
@@ -104,7 +105,7 @@ impl TestWasm {
     pub fn _instance(&self, metered: bool) -> Arc<Mutex<Instance>> {
         let module = self.module(metered);
         let env = Env::default();
-        let import_object: ImportObject = import_object(&module.store(), &env);
+        let import_object: ImportObject = import_object(module.store(), &env);
         Arc::new(Mutex::new(Instance::new(&module, &import_object).unwrap()))
     }
 
