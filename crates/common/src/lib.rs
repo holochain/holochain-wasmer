@@ -55,6 +55,7 @@ pub mod tests {
     use super::*;
 
     #[test]
+    #[test_fuzz::test_fuzz]
     fn round_trip() {
         let guest_ptr = 9000000;
         let len = 1000;
