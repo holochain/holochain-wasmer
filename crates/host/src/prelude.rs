@@ -5,5 +5,4 @@ pub use holochain_serialized_bytes::prelude::*;
 pub use holochain_wasmer_common::result::WasmError;
 pub use holochain_wasmer_common::*;
 pub use parking_lot::Mutex;
-pub use wasmer::WasmerEnv;
 pub use wasmer::*;

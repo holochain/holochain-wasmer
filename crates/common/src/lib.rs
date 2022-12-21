@@ -14,7 +14,6 @@ pub use serde_bytes;
 /// manipulate the guest memory as it needs to.
 ///
 /// Wasmer itself uses `u32` in the `WasmPtr` abstraction etc.
-/// @see https://docs.rs/wasmer-runtime/0.17.0/wasmer_runtime/struct.WasmPtr.html
 pub type WasmSize = u32;
 
 /// A `WasmSize` that points to a position in wasm linear memory that the host
@@ -55,6 +54,7 @@ pub mod tests {
     use super::*;
 
     #[test]
+    #[test_fuzz::test_fuzz]
     fn round_trip() {
         let guest_ptr = 9000000;
         let len = 1000;

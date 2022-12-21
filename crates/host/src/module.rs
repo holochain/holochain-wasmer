@@ -9,7 +9,6 @@ use std::collections::BTreeMap;
 use std::sync::Arc;
 use wasmer::Module;
 use wasmer::Store;
-use wasmer::Universal;
 
 /// We expect cache keys to be produced via hashing so 32 bytes is enough for all
 /// purposes.
@@ -154,7 +153,7 @@ impl SerializedModuleCache {
         key: CacheKey,
         wasm: &[u8],
     ) -> Result<Module, wasmer::RuntimeError> {
-        let store = Store::new(&Universal::new((self.cranelift)()).engine());
+        let store = Store::new(&(self.cranelift)());
         let module = Module::from_binary(&store, wasm)
             .map_err(|e| wasm_error!(WasmErrorInner::Compile(e.to_string())))?;
         let serialized_module = module
@@ -169,7 +168,7 @@ impl SerializedModuleCache {
     pub fn get(&mut self, key: CacheKey, wasm: &[u8]) -> Result<Module, wasmer::RuntimeError> {
         match self.cache.get(&key) {
             Some(serialized_module) => {
-                let store = Store::new(&Universal::new((self.cranelift)()).engine());
+                let store = Store::new(&(self.cranelift)());
                 let module = unsafe { Module::deserialize(&store, serialized_module) }
                     .map_err(|e| wasm_error!(WasmErrorInner::Compile(e.to_string())))?;
                 self.touch(&key);

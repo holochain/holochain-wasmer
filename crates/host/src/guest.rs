@@ -62,7 +62,7 @@ pub fn write_bytes(
     #[cfg(feature = "debug_memory")]
     tracing::debug!("writing bytes from host to guest at: {} {}", guest_ptr, len);
 
-    let ptr: WasmPtr<u8, Array> = WasmPtr::new(guest_ptr);
+    let ptr: WasmPtr<u8> = WasmPtr::new(guest_ptr);
     // Write the length prefix immediately before the slice at the guest pointer position.
     for (byte, cell) in slice.iter().zip(
         ptr.deref(memory, 0, len)
@@ -102,7 +102,7 @@ pub fn read_bytes(
     #[cfg(feature = "debug_memory")]
     tracing::debug!("reading bytes from guest to host at: {} {}", guest_ptr, len);
 
-    let ptr: WasmPtr<u8, Array> = WasmPtr::new(guest_ptr);
+    let ptr: WasmPtr<u8> = WasmPtr::new(guest_ptr);
     Ok(ptr
         .deref(memory, 0, len)
         .ok_or(wasm_error!(WasmErrorInner::Memory))?

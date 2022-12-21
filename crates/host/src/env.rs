@@ -2,19 +2,12 @@ use std::num::TryFromIntError;
 
 use crate::guest::read_bytes;
 use crate::prelude::*;
-use wasmer::Function;
-use wasmer::LazyInit;
 use wasmer::Memory;
-use wasmer::WasmerEnv;
 
-#[derive(Clone, Default, WasmerEnv)]
 pub struct Env {
-    #[wasmer(export)]
-    memory: LazyInit<Memory>,
-    #[wasmer(export(name = "__allocate"))]
-    allocate: LazyInit<Function>,
-    #[wasmer(export(name = "__deallocate"))]
-    deallocate: LazyInit<Function>,
+    memory: Option<Memory>,
+    allocate: Option<TypedFunction<i32, ()>>,
+    deallocate: Option<TypedFunction<(i32, i32), ()>>,
 }
 
 impl Env {
