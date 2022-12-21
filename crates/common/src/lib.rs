@@ -54,11 +54,10 @@ pub fn split_u64(u: GuestPtrLen) -> (GuestPtr, Len) {
 pub mod tests {
     use super::*;
 
-    #[test]
     #[test_fuzz::test_fuzz]
-    fn round_trip() {
-        let guest_ptr = 9000000;
-        let len = 1000;
+    fn round_trip(guest_ptr: GuestPtr, len: Len) {
+        // let guest_ptr = 9000000;
+        // let len = 1000;
 
         let (out_guest_ptr, out_len) = split_u64(merge_u64(guest_ptr, len));
 
