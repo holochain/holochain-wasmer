@@ -1,6 +1,5 @@
 #! /usr/bin/env bash
-
-cd crates/common
-cargo install cargo-test-fuzz afl
 cargo test
-cargo test-fuzz round_trip
+cargo test --manifest-path test/Cargo.toml
+
+cargo test-fuzz

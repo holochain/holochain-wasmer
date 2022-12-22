@@ -56,9 +56,6 @@ pub mod tests {
 
     #[test_fuzz::test_fuzz]
     fn round_trip(guest_ptr: GuestPtr, len: Len) {
-        // let guest_ptr = 9000000;
-        // let len = 1000;
-
         let (out_guest_ptr, out_len) = split_u64(merge_u64(guest_ptr, len));
 
         assert_eq!(guest_ptr, out_guest_ptr,);
