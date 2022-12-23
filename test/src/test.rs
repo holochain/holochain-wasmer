@@ -114,7 +114,8 @@ pub mod tests {
             TestWasm::Test.instance(),
             "process_string",
             &StringType::from(s.clone()),
-        ).expect("process string call");
+        )
+        .expect("process string call");
 
         let expected_string = format!("host: guest: {}", s);
 
@@ -183,7 +184,7 @@ pub mod tests {
             Err(runtime_error) => assert_eq!(
                 WasmError {
                     file: "src/wasm.rs".into(),
-                    line: 103,
+                    line: 100,
                     error: WasmErrorInner::Guest("oh no!".into()),
                 },
                 runtime_error.downcast().unwrap(),
@@ -206,7 +207,7 @@ pub mod tests {
                 assert_eq!(
                     WasmError {
                         file: "src/wasm.rs".into(),
-                        line: 133,
+                        line: 128,
                         error: WasmErrorInner::Guest("it fails!: ()".into()),
                     },
                     runtime_error.downcast().unwrap(),

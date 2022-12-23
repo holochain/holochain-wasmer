@@ -55,3 +55,15 @@ pub fn write_bytes(v: Vec<u8>) -> GuestPtr {
     // https://web.mit.edu/rust-lang_v1.25/arch/amd64_ubuntu1404/share/doc/rust/html/book/first-edition/casting-between-types.html#pointer-casts
     v.leak().as_ptr() as u32
 }
+
+#[cfg(test)]
+pub mod tests {
+    use super::*;
+
+    #[test_fuzz::test_fuzz]
+    fn round_trip(bytes: Vec<u8>) {
+        let bytes_round = consume_bytes(write_bytes(bytes.clone()), bytes.len());
+
+        assert_eq!(bytes, bytes_round);
+    }
+}

@@ -7,5 +7,5 @@ ADD Cargo.toml Cargo.toml
 RUN nix-shell --run "cargo test"
 ADD test ./test
 RUN nix-shell --run "cargo test --manifest-path test/Cargo.toml"
-ADD . .
+ADD fuzz.sh ./fuzz.sh
 CMD nix-shell --run ./fuzz.sh

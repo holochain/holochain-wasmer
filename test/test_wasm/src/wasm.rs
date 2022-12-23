@@ -73,9 +73,8 @@ pub extern "C" fn process_native(guest_ptr: GuestPtr, len: Len) -> GuestPtrLen {
 
 #[no_mangle]
 pub extern "C" fn stacked_strings(guest_ptr: GuestPtr, len: Len) -> GuestPtrLen {
-    let _: () = match host_args(guest_ptr, len) {
-        Ok(v) => v,
-        Err(err_ptr) => return err_ptr,
+    if let Err(err_ptr) = host_args::<()>(guest_ptr, len) {
+        return err_ptr;
     };
     // get the first string allocated to be returned
     let first = "first";
@@ -87,18 +86,16 @@ pub extern "C" fn stacked_strings(guest_ptr: GuestPtr, len: Len) -> GuestPtrLen 
 
 #[no_mangle]
 pub extern "C" fn some_ret(guest_ptr: GuestPtr, len: Len) -> GuestPtrLen {
-    let _: () = match host_args(guest_ptr, len) {
-        Ok(v) => v,
-        Err(err_ptr) => return err_ptr,
+    if let Err(err_ptr) = host_args::<()>(guest_ptr, len) {
+        return err_ptr;
     };
     return_ptr(SomeStruct::new("foo".into()))
 }
 
 #[no_mangle]
 pub extern "C" fn some_ret_err(guest_ptr: GuestPtr, len: Len) -> GuestPtrLen {
-    let _: () = match host_args(guest_ptr, len) {
-        Ok(v) => v,
-        Err(err_ptr) => return err_ptr,
+    if let Err(err_ptr) = host_args::<()>(guest_ptr, len) {
+        return err_ptr;
     };
     return_err_ptr(wasm_error!(WasmErrorInner::Guest("oh no!".to_string())))
 }
@@ -114,9 +111,8 @@ pub extern "C" fn native_type(guest_ptr: GuestPtr, len: Len) -> GuestPtrLen {
 
 #[no_mangle]
 pub extern "C" fn try_ptr_succeeds(guest_ptr: GuestPtr, len: Len) -> GuestPtrLen {
-    let _: () = match host_args(guest_ptr, len) {
-        Ok(v) => v,
-        Err(err_ptr) => return err_ptr,
+    if let Err(err_ptr) = host_args::<()>(guest_ptr, len) {
+        return err_ptr;
     };
     let ok: Result<SomeStruct, ()> = Ok(SomeStruct::new("foo".into()));
     let result: Result<SomeStruct, ()> = Ok(try_ptr!(ok, "this can't fail"));
@@ -125,9 +121,8 @@ pub extern "C" fn try_ptr_succeeds(guest_ptr: GuestPtr, len: Len) -> GuestPtrLen
 
 #[no_mangle]
 pub extern "C" fn try_ptr_fails_fast(guest_ptr: GuestPtr, len: Len) -> GuestPtrLen {
-    let _: () = match host_args(guest_ptr, len) {
-        Ok(v) => v,
-        Err(err_ptr) => return err_ptr,
+    if let Err(err_ptr) = host_args::<()>(guest_ptr, len) {
+        return err_ptr;
     };
     #[allow(clippy::unit_arg)]
     let result: Result<(), WasmError> = Ok(try_ptr!(Err(()), "it fails!"));
