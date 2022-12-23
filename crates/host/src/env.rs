@@ -21,7 +21,7 @@ impl Env {
     /// Given some input I that can be serialized, request an allocation from the
     /// guest and copy the serialized bytes to the allocated pointer. The guest
     /// MUST subsequently take ownership of these bytes or it will leak memory.
-    pub fn move_data_to_guest<I>(&self, input: I) -> Result<GuestPtrLen, wasmer::RuntimeError>
+    pub fn move_data_to_guest<I>(&self, input: I) -> Result<(GuestPtr, Len), wasmer::RuntimeError>
     where
         I: serde::Serialize + std::fmt::Debug,
     {
@@ -52,7 +52,7 @@ impl Env {
             guest_ptr,
             &data,
         )?;
-        Ok(merge_u64(guest_ptr, len))
+        Ok((guest_ptr, len))
     }
 
     /// Given a pointer and length for a region of memory in the guest, copy the

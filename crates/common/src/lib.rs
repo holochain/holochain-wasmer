@@ -29,25 +29,36 @@ pub type Len = WasmSize;
 /// Rust support for wasm externs is not stable at the time of writing.
 pub type GuestPtrLen = u64;
 
-/// Given a pointer and a length, return a `u64` merged `GuestPtrLen`.
+#[cfg(target_pointer_width = "16")]
+pub type DoubleUSize = u32;
+
+#[cfg(target_pointer_width = "32")]
+pub type DoubleUSize = u64;
+
+#[cfg(target_pointer_width = "64")]
+pub type DoubleUSize = u128;
+
+const SPLIT_MASK: DoubleUSize = usize::MAX as DoubleUSize;
+
+/// Given 2x `u32`, return a `DoubleUSize` merged.
 /// Works via a simple bitwise shift to move the pointer to high bits then OR
 /// the length into the low bits.
-pub fn merge_u64(guest_ptr: GuestPtr, len: Len) -> GuestPtrLen {
-    // It should be impossible to hit these unwrap/panic conditions but it's more
-    // conservative to define them than rely on an `as uX` cast.
-    (u64::try_from(guest_ptr).unwrap() << 32) | u64::try_from(len).unwrap()
+pub fn merge_usize(a: usize, b: usize) -> Result<DoubleUSize, WasmError> {
+    Ok(
+        (DoubleUSize::try_from(a).map_err(|_| wasm_error!(WasmErrorInner::PointerMap))?
+            << (std::mem::size_of::<usize>() * 8))
+            | DoubleUSize::try_from(b).map_err(|_| wasm_error!(WasmErrorInner::PointerMap))?,
+    )
 }
 
-/// Given a merged `GuestPtrLen`, split out a `u32` pointer and length.
-/// Performs the inverse of `merge_u64`. Takes the low `u32` bits as the length
-/// then shifts the 32 high bits down and takes those as the pointer.
-pub fn split_u64(u: GuestPtrLen) -> (GuestPtr, Len) {
-    // It should be impossible to hit these verbose unwrap/panic conditions but it's more
-    // conservative to define them than rely on an `as uX` cast that could silently truncate bits.
-    (
-        u32::try_from(u >> 32).unwrap(),
-        u32::try_from(u & u64::try_from(u32::MAX).unwrap()).unwrap(),
-    )
+/// Given 2x merged `usize`, split out two `usize`.
+/// Performs the inverse of `merge_usize`.
+pub fn split_usize(u: DoubleUSize) -> Result<(usize, usize), WasmError> {
+    Ok((
+        usize::try_from(u >> (std::mem::size_of::<usize>() * 8))
+            .map_err(|_| wasm_error!(WasmErrorInner::PointerMap))?,
+        usize::try_from(u & SPLIT_MASK).unwrap(),
+    ))
 }
 
 #[cfg(test)]
@@ -55,8 +66,8 @@ pub mod tests {
     use super::*;
 
     #[test_fuzz::test_fuzz]
-    fn round_trip(guest_ptr: GuestPtr, len: Len) {
-        let (out_guest_ptr, out_len) = split_u64(merge_u64(guest_ptr, len));
+    fn round_trip_ptrlen(guest_ptr: usize, len: usize) {
+        let (out_guest_ptr, out_len) = split_usize(merge_usize(guest_ptr, len));
 
         assert_eq!(guest_ptr, out_guest_ptr,);
         assert_eq!(len, out_len,);
