@@ -38,15 +38,30 @@ pub type DoubleUSize = u64;
 #[cfg(target_pointer_width = "64")]
 pub type DoubleUSize = u128;
 
+pub fn merge_u64(a: u64, b: u64) -> Result<u128, WasmError> {
+    Ok(
+        (u128::try_from(a).map_err(|_| wasm_error!(WasmErrorInner::PointerMap))?
+            << (std::mem::size_of::<u64>() * 8))
+            | u128::try_from(b).map_err(|_| wasm_error!(WasmErrorInner::PointerMap))?,
+    )
+}
+
+pub fn merge_u32(a: u32, b: u32) -> Result<u64, WasmError> {
+    Ok(
+        (u64::try_from(a).map_err(|_| wasm_error!(WasmErrorInner::PointerMap))?
+            << (std::mem::size_of::<u32>() * 8))
+            | u64::try_from(b).map_err(|_| wasm_error!(WasmErrorInner::PointerMap))?,
+    )
+}
+
 /// Given 2x `u32`, return a `DoubleUSize` merged.
 /// Works via a simple bitwise shift to move the pointer to high bits then OR
 /// the length into the low bits.
 pub fn merge_usize(a: usize, b: usize) -> Result<DoubleUSize, WasmError> {
-    Ok(
-        (DoubleUSize::try_from(a).map_err(|_| wasm_error!(WasmErrorInner::PointerMap))?
-            << (std::mem::size_of::<usize>() * 8))
-            | DoubleUSize::try_from(b).map_err(|_| wasm_error!(WasmErrorInner::PointerMap))?,
-    )
+    #[cfg(target_pointer_width = "64")]
+    return merge_u64(a as u64, b as u64);
+    #[cfg(target_pointer_width = "32")]
+    return merge_u32(a as u32, b as u32);
 }
 
 pub fn split_u128(u: u128) -> Result<(u64, u64), WasmError> {
