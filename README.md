@@ -237,9 +237,9 @@ The `test_process_struct` shows a good minimal example of an import function:
 ```rust
 pub fn test_process_struct(
     env: &Env,
-    guest_ptr: GuestPtr,
-    len: Len,
-) -> Result<u64, wasmer::RuntimeError> {
+    guest_ptr: usize,
+    len: usize,
+) -> Result<DoubleUSize, wasmer::RuntimeError> {
     let mut some_struct: SomeStruct = env.consume_bytes_from_guest(guest_ptr, len)?;
     some_struct.process();
     env.move_data_to_guest(Ok::<SomeStruct, WasmError>(some_struct))
@@ -349,7 +349,7 @@ This is easy, `host_args` takes `u32` pointer and length and tries to inject it 
 
 ```rust
 #[no_mangle]
-pub extern "C" fn foo(remote_ptr: GuestPtr, len: GuestPtr) -> GuestPtr {
+pub extern "C" fn foo(remote_ptr: usize, len: usize) -> DoubleUSize {
  let bar: SomeType = match host_args(remote_ptr, len) {
   Ok(v) => v,
   Err(guest_ptr) => return guest_ptr,
@@ -399,7 +399,7 @@ In a guest extern you will likely want to wrap the `host_call` in a `try_ptr!` (
 ```rust
 host_externs!(__some_host_function);
 
-extern "C" fn foo(_: GuestPtr, _: Len) -> GuestPtrLen {
+extern "C" fn foo(_: usize, _: usize) -> DoubleUSize {
  let input = String::from("bar");
 
  // note the try_ptr! wrapper to be compatible with GuestPtr return value

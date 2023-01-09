@@ -15,13 +15,13 @@ host_externs!(
 );
 
 #[no_mangle]
-pub extern "C" fn short_circuit(_guest_ptr: GuestPtr, _len: Len) -> GuestPtrLen {
+pub extern "C" fn short_circuit(_guest_ptr: usize, _len: usize) -> DoubleUSize {
     host_call::<(), String>(__short_circuit, ()).unwrap();
     0
 }
 
 #[no_mangle]
-pub extern "C" fn literal_bytes(guest_ptr: GuestPtr, len: Len) -> GuestPtrLen {
+pub extern "C" fn literal_bytes(guest_ptr: usize, len: usize) -> DoubleUSize {
     let bytes: Vec<u8> = match host_args(guest_ptr, len) {
         Ok(v) => v,
         Err(err_ptr) => return err_ptr,
@@ -31,7 +31,7 @@ pub extern "C" fn literal_bytes(guest_ptr: GuestPtr, len: Len) -> GuestPtrLen {
 }
 
 #[no_mangle]
-pub extern "C" fn ignore_args_process_string(guest_ptr: GuestPtr, len: Len) -> GuestPtrLen {
+pub extern "C" fn ignore_args_process_string(guest_ptr: usize, len: usize) -> DoubleUSize {
     // A well behaved wasm must either use or deallocate the input.
     // A malicious wasm can simply define a __deallocate function that does nothing.
     // The host has no way of knowing whether the guest is behaving right up until it leaks all available memory.
@@ -42,7 +42,7 @@ pub extern "C" fn ignore_args_process_string(guest_ptr: GuestPtr, len: Len) -> G
 }
 
 #[no_mangle]
-pub extern "C" fn process_string(guest_ptr: GuestPtr, len: Len) -> GuestPtrLen {
+pub extern "C" fn process_string(guest_ptr: usize, len: usize) -> DoubleUSize {
     // get the string the host is trying to pass us out of memory
     // the ptr and cap line up with what was previously allocated with pre_alloc_string
     let s: StringType = match host_args(guest_ptr, len) {
@@ -59,7 +59,7 @@ pub extern "C" fn process_string(guest_ptr: GuestPtr, len: Len) -> GuestPtrLen {
 }
 
 #[no_mangle]
-pub extern "C" fn process_native(guest_ptr: GuestPtr, len: Len) -> GuestPtrLen {
+pub extern "C" fn process_native(guest_ptr: usize, len: usize) -> DoubleUSize {
     let input: SomeStruct = match host_args(guest_ptr, len) {
         Ok(v) => v,
         Err(err_ptr) => return err_ptr,
@@ -72,7 +72,7 @@ pub extern "C" fn process_native(guest_ptr: GuestPtr, len: Len) -> GuestPtrLen {
 }
 
 #[no_mangle]
-pub extern "C" fn stacked_strings(guest_ptr: GuestPtr, len: Len) -> GuestPtrLen {
+pub extern "C" fn stacked_strings(guest_ptr: usize, len: usize) -> DoubleUSize {
     if let Err(err_ptr) = host_args::<()>(guest_ptr, len) {
         return err_ptr;
     };
@@ -85,7 +85,7 @@ pub extern "C" fn stacked_strings(guest_ptr: GuestPtr, len: Len) -> GuestPtrLen 
 }
 
 #[no_mangle]
-pub extern "C" fn some_ret(guest_ptr: GuestPtr, len: Len) -> GuestPtrLen {
+pub extern "C" fn some_ret(guest_ptr: usize, len: usize) -> DoubleUSize {
     if let Err(err_ptr) = host_args::<()>(guest_ptr, len) {
         return err_ptr;
     };
@@ -93,7 +93,7 @@ pub extern "C" fn some_ret(guest_ptr: GuestPtr, len: Len) -> GuestPtrLen {
 }
 
 #[no_mangle]
-pub extern "C" fn some_ret_err(guest_ptr: GuestPtr, len: Len) -> GuestPtrLen {
+pub extern "C" fn some_ret_err(guest_ptr: usize, len: usize) -> DoubleUSize {
     if let Err(err_ptr) = host_args::<()>(guest_ptr, len) {
         return err_ptr;
     };
@@ -101,7 +101,7 @@ pub extern "C" fn some_ret_err(guest_ptr: GuestPtr, len: Len) -> GuestPtrLen {
 }
 
 #[no_mangle]
-pub extern "C" fn native_type(guest_ptr: GuestPtr, len: Len) -> GuestPtrLen {
+pub extern "C" fn native_type(guest_ptr: usize, len: usize) -> DoubleUSize {
     let input: SomeStruct = match host_args(guest_ptr, len) {
         Ok(v) => v,
         Err(err_ptr) => return err_ptr,
@@ -110,7 +110,7 @@ pub extern "C" fn native_type(guest_ptr: GuestPtr, len: Len) -> GuestPtrLen {
 }
 
 #[no_mangle]
-pub extern "C" fn try_ptr_succeeds(guest_ptr: GuestPtr, len: Len) -> GuestPtrLen {
+pub extern "C" fn try_ptr_succeeds(guest_ptr: usize, len: usize) -> DoubleUSize {
     if let Err(err_ptr) = host_args::<()>(guest_ptr, len) {
         return err_ptr;
     };
@@ -120,7 +120,7 @@ pub extern "C" fn try_ptr_succeeds(guest_ptr: GuestPtr, len: Len) -> GuestPtrLen
 }
 
 #[no_mangle]
-pub extern "C" fn try_ptr_fails_fast(guest_ptr: GuestPtr, len: Len) -> GuestPtrLen {
+pub extern "C" fn try_ptr_fails_fast(guest_ptr: usize, len: usize) -> DoubleUSize {
     if let Err(err_ptr) = host_args::<()>(guest_ptr, len) {
         return err_ptr;
     };
@@ -130,7 +130,7 @@ pub extern "C" fn try_ptr_fails_fast(guest_ptr: GuestPtr, len: Len) -> GuestPtrL
 }
 
 #[no_mangle]
-pub extern "C" fn loop_forever(_guest_ptr: GuestPtr, _len: Len) -> GuestPtrLen {
+pub extern "C" fn loop_forever(_guest_ptr: usize, _len: usize) -> DoubleUSize {
     #[allow(clippy::empty_loop)]
     loop {}
 }

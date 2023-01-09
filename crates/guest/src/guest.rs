@@ -10,7 +10,7 @@ use crate::allocation::write_bytes;
 macro_rules! host_externs {
     ( $( $func_name:ident ),* ) => {
         extern "C" {
-            $( pub fn $func_name(guest_allocation_ptr: $crate::GuestPtr, len: $crate::Len) -> $crate::GuestPtrLen; )*
+            $( pub fn $func_name(guest_allocation_ptr: usize, len: usize) -> $crate::DoubleUSize; )*
         }
     };
 }
@@ -57,13 +57,13 @@ where
     // Call the host function and receive the length of the serialized result.
     let input_bytes = holochain_serialized_bytes::encode(&input).map_err(|e| wasm_error!(e))?;
     let input_len: usize = input_bytes.len();
-    let input_guest_ptr = crate::allocation::write_bytes(input_bytes).try_into().map_err(|_| wasm_error!(WasmErrorInner::PointerMap))?;
+    let input_guest_ptr = crate::allocation::write_bytes(input_bytes);
 
     let (output_guest_ptr, output_len): (usize, usize) = split_usize(unsafe {
         // This is unsafe because all host function calls in wasm are unsafe.
         // The host will call `__deallocate` for us to free the leaked bytes from the input.
         f(input_guest_ptr, input_len)
-    })?.try_into().map_err(|_| wasm_error!(WasmErrorInner::PointerMap))?;
+    })?;
 
     // Deserialize the host bytes into the output type.
     let bytes = crate::allocation::consume_bytes(output_guest_ptr, output_len);
@@ -102,7 +102,8 @@ where
 /// for `wasm32-unknown-unknown` target.
 #[inline(always)]
 pub fn return_err_ptr(wasm_error: WasmError) -> DoubleUSize {
-    let bytes = match holochain_serialized_bytes::encode::<Result<(), WasmError>>(&Err(wasm_error)) {
+    let bytes = match holochain_serialized_bytes::encode::<Result<(), WasmError>>(&Err(wasm_error))
+    {
         Ok(bytes) => bytes,
         Err(e) => match holochain_serialized_bytes::encode::<Result<(), WasmError>>(&Err(
             wasm_error!(WasmErrorInner::Serialize(e)),

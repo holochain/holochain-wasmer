@@ -3,9 +3,7 @@
 #[no_mangle]
 #[inline(always)]
 pub extern "C" fn __allocate(len: usize) -> usize {
-    write_bytes(Vec::with_capacity(
-        len
-    ))
+    write_bytes(Vec::with_capacity(len))
 }
 
 /// Free an allocation.

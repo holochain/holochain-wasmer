@@ -38,8 +38,6 @@ pub type DoubleUSize = u64;
 #[cfg(target_pointer_width = "64")]
 pub type DoubleUSize = u128;
 
-const SPLIT_MASK: DoubleUSize = usize::MAX as DoubleUSize;
-
 /// Given 2x `u32`, return a `DoubleUSize` merged.
 /// Works via a simple bitwise shift to move the pointer to high bits then OR
 /// the length into the low bits.
@@ -51,14 +49,31 @@ pub fn merge_usize(a: usize, b: usize) -> Result<DoubleUSize, WasmError> {
     )
 }
 
+pub fn split_u128(u: u128) -> Result<(u64, u64), WasmError> {
+    Ok((
+        u64::try_from(u >> (std::mem::size_of::<u64>() * 8))
+            .map_err(|_| wasm_error!(WasmErrorInner::PointerMap))?,
+        u64::try_from(u & (u64::MAX as u128))
+            .map_err(|_| wasm_error!(WasmErrorInner::PointerMap))?,
+    ))
+}
+
+pub fn split_u64(u: u64) -> Result<(u32, u32), WasmError> {
+    Ok((
+        u32::try_from(u >> (std::mem::size_of::<u32>() * 8))
+            .map_err(|_| wasm_error!(WasmErrorInner::PointerMap))?,
+        u32::try_from(u & (u32::MAX as u64))
+            .map_err(|_| wasm_error!(WasmErrorInner::PointerMap))?,
+    ))
+}
+
 /// Given 2x merged `usize`, split out two `usize`.
 /// Performs the inverse of `merge_usize`.
 pub fn split_usize(u: DoubleUSize) -> Result<(usize, usize), WasmError> {
-    Ok((
-        usize::try_from(u >> (std::mem::size_of::<usize>() * 8))
-            .map_err(|_| wasm_error!(WasmErrorInner::PointerMap))?,
-        usize::try_from(u & SPLIT_MASK).unwrap(),
-    ))
+    #[cfg(target_pointer_width = "64")]
+    return split_u128(u as u128).map(|(a, b)| (a as usize, b as usize));
+    #[cfg(target_pointer_width = "32")]
+    return split_u64(u as u64).map(|(a, b)| (a as usize, b as usize));
 }
 
 #[cfg(test)]
@@ -67,7 +82,7 @@ pub mod tests {
 
     #[test_fuzz::test_fuzz]
     fn round_trip_ptrlen(guest_ptr: usize, len: usize) {
-        let (out_guest_ptr, out_len) = split_usize(merge_usize(guest_ptr, len));
+        let (out_guest_ptr, out_len) = split_usize(merge_usize(guest_ptr, len).unwrap()).unwrap();
 
         assert_eq!(guest_ptr, out_guest_ptr,);
         assert_eq!(len, out_len,);

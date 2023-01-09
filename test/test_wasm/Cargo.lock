@@ -532,6 +532,7 @@ dependencies = [
  "holochain_wasmer_common",
  "parking_lot",
  "serde",
+ "test-fuzz",
  "tracing",
 ]
 

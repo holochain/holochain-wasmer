@@ -9,7 +9,7 @@ extern "C" {
 }
 
 #[no_mangle]
-pub extern "C" fn bytes_round_trip(_: GuestPtr, _: Len) -> GuestPtrLen {
+pub extern "C" fn bytes_round_trip(_: usize, _: usize) -> DoubleUSize {
 
     let mut old_pages: WasmSize = unsafe { __pages(0) };
     let mut current_pages: WasmSize = old_pages;
@@ -22,7 +22,7 @@ pub extern "C" fn bytes_round_trip(_: GuestPtr, _: Len) -> GuestPtrLen {
         // allocations are in the correct position and not overlapping
         let bytes: Vec<[u8; 5]> = std::iter::repeat([ 1, 2, 3, 4, 5 ]).take(100).collect();
 
-        let ptrs: Vec<GuestPtr> = bytes.iter().map(|b| {
+        let ptrs: Vec<usize> = bytes.iter().map(|b| {
             allocation::write_bytes(b.to_vec())
         }).collect();
 
