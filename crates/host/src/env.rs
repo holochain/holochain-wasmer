@@ -52,7 +52,7 @@ impl Env {
             guest_ptr,
             &data,
         )?;
-        Ok((guest_ptr, len))
+        Ok(merge_u32(guest_ptr, len)?)
     }
 
     /// Given a pointer and length for a region of memory in the guest, copy the
