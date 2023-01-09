@@ -9,4 +9,6 @@ RUN nix-shell --run "cargo test --manifest-path crates/guest/Cargo.toml"
 ADD test ./test
 RUN nix-shell --run "cargo test --manifest-path test/Cargo.toml"
 ADD fuzz.sh ./fuzz.sh
+ENV AFL_SKIP_CPUFREQ=1
+
 CMD nix-shell --run ./fuzz.sh

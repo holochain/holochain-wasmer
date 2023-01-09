@@ -60,6 +60,14 @@ There are several places we need to implement things:
 - Holochain HDK needs to use the `holochain_wasmer_guest` functions to wrap externs in something ergonomic for happ developers
 - Happ developers need to be broadly aware of how to send cleanly serializable inputs and work with serde
 
+## Fuzz testing
+
+There is a docker build for fuzz testing but it requires changes to be made to the _docker host_.
+
+These changes will be alerted to you when you run the fuzz docker box, hopefully they are minimal and most of what the fuzzer needs is handled by docker.
+
+Recommended that you make backups of any files it asks you to change as they can be performance/security sensitive.
+
 ### Holochain core
 
 #### Being a good wasm host

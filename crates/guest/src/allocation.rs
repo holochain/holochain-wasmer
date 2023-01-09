@@ -64,4 +64,9 @@ pub mod tests {
 
         assert_eq!(bytes, bytes_round);
     }
+
+    #[test_fuzz::test_fuzz]
+    fn alloc_dealloc(len: usize) {
+        __deallocate(__allocate(len), len);
+    }
 }

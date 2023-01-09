@@ -96,10 +96,26 @@ pub mod tests {
     use super::*;
 
     #[test_fuzz::test_fuzz]
-    fn round_trip_ptrlen(guest_ptr: usize, len: usize) {
-        let (out_guest_ptr, out_len) = split_usize(merge_usize(guest_ptr, len).unwrap()).unwrap();
+    fn round_trip_u32(a: u32, b: u32) {
+        let (out_a, out_b) = split_u64(merge_u32(a, b).unwrap()).unwrap();
 
-        assert_eq!(guest_ptr, out_guest_ptr,);
-        assert_eq!(len, out_len,);
+        assert_eq!(a, out_a);
+        assert_eq!(b, out_b);
+    }
+
+    #[test_fuzz::test_fuzz]
+    fn round_trip_u64(a: u64, b: u64) {
+        let (out_a, out_b) = split_u128(merge_u64(a, b).unwrap()).unwrap();
+
+        assert_eq!(a, out_a);
+        assert_eq!(b, out_b);
+    }
+
+    #[test_fuzz::test_fuzz]
+    fn round_trip_usize(a: usize, b: usize) {
+        let (out_a, out_b) = split_usize(merge_usize(a, b).unwrap()).unwrap();
+
+        assert_eq!(a, out_a,);
+        assert_eq!(b, out_b,);
     }
 }
