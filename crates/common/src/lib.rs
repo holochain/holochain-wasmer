@@ -95,6 +95,7 @@ pub fn split_usize(u: DoubleUSize) -> Result<(usize, usize), WasmError> {
 pub mod tests {
     use super::*;
 
+    // https://github.com/trailofbits/test-fuzz/issues/171
     #[cfg(not(target_os = "windows"))]
     #[test_fuzz::test_fuzz]
     fn round_trip_u32(a: u32, b: u32) {
@@ -104,6 +105,8 @@ pub mod tests {
         assert_eq!(b, out_b);
     }
 
+    // https://github.com/trailofbits/test-fuzz/issues/171
+    #[cfg(not(target_os = "windows"))]
     #[test_fuzz::test_fuzz]
     fn round_trip_u64(a: u64, b: u64) {
         let (out_a, out_b) = split_u128(merge_u64(a, b).unwrap()).unwrap();
@@ -112,6 +115,8 @@ pub mod tests {
         assert_eq!(b, out_b);
     }
 
+    // https://github.com/trailofbits/test-fuzz/issues/171
+    #[cfg(not(target_os = "windows"))]
     #[test_fuzz::test_fuzz]
     fn round_trip_usize(a: usize, b: usize) {
         let (out_a, out_b) = split_usize(merge_usize(a, b).unwrap()).unwrap();
