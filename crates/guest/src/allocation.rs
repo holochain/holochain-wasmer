@@ -83,12 +83,12 @@ pub mod tests {
     // https://github.com/trailofbits/test-fuzz/issues/171
     #[cfg(not(target_os = "windows"))]
     #[test_fuzz::test_fuzz]
-    alloc_dealloc(len: usize) {
+    fn alloc_dealloc(len: usize) {
         _alloc_dealloc(len);
     }
 
     #[test]
-    some_alloc_dealloc() {
+    fn some_alloc_dealloc() {
         _alloc_dealloc(1_000_000_000_usize);
     }
 }
