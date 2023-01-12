@@ -2,4 +2,4 @@
 cargo test
 cargo test --manifest-path test/Cargo.toml
 
-cargo test-fuzz
+cargo test-fuzz "$FUZZ_TARGET"
