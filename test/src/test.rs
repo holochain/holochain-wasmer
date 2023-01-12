@@ -109,9 +109,6 @@ pub mod tests {
     }
 
     #[test_fuzz::test_fuzz]
-<<<<<<< HEAD
-    fn process_string_test(starter_string: String) {
-=======
     fn process_string_fuzz(s: String) {
         let result: StringType = guest::call(
             TestWasm::Test.instance(),
@@ -127,11 +124,10 @@ pub mod tests {
 
     #[test]
     fn process_string_test() {
->>>>>>> 04a2a92f17a132eec3147eff20e45fffc0e8c0e8
         // use a "crazy" string that is much longer than a single wasm page to show that pagination
         // and utf-8 are both working OK
-        // let starter_string = "╰▐ ✖ 〜 ✖ ▐╯"
-        //     .repeat(usize::try_from(10_u32 * u32::try_from(std::u16::MAX).unwrap()).unwrap());
+        let starter_string = "╰▐ ✖ 〜 ✖ ▐╯"
+            .repeat(usize::try_from(10_u32 * u32::try_from(std::u16::MAX).unwrap()).unwrap());
         let result: StringType = guest::call(
             TestWasm::Test.instance(),
             "process_string",
