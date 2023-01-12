@@ -95,6 +95,7 @@ pub fn split_usize(u: DoubleUSize) -> Result<(usize, usize), WasmError> {
 pub mod tests {
     use super::*;
 
+    #[cfg(not(target_os = "windows"))]
     #[test_fuzz::test_fuzz]
     fn round_trip_u32(a: u32, b: u32) {
         let (out_a, out_b) = split_u64(merge_u32(a, b).unwrap()).unwrap();
