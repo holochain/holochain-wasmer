@@ -1,6 +1,7 @@
 #! /usr/bin/env bash
 
-cd crates/common
 cargo install cargo-test-fuzz afl
+
+cd test
 cargo test
-cargo test-fuzz round_trip
+cargo test-fuzz process_string_test
