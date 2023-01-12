@@ -108,6 +108,8 @@ pub mod tests {
         assert_eq!(String::new(), String::from(result));
     }
 
+    // https://github.com/trailofbits/test-fuzz/issues/171
+    #[cfg(not(target_os = "windows"))]
     #[test_fuzz::test_fuzz]
     fn process_string_fuzz(s: String) {
         let result: StringType = guest::call(

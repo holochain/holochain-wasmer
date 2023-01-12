@@ -58,15 +58,37 @@ pub mod tests {
         dbg!(&bytes_round);
     }
 
-    #[test_fuzz::test_fuzz]
-    fn round_trip_allocation(bytes: Vec<u8>) {
+    fn _round_trip_allocation(bytes: Vec<u8>) {
         let bytes_round = consume_bytes(write_bytes(bytes.clone()), bytes.len());
 
         assert_eq!(bytes, bytes_round);
     }
 
+    // https://github.com/trailofbits/test-fuzz/issues/171
+    #[cfg(not(target_os = "windows"))]
     #[test_fuzz::test_fuzz]
-    fn alloc_dealloc(len: usize) {
+    fn round_trip_allocation(bytes: Vec<u8>) {
+        _round_trip_allocation(bytes);
+    }
+
+    #[test]
+    fn some_round_trip_allocation() {
+        _round_trip_allocation(vec![1, 2, 3]);
+    }
+
+    fn _alloc_dealloc(len: usize) {
         __deallocate(__allocate(len), len);
+    }
+
+    // https://github.com/trailofbits/test-fuzz/issues/171
+    #[cfg(not(target_os = "windows"))]
+    #[test_fuzz::test_fuzz]
+    alloc_dealloc(len: usize) {
+        _alloc_dealloc(len);
+    }
+
+    #[test]
+    some_alloc_dealloc() {
+        _alloc_dealloc(1_000_000_000_usize);
     }
 }
