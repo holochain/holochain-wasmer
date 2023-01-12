@@ -1,7 +1,5 @@
 #! /usr/bin/env bash
-
-cargo install cargo-test-fuzz afl
-
-cd test
 cargo test
-cargo test-fuzz process_string_test
+cargo test --manifest-path test/Cargo.toml
+
+cargo test-fuzz

@@ -5,7 +5,7 @@ macro_rules! _s {
         paste::item! {
             #[no_mangle]
             /// ignore the input completely and return empty data
-            pub extern "C" fn [< $t:lower _input_ignored_empty_ret >](guest_ptr: GuestPtr, len: Len) -> GuestPtrLen {
+            pub extern "C" fn [< $t:lower _input_ignored_empty_ret >](guest_ptr: usize, len: usize) -> DoubleUSize {
                 // Still need to deallocate the input even if we don't use it.
                 crate::allocation::__deallocate(guest_ptr, len);
                 return_ptr(
@@ -17,7 +17,7 @@ macro_rules! _s {
 
             #[no_mangle]
             /// load the input args and do nothing with it
-            pub extern "C" fn [< $t:lower _input_args_empty_ret >](ptr: GuestPtr, len: Len) -> GuestPtrLen {
+            pub extern "C" fn [< $t:lower _input_args_empty_ret >](ptr: usize, len: usize) -> DoubleUSize {
                 paste::expr! {
                     let _: test_common::[< $t:camel Type >] = match host_args(ptr, len) {
                         Ok(v) => v,
@@ -33,7 +33,7 @@ macro_rules! _s {
 
             #[no_mangle]
             /// load the input args and return it
-            pub extern "C" fn [< $t:lower _input_args_echo_ret >](ptr: GuestPtr, len: Len) -> GuestPtrLen {
+            pub extern "C" fn [< $t:lower _input_args_echo_ret >](ptr: usize, len: usize) -> DoubleUSize {
                 let r: test_common::[< $t:camel Type >] = match host_args(ptr, len) {
                     Ok(v) => v,
                     Err(err_ptr) => return err_ptr,
@@ -51,7 +51,7 @@ macro_rules! _n {
     ( $t:tt; $n:ident; $inner:expr; $empty:expr; ) => {
         paste::item! {
             #[no_mangle]
-            pub extern "C" fn [< $t:lower _serialize_n >](ptr: GuestPtr, len: Len) -> GuestPtrLen {
+            pub extern "C" fn [< $t:lower _serialize_n >](ptr: usize, len: usize) -> DoubleUSize {
                 // build it
                 let $n: test_common::IntegerType = match host_args(ptr, len) {
                     Ok(v) => v,
@@ -71,7 +71,7 @@ macro_rules! _n {
             }
 
             #[no_mangle]
-            pub extern "C" fn [< $t:lower _ret_n >](ptr: GuestPtr, len: Len) -> GuestPtrLen {
+            pub extern "C" fn [< $t:lower _ret_n >](ptr: usize, len: usize) -> DoubleUSize {
                 // build it
                 let $n: test_common::IntegerType = match host_args(ptr, len) {
                     Ok(v) => v,
