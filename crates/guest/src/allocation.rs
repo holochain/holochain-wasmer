@@ -2,7 +2,7 @@
 /// Return the pointer to the leaked allocation so the host can write to it.
 #[no_mangle]
 #[inline(always)]
-pub extern "C" fn __allocate(len: usize) -> usize {
+pub extern "C" fn __hc__allocate_1(len: usize) -> usize {
     write_bytes(Vec::with_capacity(len))
 }
 
@@ -10,7 +10,7 @@ pub extern "C" fn __allocate(len: usize) -> usize {
 /// Needed because we leak memory every time we call `__allocate` and `write_bytes`.
 #[no_mangle]
 #[inline(always)]
-pub extern "C" fn __deallocate(guest_ptr: usize, len: usize) {
+pub extern "C" fn __hc__deallocate_1(guest_ptr: usize, len: usize) {
     let _ = consume_bytes(guest_ptr, len);
 }
 
