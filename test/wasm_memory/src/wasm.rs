@@ -1,7 +1,7 @@
 use holochain_wasmer_guest::*;
 
 host_externs!(
-    __debug
+    debug:1
 );
 
 extern "C" {

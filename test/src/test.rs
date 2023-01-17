@@ -57,6 +57,16 @@ pub mod tests {
     }
 
     #[test]
+    fn host_externs_toolable() {
+        let module = TestWasm::Test.module(false);
+        dbg!(&module
+            .exports()
+            .globals()
+            .filter(|global| global.name().ends_with("__version"))
+            .collect::<Vec<_>>());
+    }
+
+    #[test]
     fn infinite_loop() {
         // Instead of looping forever we want the metering to kick in and trap
         // the execution into an unreachable error.

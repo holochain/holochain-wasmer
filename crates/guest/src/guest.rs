@@ -6,11 +6,21 @@ pub use holochain_wasmer_common::*;
 use crate::allocation::consume_bytes;
 use crate::allocation::write_bytes;
 
+pub use paste::paste;
+
 #[macro_export]
 macro_rules! host_externs {
-    ( $( $func_name:ident ),* ) => {
-        extern "C" {
-            $( pub fn $func_name(guest_allocation_ptr: usize, len: usize) -> $crate::DoubleUSize; )*
+    ( $( $func_name:ident:$version:literal ),* ) => {
+        $crate::paste! {
+            $(
+            #[no_mangle]
+            pub static [<__ $func_name __version>]: u64 = $version;
+            )*
+
+            #[no_mangle]
+            extern "C" {
+                $( pub fn [<__ $func_name _ $version>](guest_allocation_ptr: usize, len: usize) -> $crate::DoubleUSize; )*
+            }
         }
     };
 }
