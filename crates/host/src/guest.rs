@@ -200,7 +200,7 @@ where
                 let u: GuestPtrLen = (*i)
                     .try_into()
                     .map_err(|e: TryFromIntError| wasm_error!(e))?;
-                split_u64(u)
+                split_u64(u)?
             }
             _ => return Err(wasm_error!(WasmErrorInner::PointerMap).into()),
         },

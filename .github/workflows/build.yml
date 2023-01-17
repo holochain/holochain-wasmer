@@ -1,0 +1,19 @@
+name: build docker
+
+on:
+  push:
+    branches:
+      - main
+      - 2022-12-21-fuzz
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: docker/login-action@v2
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+      - run: docker build -t holochain/fuzzbox:holochain-wasmer .
+      - run: docker push holochain/fuzzbox:holochain-wasmer

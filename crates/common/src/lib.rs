@@ -29,39 +29,126 @@ pub type Len = WasmSize;
 /// Rust support for wasm externs is not stable at the time of writing.
 pub type GuestPtrLen = u64;
 
-/// Given a pointer and a length, return a `u64` merged `GuestPtrLen`.
-/// Works via a simple bitwise shift to move the pointer to high bits then OR
-/// the length into the low bits.
-pub fn merge_u64(guest_ptr: GuestPtr, len: Len) -> GuestPtrLen {
-    // It should be impossible to hit these unwrap/panic conditions but it's more
-    // conservative to define them than rely on an `as uX` cast.
-    (u64::try_from(guest_ptr).unwrap() << 32) | u64::try_from(len).unwrap()
+#[cfg(target_pointer_width = "16")]
+pub type DoubleUSize = u32;
+
+#[cfg(target_pointer_width = "32")]
+pub type DoubleUSize = u64;
+
+#[cfg(target_pointer_width = "64")]
+pub type DoubleUSize = u128;
+
+pub fn merge_u64(a: u64, b: u64) -> Result<u128, WasmError> {
+    Ok(
+        (u128::try_from(a).map_err(|_| wasm_error!(WasmErrorInner::PointerMap))?
+            << (std::mem::size_of::<u64>() * 8))
+            | u128::try_from(b).map_err(|_| wasm_error!(WasmErrorInner::PointerMap))?,
+    )
 }
 
-/// Given a merged `GuestPtrLen`, split out a `u32` pointer and length.
-/// Performs the inverse of `merge_u64`. Takes the low `u32` bits as the length
-/// then shifts the 32 high bits down and takes those as the pointer.
-pub fn split_u64(u: GuestPtrLen) -> (GuestPtr, Len) {
-    // It should be impossible to hit these verbose unwrap/panic conditions but it's more
-    // conservative to define them than rely on an `as uX` cast that could silently truncate bits.
-    (
-        u32::try_from(u >> 32).unwrap(),
-        u32::try_from(u & u64::try_from(u32::MAX).unwrap()).unwrap(),
+pub fn merge_u32(a: u32, b: u32) -> Result<u64, WasmError> {
+    Ok(
+        (u64::try_from(a).map_err(|_| wasm_error!(WasmErrorInner::PointerMap))?
+            << (std::mem::size_of::<u32>() * 8))
+            | u64::try_from(b).map_err(|_| wasm_error!(WasmErrorInner::PointerMap))?,
     )
+}
+
+/// Given 2x `u32`, return a `DoubleUSize` merged.
+/// Works via a simple bitwise shift to move the pointer to high bits then OR
+/// the length into the low bits.
+pub fn merge_usize(a: usize, b: usize) -> Result<DoubleUSize, WasmError> {
+    #[cfg(target_pointer_width = "64")]
+    return merge_u64(a as u64, b as u64);
+    #[cfg(target_pointer_width = "32")]
+    return merge_u32(a as u32, b as u32);
+}
+
+pub fn split_u128(u: u128) -> Result<(u64, u64), WasmError> {
+    Ok((
+        u64::try_from(u >> (std::mem::size_of::<u64>() * 8))
+            .map_err(|_| wasm_error!(WasmErrorInner::PointerMap))?,
+        u64::try_from(u & (u64::MAX as u128))
+            .map_err(|_| wasm_error!(WasmErrorInner::PointerMap))?,
+    ))
+}
+
+pub fn split_u64(u: u64) -> Result<(u32, u32), WasmError> {
+    Ok((
+        u32::try_from(u >> (std::mem::size_of::<u32>() * 8))
+            .map_err(|_| wasm_error!(WasmErrorInner::PointerMap))?,
+        u32::try_from(u & (u32::MAX as u64))
+            .map_err(|_| wasm_error!(WasmErrorInner::PointerMap))?,
+    ))
+}
+
+/// Given 2x merged `usize`, split out two `usize`.
+/// Performs the inverse of `merge_usize`.
+pub fn split_usize(u: DoubleUSize) -> Result<(usize, usize), WasmError> {
+    #[cfg(target_pointer_width = "64")]
+    return split_u128(u as u128).map(|(a, b)| (a as usize, b as usize));
+    #[cfg(target_pointer_width = "32")]
+    return split_u64(u as u64).map(|(a, b)| (a as usize, b as usize));
 }
 
 #[cfg(test)]
 pub mod tests {
     use super::*;
 
+    fn _round_trip_u32(a: u32, b: u32) {
+        let (out_a, out_b) = split_u64(merge_u32(a, b).unwrap()).unwrap();
+
+        assert_eq!(a, out_a);
+        assert_eq!(b, out_b);
+    }
+
+    // https://github.com/trailofbits/test-fuzz/issues/171
+    #[cfg(not(target_os = "windows"))]
+    #[test_fuzz::test_fuzz]
+    fn round_trip_u32(a: u32, b: u32) {
+        _round_trip_u32(a, b);
+    }
+
     #[test]
-    fn round_trip() {
-        let guest_ptr = 9000000;
-        let len = 1000;
+    fn some_round_trip_u32() {
+        _round_trip_u32(u32::MAX, u32::MAX);
+    }
 
-        let (out_guest_ptr, out_len) = split_u64(merge_u64(guest_ptr, len));
+    fn _round_trip_u64(a: u64, b: u64) {
+        let (out_a, out_b) = split_u128(merge_u64(a, b).unwrap()).unwrap();
 
-        assert_eq!(guest_ptr, out_guest_ptr,);
-        assert_eq!(len, out_len,);
+        assert_eq!(a, out_a);
+        assert_eq!(b, out_b);
+    }
+
+    // https://github.com/trailofbits/test-fuzz/issues/171
+    #[cfg(not(target_os = "windows"))]
+    #[test_fuzz::test_fuzz]
+    fn round_trip_u64(a: u64, b: u64) {
+        _round_trip_u64(a, b);
+    }
+
+    #[test]
+    fn some_round_trip_u64() {
+        _round_trip_u64(u64::MAX, u64::MAX);
+    }
+
+    fn _round_trip_usize(a: usize, b: usize) {
+        let (out_a, out_b) = split_usize(merge_usize(a, b).unwrap()).unwrap();
+
+        assert_eq!(a, out_a,);
+        assert_eq!(b, out_b,);
+    }
+
+    // https://github.com/trailofbits/test-fuzz/issues/171
+    #[cfg(not(target_os = "windows"))]
+    #[test_fuzz::test_fuzz]
+    fn round_trip_usize(a: usize, b: usize) {
+        _round_trip_usize(a, b);
+    }
+
+    #[test]
+    fn some_round_trip_usize() {
+        _round_trip_usize(usize::MAX, usize::MAX);
     }
 }

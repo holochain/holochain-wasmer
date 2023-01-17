@@ -108,6 +108,22 @@ pub mod tests {
         assert_eq!(String::new(), String::from(result));
     }
 
+    // https://github.com/trailofbits/test-fuzz/issues/171
+    #[cfg(not(target_os = "windows"))]
+    #[test_fuzz::test_fuzz]
+    fn process_string_fuzz(s: String) {
+        let result: StringType = guest::call(
+            TestWasm::Test.instance(),
+            "process_string",
+            &StringType::from(s.clone()),
+        )
+        .expect("process string call");
+
+        let expected_string = format!("host: guest: {}", s);
+
+        assert_eq!(&String::from(result), &expected_string);
+    }
+
     #[test]
     fn process_string_test() {
         // use a "crazy" string that is much longer than a single wasm page to show that pagination
@@ -170,7 +186,7 @@ pub mod tests {
             Err(runtime_error) => assert_eq!(
                 WasmError {
                     file: "src/wasm.rs".into(),
-                    line: 103,
+                    line: 100,
                     error: WasmErrorInner::Guest("oh no!".into()),
                 },
                 runtime_error.downcast().unwrap(),
@@ -193,7 +209,7 @@ pub mod tests {
                 assert_eq!(
                     WasmError {
                         file: "src/wasm.rs".into(),
-                        line: 133,
+                        line: 128,
                         error: WasmErrorInner::Guest("it fails!: ()".into()),
                     },
                     runtime_error.downcast().unwrap(),
