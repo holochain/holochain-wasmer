@@ -612,8 +612,8 @@ macro on the guest side.
 
 - The host moves serialized `SomeDataType` on the host using the host allocator
 - The host calculates the `u32` length of the serialized data
-- The host asks the guest to `__allocate` the length
-- The guest (inside `__allocate`) allocates length bytes and returns a `GuestPtr` to the host
+- The host asks the guest to `__hc__allocate_1` the length
+- The guest (inside `__hc__allocate_1`) allocates length bytes and returns a `GuestPtr` to the host
 - The host checks that the `GuestPtr` + len bytes fits in the guest's memory bounds
 - The host writes the data into the guest memory
 - The host calls the function it wants to call in the guest, passing in the `GuestPtr` and `Len`
@@ -639,7 +639,7 @@ the `host::guest::call()` return value.
 - The `Result` bytes are leaked into the guest
 - The guest returns a `GuestPtrLen` to the host referencing the bytes
 - The host copies the bytes from `GuestPtrLen` and deserializes the `Result`
-- The host calls `__deallocate` so that the guest can cleanup the leaked data
+- The host calls `__hc__deallocate_1` so that the guest can cleanup the leaked data
 - The host deserializes the inner value if it makes sense to
 
 ##### Guest calling host

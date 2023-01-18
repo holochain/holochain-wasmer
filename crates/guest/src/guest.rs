@@ -66,7 +66,7 @@ where
 
     let (output_guest_ptr, output_len): (usize, usize) = split_usize(unsafe {
         // This is unsafe because all host function calls in wasm are unsafe.
-        // The host will call `__deallocate` for us to free the leaked bytes from the input.
+        // The host will call `__hc__deallocate_1` for us to free the leaked bytes from the input.
         f(input_guest_ptr, input_len)
     })?;
 

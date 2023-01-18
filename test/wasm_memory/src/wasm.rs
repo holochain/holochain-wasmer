@@ -5,13 +5,13 @@ host_externs!(
 );
 
 extern "C" {
-    pub fn __pages(i: u32) -> u32;
+    pub fn __hc__pages_1(i: u32) -> u32;
 }
 
 #[no_mangle]
 pub extern "C" fn bytes_round_trip(_: usize, _: usize) -> DoubleUSize {
 
-    let mut old_pages: WasmSize = unsafe { __pages(0) };
+    let mut old_pages: WasmSize = unsafe { __hc__pages_1(0) };
     let mut current_pages: WasmSize = old_pages;
 
     // thrash this more times than there are bytes in a wasm page so that if even one byte leaks
@@ -36,7 +36,7 @@ pub extern "C" fn bytes_round_trip(_: usize, _: usize) -> DoubleUSize {
 
         // if we forget to deallocate properly then the number of allocated pages will grow
         old_pages = current_pages;
-        current_pages = unsafe { __pages(0) };
+        current_pages = unsafe { __hc__pages_1(0) };
         if i > 0 {
             assert_eq!(old_pages, current_pages);
         }

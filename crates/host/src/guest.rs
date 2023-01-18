@@ -155,7 +155,7 @@ where
     let guest_input_length_value: Value = Value::I32(guest_input_length);
     let (guest_input_ptr, guest_input_ptr_value) = match instance
         .exports
-        .get_function("__allocate")
+        .get_function("__hc__allocate_1")
         .map_err(|e| wasm_error!(WasmErrorInner::CallError(e.to_string())))?
         .call(&[guest_input_length_value.clone()])
         .map_err(|e| wasm_error!(WasmErrorInner::CallError(e.to_string())))?
@@ -171,7 +171,7 @@ where
         ),
         _ => {
             return Err(wasm_error!(WasmErrorInner::CallError(
-                "Not I32 return from __allocate".to_string()
+                "Not I32 return from __hc__allocate_1".to_string()
             ))
             .into())
         }
@@ -241,7 +241,7 @@ where
     // Tell the guest we are finished with the return pointer's data.
     instance
         .exports
-        .get_function("__deallocate")
+        .get_function("__hc__deallocate_1")
         .map_err(|e| wasm_error!(WasmErrorInner::CallError(e.to_string())))?
         .call(&[
             Value::I32(

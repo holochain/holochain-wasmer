@@ -42,27 +42,27 @@ pub fn wasm_instance(c: &mut Criterion) {
                 let env = Env::default();
                 let import_object: wasmer::ImportObject = imports! {
                     "env" => {
-                        "__short_circuit" => Function::new_native_with_env(
+                        "__hc__short_circuit_5" => Function::new_native_with_env(
                             module.store(),
                             env.clone(),
                             test::short_circuit
                         ),
-                        "__test_process_string" => Function::new_native_with_env(
+                        "__hc__test_process_string_2" => Function::new_native_with_env(
                             module.store(),
                             env.clone(),
                             test::test_process_string
                         ),
-                        "__test_process_struct" => Function::new_native_with_env(
+                        "__hc__test_process_struct_2" => Function::new_native_with_env(
                             module.store(),
                             env.clone(),
                             test::test_process_struct
                         ),
-                        "__debug" => Function::new_native_with_env(
+                        "__hc__debug_1" => Function::new_native_with_env(
                             module.store(),
                             env.clone(),
                             test::debug
                         ),
-                        "__pages" => Function::new_native_with_env(
+                        "__hc__pages_1" => Function::new_native_with_env(
                             module.store(),
                             env.clone(),
                             test::pages

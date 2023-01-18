@@ -7,7 +7,8 @@ pub extern "C" fn __hc__allocate_1(len: usize) -> usize {
 }
 
 /// Free an allocation.
-/// Needed because we leak memory every time we call `__allocate` and `write_bytes`.
+/// Needed because we leak memory every time we call `__hc__allocate_1` and
+/// `write_bytes`.
 #[no_mangle]
 #[inline(always)]
 pub extern "C" fn __hc__deallocate_1(guest_ptr: usize, len: usize) {
@@ -24,7 +25,7 @@ pub extern "C" fn __hc__deallocate_1(guest_ptr: usize, len: usize) {
 pub fn consume_bytes(guest_ptr: usize, len: usize) -> Vec<u8> {
     // This must be a Vec and not only a slice, because slices will fail to
     // deallocate memory properly when dropped.
-    // Assumes length and capacity are the same, which is true if `__allocate` is
+    // Assumes length and capacity are the same, which is true if `__hc__allocate_1` is
     // used to allocate memory for the vector.
     unsafe { std::vec::Vec::from_raw_parts(guest_ptr as *mut u8, len, len) }
 }
@@ -36,7 +37,7 @@ pub fn consume_bytes(guest_ptr: usize, len: usize) -> Vec<u8> {
 /// This facilitates the guest handing a `GuestPtr` back to the host as the return value of guest
 /// functions so that the host can read the output of guest logic from a pointer.
 ///
-/// The host MUST ensure either `__deallocate` is called or the entire wasm memory is dropped.
+/// The host MUST ensure either `__hc__deallocate_1` is called or the entire wasm memory is dropped.
 /// If the host fails to tell the guest where and how many bytes to deallocate, then this leak
 /// becomes permanent to the guest.
 #[inline(always)]
@@ -77,7 +78,7 @@ pub mod tests {
     }
 
     fn _alloc_dealloc(len: usize) {
-        __deallocate(__allocate(len), len);
+        __hc__deallocate_1(__hc__allocate_1(len), len);
     }
 
     // https://github.com/trailofbits/test-fuzz/issues/171

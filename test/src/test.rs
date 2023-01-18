@@ -59,11 +59,19 @@ pub mod tests {
     #[test]
     fn host_externs_toolable() {
         let module = TestWasm::Test.module(false);
-        dbg!(&module
-            .exports()
-            .globals()
-            .filter(|global| global.name().ends_with("__version"))
-            .collect::<Vec<_>>());
+        // Imports will be the minimal set of functions actually used by the wasm
+        // NOT the complete list defined by `host_externs!`.
+        assert_eq!(
+            vec![
+                "__hc__short_circuit_5".to_string(),
+                "__hc__test_process_string_2".to_string(),
+                "__hc__test_process_struct_2".to_string()
+            ],
+            module
+                .imports()
+                .map(|import| import.name().to_string())
+                .collect::<Vec<String>>()
+        );
     }
 
     #[test]
