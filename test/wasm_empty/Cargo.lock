@@ -537,8 +537,8 @@ dependencies = [
  "holochain_serialized_bytes",
  "holochain_wasmer_common",
  "parking_lot",
+ "paste",
  "serde",
- "test-fuzz",
  "tracing",
 ]
 
