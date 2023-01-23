@@ -106,7 +106,6 @@ pub struct SerializedModuleCache {
     plru: MicroCache,
     key_map: PlruKeyMap,
     cache: BTreeMap<CacheKey, Arc<SerializedModule>>,
-    cranelift: fn() -> Cranelift,
 }
 
 pub static SERIALIZED_MODULE_CACHE: OnceCell<RwLock<SerializedModuleCache>> = OnceCell::new();
@@ -138,9 +137,8 @@ impl PlruCache for SerializedModuleCache {
 impl SerializedModuleCache {
     /// Build a default `SerializedModuleCache` with a `Cranelift` that will be used
     /// to compile modules for serialization as needed.
-    pub fn default_with_cranelift(cranelift: fn() -> Cranelift) -> Self {
+    pub fn default() -> Self {
         Self {
-            cranelift,
             plru: MicroCache::default(),
             key_map: PlruKeyMap::default(),
             cache: BTreeMap::default(),
@@ -152,15 +150,12 @@ impl SerializedModuleCache {
     fn get_with_build_cache(
         &mut self,
         key: CacheKey,
-        wasm: &[u8],
+        serialized_module: &[u8],
     ) -> Result<Module, wasmer::RuntimeError> {
-        let store = Store::new(&Universal::new((self.cranelift)()).engine());
-        let module = Module::from_binary(&store, wasm)
-            .map_err(|e| wasm_error!(WasmErrorInner::Compile(e.to_string())))?;
-        let serialized_module = module
-            .serialize()
-            .map_err(|e| wasm_error!(WasmErrorInner::Compile(e.to_string())))?;
-        self.put_item(key, Arc::new(serialized_module));
+        let store = Store::new(&Universal::headless().engine());
+        let module = unsafe { Module::deserialize(&store, serialized_module) }
+            .map_err(|_e| wasm_error!(WasmErrorInner::Deserialize(serialized_module.to_vec())))?;
+        self.put_item(key, Arc::new(serialized_module.to_vec()));
         Ok(module)
     }
 
@@ -169,9 +164,9 @@ impl SerializedModuleCache {
     pub fn get(&mut self, key: CacheKey, wasm: &[u8]) -> Result<Module, wasmer::RuntimeError> {
         match self.cache.get(&key) {
             Some(serialized_module) => {
-                let store = Store::new(&Universal::new((self.cranelift)()).engine());
+                let store = Store::new(&Universal::headless().engine());
                 let module = unsafe { Module::deserialize(&store, serialized_module) }
-                    .map_err(|e| wasm_error!(WasmErrorInner::Compile(e.to_string())))?;
+                    .map_err(|_e| wasm_error!(WasmErrorInner::Deserialize(wasm.to_vec())))?;
                 self.touch(&key);
                 Ok(module)
             }
