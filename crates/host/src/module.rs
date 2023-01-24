@@ -8,10 +8,10 @@ use parking_lot::RwLock;
 use std::collections::BTreeMap;
 use std::str::FromStr;
 use std::sync::Arc;
+use wasmer::Dylib;
 use wasmer::Module;
 use wasmer::Store;
 use wasmer::Universal;
-use wasmer::Dylib;
 
 /// We expect cache keys to be produced via hashing so 32 bytes is enough for all
 /// purposes.
@@ -143,7 +143,7 @@ pub fn store() -> Store {
     let target = Target::new(triple, cpu_feature);
     let engine = Dylib::headless().target(target).engine();
     let store = Store::new(&engine);
-    return store
+    return store;
 }
 
 impl SerializedModuleCache {
@@ -165,24 +165,33 @@ impl SerializedModuleCache {
         serialized_module: &[u8],
     ) -> Result<Module, wasmer::RuntimeError> {
         let store = store();
-        let module = unsafe { Module::deserialize(&store, serialized_module) }
-            .map_err(|_e| wasm_error!(WasmErrorInner::Deserialize(serialized_module.to_vec())))?;
+        let module = unsafe { Module::deserialize(&store, serialized_module) }.map_err(|e| {
+            println!("error {:?}", e);
+            wasm_error!(WasmErrorInner::Deserialize(serialized_module.to_vec()))
+        })?;
         self.put_item(key, Arc::new(serialized_module.to_vec()));
         Ok(module)
     }
 
     /// Given a wasm, attempts to get the serialized module for it from the cache.
     /// If the cache misses a new serialized module, will be built from the wasm.
-    pub fn get(&mut self, key: CacheKey, wasm: &[u8]) -> Result<Module, wasmer::RuntimeError> {
+    pub fn get(
+        &mut self,
+        key: CacheKey,
+        serialized_module: &[u8],
+    ) -> Result<Module, wasmer::RuntimeError> {
         match self.cache.get(&key) {
             Some(serialized_module) => {
                 let store = store();
-                let module = unsafe { Module::deserialize(&store, serialized_module) }
-                    .map_err(|_e| wasm_error!(WasmErrorInner::Deserialize(wasm.to_vec())))?;
+                let module =
+                    unsafe { Module::deserialize(&store, serialized_module) }.map_err(|e| {
+                        println!("error {:?}", e);
+                        wasm_error!(WasmErrorInner::Deserialize(serialized_module.to_vec()))
+                    })?;
                 self.touch(&key);
                 Ok(module)
             }
-            None => self.get_with_build_cache(key, wasm),
+            None => self.get_with_build_cache(key, serialized_module),
         }
     }
 }
