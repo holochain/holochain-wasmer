@@ -6,6 +6,7 @@ use once_cell::sync::{Lazy, OnceCell};
 use parking_lot::Mutex;
 use parking_lot::RwLock;
 use std::collections::BTreeMap;
+use std::str::FromStr;
 use std::sync::Arc;
 use wasmer::Module;
 use wasmer::Store;
@@ -135,6 +136,16 @@ impl PlruCache for SerializedModuleCache {
     }
 }
 
+pub fn store() -> Store {
+    let triple = Triple::from_str("aarch64-apple-ios").unwrap();
+    let mut cpu_feature = CpuFeature::set();
+    cpu_feature.insert(CpuFeature::from_str("sse2").unwrap());
+    let target = Target::new(triple, cpu_feature);
+    let engine = Dylib::headless().target(target).engine();
+    let store = Store::new(&engine);
+    return store
+}
+
 impl SerializedModuleCache {
     /// Build a default `SerializedModuleCache` with a `Cranelift` that will be used
     /// to compile modules for serialization as needed.
@@ -153,7 +164,7 @@ impl SerializedModuleCache {
         key: CacheKey,
         serialized_module: &[u8],
     ) -> Result<Module, wasmer::RuntimeError> {
-        let store = Store::new(&Dylib::headless().engine());
+        let store = store();
         let module = unsafe { Module::deserialize(&store, serialized_module) }
             .map_err(|_e| wasm_error!(WasmErrorInner::Deserialize(serialized_module.to_vec())))?;
         self.put_item(key, Arc::new(serialized_module.to_vec()));
@@ -165,7 +176,7 @@ impl SerializedModuleCache {
     pub fn get(&mut self, key: CacheKey, wasm: &[u8]) -> Result<Module, wasmer::RuntimeError> {
         match self.cache.get(&key) {
             Some(serialized_module) => {
-                let store = Store::new(&Dylib::headless().engine());
+                let store = store();
                 let module = unsafe { Module::deserialize(&store, serialized_module) }
                     .map_err(|_e| wasm_error!(WasmErrorInner::Deserialize(wasm.to_vec())))?;
                 self.touch(&key);
