@@ -1,17 +1,17 @@
 use holochain_wasmer_guest::*;
 
 host_externs!(
-    __debug
+    debug:1
 );
 
 extern "C" {
-    pub fn __pages(i: u32) -> u32;
+    pub fn __hc__pages_1(i: u32) -> u32;
 }
 
 #[no_mangle]
-pub extern "C" fn bytes_round_trip(_: GuestPtr, _: Len) -> GuestPtrLen {
+pub extern "C" fn bytes_round_trip(_: usize, _: usize) -> DoubleUSize {
 
-    let mut old_pages: WasmSize = unsafe { __pages(0) };
+    let mut old_pages: WasmSize = unsafe { __hc__pages_1(0) };
     let mut current_pages: WasmSize = old_pages;
 
     // thrash this more times than there are bytes in a wasm page so that if even one byte leaks
@@ -22,7 +22,7 @@ pub extern "C" fn bytes_round_trip(_: GuestPtr, _: Len) -> GuestPtrLen {
         // allocations are in the correct position and not overlapping
         let bytes: Vec<[u8; 5]> = std::iter::repeat([ 1, 2, 3, 4, 5 ]).take(100).collect();
 
-        let ptrs: Vec<GuestPtr> = bytes.iter().map(|b| {
+        let ptrs: Vec<usize> = bytes.iter().map(|b| {
             allocation::write_bytes(b.to_vec())
         }).collect();
 
@@ -36,7 +36,7 @@ pub extern "C" fn bytes_round_trip(_: GuestPtr, _: Len) -> GuestPtrLen {
 
         // if we forget to deallocate properly then the number of allocated pages will grow
         old_pages = current_pages;
-        current_pages = unsafe { __pages(0) };
+        current_pages = unsafe { __hc__pages_1(0) };
         if i > 0 {
             assert_eq!(old_pages, current_pages);
         }

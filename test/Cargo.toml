@@ -1,6 +1,6 @@
 [package]
 name = "test"
-version = "0.0.82"
+version = "0.0.83"
 authors = [ "thedavidmeister", "thedavidmeister@gmail.com" ]
 edition = "2021"
 
@@ -16,6 +16,7 @@ serde_bytes = "0.11"
 parking_lot = "0.12"
 wasmer = "=2.3.0"
 wasmer-middlewares = "=2.3.0"
+test-fuzz = "=3.0.4"
 
 [dev-dependencies]
 env_logger = "0.8"

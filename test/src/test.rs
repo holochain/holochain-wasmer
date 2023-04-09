@@ -57,6 +57,24 @@ pub mod tests {
     }
 
     #[test]
+    fn host_externs_toolable() {
+        let module = TestWasm::Test.module(false);
+        // Imports will be the minimal set of functions actually used by the wasm
+        // NOT the complete list defined by `host_externs!`.
+        assert_eq!(
+            vec![
+                "__hc__short_circuit_5".to_string(),
+                "__hc__test_process_string_2".to_string(),
+                "__hc__test_process_struct_2".to_string()
+            ],
+            module
+                .imports()
+                .map(|import| import.name().to_string())
+                .collect::<Vec<String>>()
+        );
+    }
+
+    #[test]
     fn infinite_loop() {
         // Instead of looping forever we want the metering to kick in and trap
         // the execution into an unreachable error.
@@ -106,6 +124,22 @@ pub mod tests {
         )
         .expect("ignore_args_process_string call");
         assert_eq!(String::new(), String::from(result));
+    }
+
+    // https://github.com/trailofbits/test-fuzz/issues/171
+    #[cfg(not(target_os = "windows"))]
+    #[test_fuzz::test_fuzz]
+    fn process_string_fuzz(s: String) {
+        let result: StringType = guest::call(
+            TestWasm::Test.instance(),
+            "process_string",
+            &StringType::from(s.clone()),
+        )
+        .expect("process string call");
+
+        let expected_string = format!("host: guest: {}", s);
+
+        assert_eq!(&String::from(result), &expected_string);
     }
 
     #[test]
@@ -170,7 +204,7 @@ pub mod tests {
             Err(runtime_error) => assert_eq!(
                 WasmError {
                     file: "src/wasm.rs".into(),
-                    line: 103,
+                    line: 100,
                     error: WasmErrorInner::Guest("oh no!".into()),
                 },
                 runtime_error.downcast().unwrap(),
@@ -193,7 +227,7 @@ pub mod tests {
                 assert_eq!(
                     WasmError {
                         file: "src/wasm.rs".into(),
-                        line: 133,
+                        line: 128,
                         error: WasmErrorInner::Guest("it fails!: ()".into()),
                     },
                     runtime_error.downcast().unwrap(),

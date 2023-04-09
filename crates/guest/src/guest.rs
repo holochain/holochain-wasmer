@@ -6,11 +6,16 @@ pub use holochain_wasmer_common::*;
 use crate::allocation::consume_bytes;
 use crate::allocation::write_bytes;
 
+pub use paste::paste;
+
 #[macro_export]
 macro_rules! host_externs {
-    ( $( $func_name:ident ),* ) => {
-        extern "C" {
-            $( pub fn $func_name(guest_allocation_ptr: $crate::GuestPtr, len: $crate::Len) -> $crate::GuestPtrLen; )*
+    ( $( $func_name:ident:$version:literal ),* ) => {
+        $crate::paste! {
+            #[no_mangle]
+            extern "C" {
+                $( pub fn [<__hc__ $func_name _ $version>](guest_allocation_ptr: usize, len: usize) -> $crate::DoubleUSize; )*
+            }
         }
     };
 }
@@ -22,7 +27,7 @@ macro_rules! host_externs {
 /// The `WasmError::Deserialize` enum contains the bytes that failed to deserialize so the host can
 /// unambiguously provide debug information.
 #[inline(always)]
-pub fn host_args<O>(ptr: GuestPtr, len: Len) -> Result<O, GuestPtrLen>
+pub fn host_args<O>(ptr: usize, len: usize) -> Result<O, DoubleUSize>
 where
     O: serde::de::DeserializeOwned + std::fmt::Debug,
 {
@@ -47,7 +52,7 @@ where
 /// - Return a `Result` of the deserialized output type `O`
 #[inline(always)]
 pub fn host_call<I, O>(
-    f: unsafe extern "C" fn(GuestPtr, Len) -> GuestPtrLen,
+    f: unsafe extern "C" fn(usize, usize) -> DoubleUSize,
     input: I,
 ) -> Result<O, crate::WasmError>
 where
@@ -56,17 +61,14 @@ where
 {
     // Call the host function and receive the length of the serialized result.
     let input_bytes = holochain_serialized_bytes::encode(&input).map_err(|e| wasm_error!(e))?;
-    let input_len: Len = match input_bytes.len().try_into() {
-        Ok(len) => len,
-        Err(e) => return Err(wasm_error!(e)),
-    };
+    let input_len: usize = input_bytes.len();
     let input_guest_ptr = crate::allocation::write_bytes(input_bytes);
 
-    let (output_guest_ptr, output_len): (GuestPtr, Len) = split_u64(unsafe {
+    let (output_guest_ptr, output_len): (usize, usize) = split_usize(unsafe {
         // This is unsafe because all host function calls in wasm are unsafe.
-        // The host will call `__deallocate` for us to free the leaked bytes from the input.
+        // The host will call `__hc__deallocate_1` for us to free the leaked bytes from the input.
         f(input_guest_ptr, input_len)
-    });
+    })?;
 
     // Deserialize the host bytes into the output type.
     let bytes = crate::allocation::consume_bytes(output_guest_ptr, output_len);
@@ -82,17 +84,17 @@ where
 /// Convert any serializable value into a `GuestPtr` that can be returned to the host.
 /// The host is expected to know how to consume and deserialize it.
 #[inline(always)]
-pub fn return_ptr<R>(return_value: R) -> GuestPtrLen
+pub fn return_ptr<R>(return_value: R) -> DoubleUSize
 where
     R: Serialize + std::fmt::Debug,
 {
     match holochain_serialized_bytes::encode::<Result<R, WasmError>>(&Ok(return_value)) {
         Ok(bytes) => {
-            let len: Len = match bytes.len().try_into() {
-                Ok(len) => len,
-                Err(e) => return return_err_ptr(wasm_error!(e)),
-            };
-            merge_u64(write_bytes(bytes), len)
+            let len: usize = bytes.len();
+            match merge_usize(write_bytes(bytes), len) {
+                Ok(v) => v,
+                Err(e) => return_err_ptr(e),
+            }
         }
         Err(e) => return_err_ptr(wasm_error!(WasmErrorInner::Serialize(e))),
     }
@@ -104,41 +106,26 @@ where
 /// The casts from `usize` to `u32` are safe as long as the guest code is compiled
 /// for `wasm32-unknown-unknown` target.
 #[inline(always)]
-pub fn return_err_ptr(wasm_error: WasmError) -> GuestPtrLen {
-    match holochain_serialized_bytes::encode::<Result<(), WasmError>>(&Err(wasm_error)) {
-        Ok(bytes) => {
-            let len: Len = match bytes.len().try_into() {
-                Ok(len) => len,
-                Err(e) => return return_err_ptr(wasm_error!(e)),
-            };
-            merge_u64(write_bytes(bytes), len)
-        }
+pub fn return_err_ptr(wasm_error: WasmError) -> DoubleUSize {
+    let bytes = match holochain_serialized_bytes::encode::<Result<(), WasmError>>(&Err(wasm_error))
+    {
+        Ok(bytes) => bytes,
         Err(e) => match holochain_serialized_bytes::encode::<Result<(), WasmError>>(&Err(
             wasm_error!(WasmErrorInner::Serialize(e)),
         )) {
-            Ok(bytes) => {
-                let len: Len = match bytes.len().try_into() {
-                    Ok(len) => len,
-                    Err(e) => return return_err_ptr(wasm_error!(e)),
-                };
-                merge_u64(write_bytes(bytes), len)
-            }
+            Ok(bytes) => bytes,
             // At this point we've errored while erroring
             Err(_) => match holochain_serialized_bytes::encode::<Result<(), WasmError>>(&Err(
                 wasm_error!(WasmErrorInner::ErrorWhileError),
             )) {
-                Ok(bytes) => {
-                    let len: Len = match bytes.len().try_into() {
-                        Ok(len) => len,
-                        Err(e) => return return_err_ptr(wasm_error!(e)),
-                    };
-                    merge_u64(write_bytes(bytes), len)
-                }
+                Ok(bytes) => bytes,
                 // At this point we failed to serialize a unit variant so IDK ¯\_(ツ)_/¯
                 Err(_) => panic!("Failed to error"),
             },
         },
-    }
+    };
+    let len = bytes.len();
+    merge_usize(write_bytes(bytes), len).expect("Failed to build return value")
 }
 
 /// A simple macro to wrap `return_err_ptr` in an analogy to the native rust `?`.

@@ -60,6 +60,19 @@ There are several places we need to implement things:
 - Holochain HDK needs to use the `holochain_wasmer_guest` functions to wrap externs in something ergonomic for happ developers
 - Happ developers need to be broadly aware of how to send cleanly serializable inputs and work with serde
 
+## Fuzzing
+
+You can fuzz this repository as:
+
+```
+docker run --rm --env FUZZ_TARGET="<some fuzz target>" -it holochain/fuzzbox:holochain-wasmer
+```
+
+You may need to pull the tag before fuzzing to get the latest code as it is built
+on CI against main.
+
+For more information on fuzzbox see https://github.com/holochain/fuzzbox.
+
 ### Holochain core
 
 #### Being a good wasm host
@@ -237,9 +250,9 @@ The `test_process_struct` shows a good minimal example of an import function:
 ```rust
 pub fn test_process_struct(
     env: &Env,
-    guest_ptr: GuestPtr,
-    len: Len,
-) -> Result<u64, wasmer::RuntimeError> {
+    guest_ptr: usize,
+    len: usize,
+) -> Result<DoubleUSize, wasmer::RuntimeError> {
     let mut some_struct: SomeStruct = env.consume_bytes_from_guest(guest_ptr, len)?;
     some_struct.process();
     env.move_data_to_guest(Ok::<SomeStruct, WasmError>(some_struct))
@@ -349,7 +362,7 @@ This is easy, `host_args` takes `u32` pointer and length and tries to inject it 
 
 ```rust
 #[no_mangle]
-pub extern "C" fn foo(remote_ptr: GuestPtr, len: GuestPtr) -> GuestPtr {
+pub extern "C" fn foo(remote_ptr: usize, len: usize) -> DoubleUSize {
  let bar: SomeType = match host_args(remote_ptr, len) {
   Ok(v) => v,
   Err(guest_ptr) => return guest_ptr,
@@ -399,7 +412,7 @@ In a guest extern you will likely want to wrap the `host_call` in a `try_ptr!` (
 ```rust
 host_externs!(__some_host_function);
 
-extern "C" fn foo(_: GuestPtr, _: Len) -> GuestPtrLen {
+extern "C" fn foo(_: usize, _: usize) -> DoubleUSize {
  let input = String::from("bar");
 
  // note the try_ptr! wrapper to be compatible with GuestPtr return value
@@ -447,12 +460,12 @@ WASM only has 4 data types: `i32`, `i64`, `f32` and `f64`.
 
 This represents integers and floats.
 
-Integers are '[sign agnostic](https://rsms.me/wasm-intro#sign-agnostic)' which 
-can be awkward in Rust, that only has explicitly signed/unsigned primitives. 
-This basically means that integers are just chunks of binary data that allow 
-contextual math operations. For example, nothing in wasm prevents us from 
-performing signed and unsigned math operations on the same number. The number 
-itself is not signed, it's just that certain math requires the developer to 
+Integers are '[sign agnostic](https://rsms.me/wasm-intro#sign-agnostic)' which
+can be awkward in Rust, that only has explicitly signed/unsigned primitives.
+This basically means that integers are just chunks of binary data that allow
+contextual math operations. For example, nothing in wasm prevents us from
+performing signed and unsigned math operations on the same number. The number
+itself is not signed, it's just that certain math requires the developer to
 adopt consistent _conventions_ in order to write correct code. This is a poor
 fit for the Rust mentality that demands _proofs_ at the compiler level, not mere
 conventions.
@@ -464,10 +477,10 @@ time.
 
 Wasm floats show some [non-deterministic behaviour](https://webassembly.org/docs/nondeterminism/) in the case of `NaN` values.
 The cranelift compiler can be configured to canonicalize `NaN` values and it is
-strongly recommended to enable this. Non-determinism is very bad in the context 
-a p2p network because it means we cannot differentiate clearly between honest 
-and dishonest actors based on individual pieces of data. At best we can apply 
-statistical heuristics across many data points that are costly and can be gamed 
+strongly recommended to enable this. Non-determinism is very bad in the context
+a p2p network because it means we cannot differentiate clearly between honest
+and dishonest actors based on individual pieces of data. At best we can apply
+statistical heuristics across many data points that are costly and can be gamed
 or avoided by attackers.
 
 Wasm has no strings, sequences, structs or any other collection or complex type.
@@ -599,8 +612,8 @@ macro on the guest side.
 
 - The host moves serialized `SomeDataType` on the host using the host allocator
 - The host calculates the `u32` length of the serialized data
-- The host asks the guest to `__allocate` the length
-- The guest (inside `__allocate`) allocates length bytes and returns a `GuestPtr` to the host
+- The host asks the guest to `__hc__allocate_1` the length
+- The guest (inside `__hc__allocate_1`) allocates length bytes and returns a `GuestPtr` to the host
 - The host checks that the `GuestPtr` + len bytes fits in the guest's memory bounds
 - The host writes the data into the guest memory
 - The host calls the function it wants to call in the guest, passing in the `GuestPtr` and `Len`
@@ -626,7 +639,7 @@ the `host::guest::call()` return value.
 - The `Result` bytes are leaked into the guest
 - The guest returns a `GuestPtrLen` to the host referencing the bytes
 - The host copies the bytes from `GuestPtrLen` and deserializes the `Result`
-- The host calls `__deallocate` so that the guest can cleanup the leaked data
+- The host calls `__hc__deallocate_1` so that the guest can cleanup the leaked data
 - The host deserializes the inner value if it makes sense to
 
 ##### Guest calling host
