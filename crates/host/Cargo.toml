@@ -26,3 +26,4 @@ path = "src/host.rs"
 default = ["error_as_host"]
 debug_memory = []
 error_as_host = ["holochain_wasmer_common/error_as_host"]
+dylib = ["wasmer/dylib"]
