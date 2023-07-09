@@ -45,21 +45,17 @@ impl TestWasm {
         }
     }
 
-    pub fn key(&self, metered: bool) -> [u8; 32] {
-        match (self, metered) {
-            (TestWasm::Empty, false) => [0; 32],
-            (TestWasm::Empty, true) => [1; 32],
-            (TestWasm::Io, false) => [2; 32],
-            (TestWasm::Io, true) => [3; 32],
-            (TestWasm::Test, false) => [4; 32],
-            (TestWasm::Test, true) => [5; 32],
-            (TestWasm::Memory, false) => [6; 32],
-            (TestWasm::Memory, true) => [7; 32],
+    pub fn key(&self) -> [u8; 32] {
+        match self {
+            TestWasm::Empty => [0; 32],
+            TestWasm::Io => [1; 32],
+            TestWasm::Test => [2; 32],
+            TestWasm::Memory => [3; 32],
         }
     }
 
     pub fn module(&self, metered: bool) -> Arc<Module> {
-        match MODULE_CACHE.write().get(self.key(metered), self.bytes()) {
+        match MODULE_CACHE.write().get(self.key(), self.bytes()) {
             Ok(v) => v,
             Err(runtime_error) => match runtime_error.downcast::<WasmError>() {
                 Ok(WasmError {
@@ -69,7 +65,7 @@ impl TestWasm {
                     {
                         let cranelift_fn = || {
                             let cost_function = |_operator: &Operator| -> u64 { 1 };
-                            let metering = Arc::new(Metering::new(6_500_000_000, cost_function));
+                            let metering = Arc::new(Metering::new(10000000000, cost_function));
                             let mut cranelift = Cranelift::default();
                             cranelift.canonicalize_nans(true).push_middleware(metering);
                             cranelift
@@ -96,7 +92,7 @@ impl TestWasm {
                             .get()
                             .unwrap()
                             .write()
-                            .get(self.key(metered), self.bytes())
+                            .get(self.key(), self.bytes())
                             .unwrap(),
                     )
                 }
