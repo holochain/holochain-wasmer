@@ -6,17 +6,17 @@ use test_common::StringType;
 
 // define a few functions we expect the host to provide for us
 host_externs!(
-    debug:1,
-    noop:1,
-    this_func_doesnt_exist_but_we_can_extern_it_anyway:1,
-    test_process_string:2,
-    test_process_struct:2,
-    short_circuit:5
+    __debug,
+    __noop,
+    __this_func_doesnt_exist_but_we_can_extern_it_anyway,
+    __test_process_string,
+    __test_process_struct,
+    __short_circuit
 );
 
 #[no_mangle]
 pub extern "C" fn short_circuit(_guest_ptr: usize, _len: usize) -> DoubleUSize {
-    host_call::<(), String>(__hc__short_circuit_5, ()).unwrap();
+    host_call::<(), String>(__short_circuit, ()).unwrap();
     0
 }
 
@@ -33,11 +33,11 @@ pub extern "C" fn literal_bytes(guest_ptr: usize, len: usize) -> DoubleUSize {
 #[no_mangle]
 pub extern "C" fn ignore_args_process_string(guest_ptr: usize, len: usize) -> DoubleUSize {
     // A well behaved wasm must either use or deallocate the input.
-    // A malicious wasm can simply define a __hc__deallocate_1 function that does nothing.
+    // A malicious wasm can simply define a __deallocate function that does nothing.
     // The host has no way of knowing whether the guest is behaving right up until it leaks all available memory.
     // If the host tries to force deallocation it risks double-deallocating an honest guest.
-    crate::allocation::__hc__deallocate_1(guest_ptr, len);
-    host_call::<&String, StringType>(__hc__test_process_string_2, &"foo".into()).unwrap();
+    crate::allocation::__deallocate(guest_ptr, len);
+    host_call::<&String, StringType>(__test_process_string, &"foo".into()).unwrap();
     return_ptr(StringType::from(String::new()))
 }
 
@@ -52,8 +52,8 @@ pub extern "C" fn process_string(guest_ptr: usize, len: usize) -> DoubleUSize {
 
     let s: String = format!("guest: {}", String::from(s));
     let s: StringType = try_ptr!(
-        host_call::<&String, StringType>(__hc__test_process_string_2, &s),
-        "could not __hc__test_process_string_2"
+        host_call::<&String, StringType>(__test_process_string, &s),
+        "could not __test_process_string"
     );
     return_ptr(s)
 }
@@ -65,7 +65,7 @@ pub extern "C" fn process_native(guest_ptr: usize, len: usize) -> DoubleUSize {
         Err(err_ptr) => return err_ptr,
     };
     let processed: SomeStruct = try_ptr!(
-        host_call(__hc__test_process_struct_2, &input),
+        host_call(__test_process_struct, &input),
         "could not deserialize SomeStruct in process_native"
     );
     return_ptr(processed)

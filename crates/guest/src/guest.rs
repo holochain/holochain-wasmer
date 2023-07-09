@@ -6,16 +6,11 @@ pub use holochain_wasmer_common::*;
 use crate::allocation::consume_bytes;
 use crate::allocation::write_bytes;
 
-pub use paste::paste;
-
 #[macro_export]
 macro_rules! host_externs {
-    ( $( $func_name:ident:$version:literal ),* ) => {
-        $crate::paste! {
-            #[no_mangle]
-            extern "C" {
-                $( pub fn [<__hc__ $func_name _ $version>](guest_allocation_ptr: usize, len: usize) -> $crate::DoubleUSize; )*
-            }
+    ( $( $func_name:ident ),* ) => {
+        extern "C" {
+            $( pub fn $func_name(guest_allocation_ptr: usize, len: usize) -> $crate::DoubleUSize; )*
         }
     };
 }
@@ -66,7 +61,7 @@ where
 
     let (output_guest_ptr, output_len): (usize, usize) = split_usize(unsafe {
         // This is unsafe because all host function calls in wasm are unsafe.
-        // The host will call `__hc__deallocate_1` for us to free the leaked bytes from the input.
+        // The host will call `__deallocate` for us to free the leaked bytes from the input.
         f(input_guest_ptr, input_len)
     })?;
 

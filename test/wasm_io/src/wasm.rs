@@ -7,7 +7,7 @@ macro_rules! _s {
             /// ignore the input completely and return empty data
             pub extern "C" fn [< $t:lower _input_ignored_empty_ret >](guest_ptr: usize, len: usize) -> DoubleUSize {
                 // Still need to deallocate the input even if we don't use it.
-                crate::allocation::__hc__deallocate_1(guest_ptr, len);
+                crate::allocation::__deallocate(guest_ptr, len);
                 return_ptr(
                     paste::expr! {
                         test_common::[< $t:camel Type >]::from($empty)
