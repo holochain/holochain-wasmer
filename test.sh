@@ -11,7 +11,7 @@ cargo clippy
 ( cd crates/guest && cargo clippy )
 
 # tests the root workspace that doesn't include any wasm code
-cargo test -- --nocapture
+cargo test ${1-} -- --nocapture
 
 # test that everything builds
 cargo build --release --manifest-path test/test_wasm/Cargo.toml --target wasm32-unknown-unknown

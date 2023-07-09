@@ -11,9 +11,9 @@ use wasmer::WasmerEnv;
 pub struct Env {
     #[wasmer(export)]
     memory: LazyInit<Memory>,
-    #[wasmer(export(name = "__allocate"))]
+    #[wasmer(export(name = "__hc__allocate_1"))]
     allocate: LazyInit<Function>,
-    #[wasmer(export(name = "__deallocate"))]
+    #[wasmer(export(name = "__hc__deallocate_1"))]
     deallocate: LazyInit<Function>,
 }
 

@@ -1,22 +1,22 @@
 use holochain_wasmer_guest::*;
 
 host_externs!(
-    __debug
+    debug:1
 );
 
 extern "C" {
-    pub fn __pages(i: u32) -> u32;
+    pub fn __hc__pages_1(i: u32) -> u32;
 }
 
 #[no_mangle]
 pub extern "C" fn bytes_round_trip(_: usize, _: usize) -> DoubleUSize {
 
-    let mut old_pages: WasmSize = unsafe { __pages(0) };
+    let mut old_pages: WasmSize = unsafe { __hc__pages_1(0) };
     let mut current_pages: WasmSize = old_pages;
 
     // thrash this more times than there are bytes in a wasm page so that if even one byte leaks
     // we will see it in the page count
-    for i in 0..100_000 {
+    for i in 0..70_000 {
 
         // thrash a bunch of little chunks of bytes so that we can be reasonably sure the
         // allocations are in the correct position and not overlapping
@@ -36,7 +36,7 @@ pub extern "C" fn bytes_round_trip(_: usize, _: usize) -> DoubleUSize {
 
         // if we forget to deallocate properly then the number of allocated pages will grow
         old_pages = current_pages;
-        current_pages = unsafe { __pages(0) };
+        current_pages = unsafe { __hc__pages_1(0) };
         if i > 0 {
             assert_eq!(old_pages, current_pages);
         }

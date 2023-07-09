@@ -8,6 +8,8 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Changed
 
+- Bumped holochain_serialized_bytes to v0.0.52
+
 ### Deprecated
 
 ### Removed
