@@ -2,7 +2,7 @@
 /// Return the pointer to the leaked allocation so the host can write to it.
 #[no_mangle]
 #[inline(always)]
-pub extern "C" fn __hc__allocate_1(len: usize) -> usize {
+pub extern "C" fn __allocate(len: usize) -> usize {
     write_bytes(Vec::with_capacity(len))
 }
 
@@ -77,7 +77,7 @@ pub mod tests {
     }
 
     fn _alloc_dealloc(len: usize) {
-        __deallocate(__hc__allocate_1(len), len);
+        __deallocate(__allocate(len), len);
     }
 
     // https://github.com/trailofbits/test-fuzz/issues/171
