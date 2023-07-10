@@ -33,10 +33,10 @@ pub extern "C" fn literal_bytes(guest_ptr: usize, len: usize) -> DoubleUSize {
 #[no_mangle]
 pub extern "C" fn ignore_args_process_string(guest_ptr: usize, len: usize) -> DoubleUSize {
     // A well behaved wasm must either use or deallocate the input.
-    // A malicious wasm can simply define a __deallocate function that does nothing.
+    // A malicious wasm can simply define a __hc__deallocate_1 function that does nothing.
     // The host has no way of knowing whether the guest is behaving right up until it leaks all available memory.
     // If the host tries to force deallocation it risks double-deallocating an honest guest.
-    crate::allocation::__deallocate(guest_ptr, len);
+    crate::allocation::__hc__deallocate_1(guest_ptr, len);
     host_call::<&String, StringType>(__hc__test_process_string_2, &"foo".into()).unwrap();
     return_ptr(StringType::from(String::new()))
 }
@@ -53,7 +53,7 @@ pub extern "C" fn process_string(guest_ptr: usize, len: usize) -> DoubleUSize {
     let s: String = format!("guest: {}", String::from(s));
     let s: StringType = try_ptr!(
         host_call::<&String, StringType>(__hc__test_process_string_2, &s),
-        "could not __test_process_string"
+        "could not __hc__test_process_string_2"
     );
     return_ptr(s)
 }
