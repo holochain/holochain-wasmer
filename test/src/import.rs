@@ -13,12 +13,12 @@ pub fn import_object(store: &Store, env: &Env) -> ImportObject {
                 env.clone(),
                 short_circuit
             ),
-            "__hc_test_process_string_2" => Function::new_native_with_env(
+            "__hc__test_process_string_2" => Function::new_native_with_env(
                 store,
                 env.clone(),
                 test_process_string
             ),
-            "__hc_test_process_struct_2" => Function::new_native_with_env(
+            "__hc__test_process_struct_2" => Function::new_native_with_env(
                 store,
                 env.clone(),
                 test_process_struct
