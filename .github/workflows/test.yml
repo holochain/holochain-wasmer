@@ -18,11 +18,11 @@ jobs:
         script: ["./test.sh", "./bench.sh"]
     steps:
       - uses: actions/checkout@v3
-      - uses: actions/cache@v3
+      - name: Cache install Nix packages
+        uses: rikhuijzer/cache-install@v1
         with:
-          path: |
-            /nix/store
-          key: nix-store-${{ hashFiles('default.nix') }}-${{ hashFiles('config.nix') }}-${{ hashFiles('nix') }}
+          key: nix-${{ hashFiles('flake.nix') }}
+          nix_file: 'flake.nix'
       - uses: cachix/install-nix-action@v22
         with:
           nix_path: nixpkgs=channel:nixos-unstable
