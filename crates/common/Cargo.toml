@@ -2,7 +2,7 @@
 name = "holochain_wasmer_common"
 description = "commons for both host and guest"
 license = "Apache-2.0"
-version = "0.0.83"
+version = "0.0.84"
 authors = [ "thedavidmeister", "thedavidmeister@gmail.com" ]
 edition = "2021"
 

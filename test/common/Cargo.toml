@@ -1,6 +1,6 @@
 [package]
 name = "test_common"
-version = "0.0.83"
+version = "0.0.84"
 authors = [ "thedavidmeister", "thedavidmeister@gmail.com" ]
 edition = "2021"
 
