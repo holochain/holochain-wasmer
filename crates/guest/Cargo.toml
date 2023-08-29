@@ -14,7 +14,7 @@ crate-type = [ "cdylib", "rlib" ]
 path = "src/guest.rs"
 
 [dependencies]
-holochain_serialized_bytes = { version = "=0.0.52", features = [] }
+holochain_serialized_bytes = { version = "=0.0.53", features = [] }
 holochain_wasmer_common = { version = "=0.0.84", path = "../common" }
 serde = "1"
 tracing = "0.1"
