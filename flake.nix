@@ -21,7 +21,6 @@
                     inputs.holochain-flake.devShells.${system}.holonix
                 ];
                 packages = [
-                    pkgs.nodejs-18_x
                 ];
             };
         };
