@@ -14,15 +14,16 @@ jobs:
         script: ["./test.sh", "./bench.sh"]
     steps:
       - uses: actions/checkout@v3
-      - uses: actions/cache@v3
+      - name: Install nix
+        uses: cachix/install-nix-action@v20
+      - name: Setup cachix
+        uses: cachix/cachix-action@v12
+        if: ${{ ! contains(matrix.platform.runs-on, 'self-hosted') }}
         with:
-          path: |
-            /nix/store
-          key: nix-store-${{ hashFiles('default.nix') }}-${{ hashFiles('config.nix') }}-${{ hashFiles('nix') }}
-      - uses: cachix/install-nix-action@v22
-        with:
-          nix_path: nixpkgs=channel:nixos-unstable
-          extra_nix_config: |
-            substituters = https://cache.nixos.org/ https://cache.holo.host/
-            trusted-public-keys = cache.nixos.org-1:6NCHdD59X431o0gWypbMrAURkbJ16ZPMQFGspcDShjY= cache.holo.host-1:lNXIXtJgS9Iuw4Cu6X0HINLu9sTfcjEntnrgwMQIMcE= cache.holo.host-2:ZJCkX3AUYZ8soxTLfTb60g+F3MkWD7hkH9y8CgqwhDQ=
+          name: holochain-ci
+          authToken: "${{ secrets.CACHIX_AUTH_TOKEN }}"
+          installCommand: |
+            nix-env -if https://github.com/cachix/cachix/tarball/${CACHIX_REV} \
+              --substituters 'https://cache.nixos.org https://cachix.cachix.org' \
+              --trusted-public-keys 'cachix.cachix.org-1:eWNHQldwUO7G2VkjpnjDbWwy4KQ/HNxht7H4SSoMckM= cache.nixos.org-1:6NCHdD59X431o0gWypbMrAURkbJ16ZPMQFGspcDShjY='
       - run: nix develop --command ${{ matrix.script }}
