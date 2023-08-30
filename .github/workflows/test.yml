@@ -6,6 +6,10 @@ on:
       - develop
   pull_request: {}
 
+env:
+  HOLOCHAIN_REPO: "/var/tmp/holochain_repo"
+  CACHIX_REV: "v1.2"
+
 jobs:
   test:
     runs-on: ubuntu-latest
