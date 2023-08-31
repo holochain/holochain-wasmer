@@ -7,7 +7,7 @@ authors = [ "thedavidmeister", "thedavidmeister@gmail.com" ]
 edition = "2021"
 
 [dependencies]
-holochain_serialized_bytes = "=0.0.51"
+holochain_serialized_bytes = "=0.0.53"
 serde = "1"
 thiserror = "1"
 serde_bytes = "0.11"

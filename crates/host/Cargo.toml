@@ -9,7 +9,7 @@ edition = "2021"
 [dependencies]
 wasmer = "=2.3.0"
 holochain_wasmer_common = { version = "=0.0.84", path = "../common" }
-holochain_serialized_bytes = "=0.0.51"
+holochain_serialized_bytes = "=0.0.53"
 serde = "1"
 tracing = "0.1"
 parking_lot = "0.12"
