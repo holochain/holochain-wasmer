@@ -519,7 +519,7 @@ dependencies = [
 
 [[package]]
 name = "holochain_wasmer_common"
-version = "0.0.83"
+version = "0.0.84"
 dependencies = [
  "holochain_serialized_bytes",
  "serde",
@@ -532,7 +532,7 @@ dependencies = [
 
 [[package]]
 name = "holochain_wasmer_guest"
-version = "0.0.83"
+version = "0.0.84"
 dependencies = [
  "holochain_serialized_bytes",
  "holochain_wasmer_common",
@@ -1276,7 +1276,7 @@ dependencies = [
 
 [[package]]
 name = "test_wasm_empty"
-version = "0.0.83"
+version = "0.0.84"
 dependencies = [
  "holochain_wasmer_guest",
 ]
