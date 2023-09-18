@@ -45,6 +45,8 @@ impl TestWasm {
         }
     }
 
+    /// Simply enumerates every possible combination of wasm and metering with
+    /// a key that is unique to that combination.
     pub fn key(&self, metered: bool) -> [u8; 32] {
         match (self, metered) {
             (TestWasm::Empty, false) => [0; 32],

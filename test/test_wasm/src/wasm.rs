@@ -129,6 +129,8 @@ pub extern "C" fn try_ptr_fails_fast(guest_ptr: usize, len: usize) -> DoubleUSiz
     return_ptr(result)
 }
 
+/// This function is used to test that metering will kick in and stop a wasm
+/// from running forever.
 #[no_mangle]
 pub extern "C" fn loop_forever(_guest_ptr: usize, _len: usize) -> DoubleUSize {
     #[allow(clippy::empty_loop)]
