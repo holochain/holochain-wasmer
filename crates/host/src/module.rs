@@ -9,7 +9,8 @@ use std::collections::BTreeMap;
 use std::sync::Arc;
 use wasmer::Module;
 use wasmer::Store;
-use wasmer::Universal;
+// use wasmer::Universal;
+use bytes::Bytes;
 
 /// We expect cache keys to be produced via hashing so 32 bytes is enough for all
 /// purposes.
@@ -18,7 +19,7 @@ pub type CacheKey = [u8; 32];
 /// keys and the bits used to evict things from the cache.
 pub type PlruKeyMap = BiMap<usize, CacheKey>;
 /// Modules serialize to a vec of bytes as per wasmer.
-pub type SerializedModule = Vec<u8>;
+pub type SerializedModule = Bytes;
 
 /// Higher level trait over the plru cache to make it a bit easier to interact
 /// with consistently. Default implementations for key functions are provided.
@@ -154,7 +155,7 @@ impl SerializedModuleCache {
         key: CacheKey,
         wasm: &[u8],
     ) -> Result<Module, wasmer::RuntimeError> {
-        let store = Store::new(&Universal::new((self.cranelift)()).engine());
+        let store = Store::new((self.cranelift)());
         let module = Module::from_binary(&store, wasm)
             .map_err(|e| wasm_error!(WasmErrorInner::Compile(e.to_string())))?;
         let serialized_module = module
@@ -169,8 +170,8 @@ impl SerializedModuleCache {
     pub fn get(&mut self, key: CacheKey, wasm: &[u8]) -> Result<Module, wasmer::RuntimeError> {
         match self.cache.get(&key) {
             Some(serialized_module) => {
-                let store = Store::new(&Universal::new((self.cranelift)()).engine());
-                let module = unsafe { Module::deserialize(&store, serialized_module) }
+                let store = Store::new((self.cranelift)());
+                let module = unsafe { Module::deserialize(&store, (**serialized_module).clone()) }
                     .map_err(|e| wasm_error!(WasmErrorInner::Compile(e.to_string())))?;
                 self.touch(&key);
                 Ok(module)

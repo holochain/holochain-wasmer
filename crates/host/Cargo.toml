@@ -16,6 +16,7 @@ parking_lot = "0.12"
 once_cell = "1"
 rand = "0.8"
 bimap = "0.6"
+bytes = "1"
 
 [lib]
 name = "holochain_wasmer_host"
