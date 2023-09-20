@@ -31,6 +31,16 @@ pub fn test_process_struct(
     env.move_data_to_guest(Ok::<SomeStruct, WasmError>(some_struct))
 }
 
+/// Uses up all the gas in the metering system.
+pub fn burn_through_ops(
+    env: &Env,
+    guest_ptr: GuestPtr,
+    len: Len,
+) -> Result<u64, wasmer::RuntimeError> {
+    let _: () = env.consume_bytes_from_guest(guest_ptr, len)?;
+    env.move_data_to_guest(())
+}
+
 pub fn debug(env: &Env, some_number: WasmSize) -> Result<u64, wasmer::RuntimeError> {
     println!("debug {:?}", some_number);
     env.move_data_to_guest(())
