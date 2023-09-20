@@ -86,9 +86,9 @@ pub fn split_u64(u: u64) -> Result<(u32, u32), WasmError> {
 /// Performs the inverse of `merge_usize`.
 pub fn split_usize(u: DoubleUSize) -> Result<(usize, usize), WasmError> {
     #[cfg(target_pointer_width = "64")]
-    return split_u128(u as u128).map(|(a, b)| (a as usize, b as usize));
+    return split_u128(u).map(|(a, b)| (a as usize, b as usize));
     #[cfg(target_pointer_width = "32")]
-    return split_u64(u as u64).map(|(a, b)| (a as usize, b as usize));
+    return split_u64(u).map(|(a, b)| (a as usize, b as usize));
 }
 
 #[cfg(test)]
