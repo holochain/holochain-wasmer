@@ -7,7 +7,7 @@ authors = [ "thedavidmeister", "thedavidmeister@gmail.com" ]
 edition = "2021"
 
 [dependencies]
-wasmer = "=2.3.0"
+wasmer = "=3.0.0"
 holochain_wasmer_common = { version = "=0.0.85", path = "../common" }
 holochain_serialized_bytes = "=0.0.53"
 serde = "1"
@@ -26,4 +26,3 @@ path = "src/host.rs"
 default = ["error_as_host"]
 debug_memory = []
 error_as_host = ["holochain_wasmer_common/error_as_host"]
-dylib = ["wasmer/dylib"]
