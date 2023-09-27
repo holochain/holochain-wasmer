@@ -3,8 +3,13 @@ pub mod wasms;
 
 use holochain_wasmer_host::prelude::*;
 use test_common::SomeStruct;
+use wasmer::FunctionEnv;
 
-pub fn short_circuit(_: &Env, _: GuestPtr, _: Len) -> Result<u64, wasmer::RuntimeError> {
+pub fn short_circuit(
+    env: FunctionEnv<Env>,
+    _: GuestPtr,
+    _: Len,
+) -> Result<u64, wasmer::RuntimeError> {
     Err(wasm_error!(WasmErrorInner::HostShortCircuit(
         holochain_serialized_bytes::encode(&String::from("shorts")).map_err(|e| wasm_error!(e))?,
     ))
@@ -12,7 +17,7 @@ pub fn short_circuit(_: &Env, _: GuestPtr, _: Len) -> Result<u64, wasmer::Runtim
 }
 
 pub fn test_process_string(
-    env: &Env,
+    env: FunctionEnv<Env>,
     guest_ptr: GuestPtr,
     len: Len,
 ) -> Result<u64, wasmer::RuntimeError> {
@@ -22,7 +27,7 @@ pub fn test_process_string(
 }
 
 pub fn test_process_struct(
-    env: &Env,
+    env: FunctionEnv<Env>,
     guest_ptr: GuestPtr,
     len: Len,
 ) -> Result<u64, wasmer::RuntimeError> {
@@ -31,12 +36,13 @@ pub fn test_process_struct(
     env.move_data_to_guest(Ok::<SomeStruct, WasmError>(some_struct))
 }
 
-pub fn debug(env: &Env, some_number: WasmSize) -> Result<u64, wasmer::RuntimeError> {
+pub fn debug(env: FunctionEnv<Env>, some_number: i32) -> i32 {
     println!("debug {:?}", some_number);
-    env.move_data_to_guest(())
+    // env.move_data_to_guest(())
+    0
 }
 
-pub fn pages(env: &Env, _: WasmSize) -> Result<WasmSize, wasmer::RuntimeError> {
+pub fn pages(env: FunctionEnv<Env>, _: WasmSize) -> Result<WasmSize, wasmer::RuntimeError> {
     Ok(env
         .memory_ref()
         .ok_or(wasm_error!(WasmErrorInner::Memory))?

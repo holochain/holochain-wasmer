@@ -4,18 +4,16 @@
 // use crate::prelude::*;
 // use wasmer::Function;
 // use wasmer::LazyInit;
-// use wasmer::Memory;
+use wasmer::Memory;
+use wasmer::TypedFunction;
 // use wasmer::WasmerEnv;
 
-// #[derive(Clone, Default, WasmerEnv)]
-// pub struct Env {
-//     #[wasmer(export)]
-//     memory: LazyInit<Memory>,
-//     #[wasmer(export(name = "__hc__allocate_1"))]
-//     allocate: LazyInit<Function>,
-//     #[wasmer(export(name = "__hc__deallocate_1"))]
-//     deallocate: LazyInit<Function>,
-// }
+#[derive(Clone, Default)]
+pub struct Env {
+    // memory: Option<Memory>,
+    // allocate: Option<TypedFunction<i32, i32>>,
+    // deallocate: Option<TypedFunction<i32, i32>>,
+}
 
 // impl Env {
 //     /// Given some input I that can be serialized, request an allocation from the

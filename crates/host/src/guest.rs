@@ -3,9 +3,11 @@ use core::num::TryFromIntError;
 use holochain_serialized_bytes::prelude::*;
 // use parking_lot::Mutex;
 // use std::sync::Arc;
+use wasmer::AsStoreMut;
 use wasmer::Instance;
 use wasmer::Memory;
 use wasmer::Value;
+use wasmer::WasmSlice;
 
 /// Write a slice of bytes to the guest in a safe-ish way.
 ///

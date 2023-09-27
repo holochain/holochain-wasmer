@@ -7,6 +7,8 @@ use parking_lot::Mutex;
 use parking_lot::RwLock;
 use std::collections::BTreeMap;
 use std::sync::Arc;
+use wasmer::Cranelift;
+use wasmer::Instance;
 use wasmer::Module;
 use wasmer::Store;
 // use wasmer::Universal;

@@ -1,10 +1,13 @@
-use crate::import::import_object;
-use crate::wasmparser::Operator;
+use crate::import::imports;
 use holochain_wasmer_host::module::SerializedModuleCache;
 use holochain_wasmer_host::module::SERIALIZED_MODULE_CACHE;
 use holochain_wasmer_host::prelude::*;
 use parking_lot::Mutex;
 use std::sync::Arc;
+use wasmer::Cranelift;
+use wasmer::Imports;
+use wasmer::Instance;
+use wasmer::Module;
 use wasmer_middlewares::Metering;
 
 pub enum TestWasm {
@@ -108,9 +111,9 @@ impl TestWasm {
 
     pub fn _instance(&self, metered: bool) -> Arc<Mutex<Instance>> {
         let module = self.module(metered);
-        let env = Env::default();
-        let import_object: ImportObject = import_object(module.store(), &env);
-        Arc::new(Mutex::new(Instance::new(&module, &import_object).unwrap()))
+        // let env = Env::default();
+        let imports: Imports = imports(module.store());
+        Arc::new(Mutex::new(Instance::new(&module, &imports).unwrap()))
     }
 
     pub fn instance(&self) -> Arc<Mutex<Instance>> {

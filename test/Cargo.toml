@@ -14,8 +14,8 @@ criterion = "0.3"
 rand = "0.8"
 serde_bytes = "0.11"
 parking_lot = "0.12"
-wasmer = "=2.3.0"
-wasmer-middlewares = "=2.3.0"
+wasmer = "=3.3.0"
+wasmer-middlewares = "=3.3.0"
 test-fuzz = "=3.0.4"
 
 [dev-dependencies]
