@@ -1,4 +1,5 @@
 // use crate::debug;
+use crate::err;
 use crate::pages;
 use crate::short_circuit;
 use crate::test_process_string;
@@ -29,7 +30,7 @@ pub fn debug(_env: FunctionEnvMut<Env>, some_number: i32) -> i32 {
 /// let f = Function::new_typed_with_env(&mut store, &env, sum);
 /// ```
 
-pub fn imports(store: &mut impl AsStoreMut, env: FunctionEnv<()>) -> Imports {
+pub fn imports(store: &mut impl AsStoreMut, env: Env) -> Imports {
     imports! {
         "env" => {
             // "__hc__short_circuit_5" => Function::new_typed_with_env(
@@ -49,8 +50,13 @@ pub fn imports(store: &mut impl AsStoreMut, env: FunctionEnv<()>) -> Imports {
             // ),
             "__hc__debug_1" => Function::new_typed_with_env(
                 store,
-                &FunctionEnv::new(&mut store, Env::default()),
+                &FunctionEnv::new(&mut store, env.clone()),
                 debug
+            ),
+            "__hc__guest_err_1" => Function::new_typed_with_env(
+                store,
+                &FunctionEnv::new(&mut store, env),
+                err
             ),
             // "__hc__pages_1" => Function::new_typed_with_env(
             //     store,

@@ -4,6 +4,9 @@ use holochain_wasmer_host::module::SERIALIZED_MODULE_CACHE;
 use holochain_wasmer_host::prelude::*;
 use parking_lot::Mutex;
 use std::sync::Arc;
+use wasmer::wasmparser::Operator;
+use wasmer::AsStoreMut;
+use wasmer::CompilerConfig;
 use wasmer::Cranelift;
 use wasmer::Imports;
 use wasmer::Instance;
@@ -111,9 +114,11 @@ impl TestWasm {
 
     pub fn _instance(&self, metered: bool) -> Arc<Mutex<Instance>> {
         let module = self.module(metered);
-        // let env = Env::default();
-        let imports: Imports = imports(module.store());
-        Arc::new(Mutex::new(Instance::new(&module, &imports).unwrap()))
+        let env = Env::default();
+        let imports: Imports = imports(&mut STORE.as_store_mut(), env);
+        Arc::new(Mutex::new(
+            Instance::new(&mut STORE.as_store_mut(), &module, &imports).unwrap(),
+        ))
     }
 
     pub fn instance(&self) -> Arc<Mutex<Instance>> {

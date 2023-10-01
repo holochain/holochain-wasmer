@@ -786,6 +786,7 @@ dependencies = [
  "serde",
  "tracing",
  "wasmer",
+ "wasmer-middlewares",
 ]
 
 [[package]]

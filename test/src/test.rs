@@ -4,6 +4,7 @@ pub mod wasms;
 use holochain_wasmer_host::prelude::*;
 use test_common::SomeStruct;
 use wasmer::FunctionEnv;
+use wasmer::FunctionEnvMut;
 
 pub fn short_circuit(
     env: FunctionEnv<Env>,
@@ -40,6 +41,10 @@ pub fn debug(env: FunctionEnv<Env>, some_number: i32) -> i32 {
     println!("debug {:?}", some_number);
     // env.move_data_to_guest(())
     0
+}
+
+pub fn err(env: FunctionEnvMut<Env>) -> Result<(), wasmer::RuntimeError> {
+    Err(wasm_error!(WasmErrorInner::Guest("oh no!".into())).into())
 }
 
 pub fn pages(env: FunctionEnv<Env>, _: WasmSize) -> Result<WasmSize, wasmer::RuntimeError> {

@@ -6,6 +6,7 @@ use holochain_serialized_bytes::prelude::*;
 use wasmer::AsStoreMut;
 use wasmer::Instance;
 use wasmer::Memory;
+use wasmer::MemoryView;
 use wasmer::Value;
 use wasmer::WasmSlice;
 
@@ -99,16 +100,16 @@ pub fn write_bytes(
 ///
 /// A better approach is to use an immutable deref from a `WasmPtr`, which checks against memory
 /// bounds for the guest, and map over the whole thing to a `Vec<u8>`.
-// pub fn read_bytes(
-//     memory: &Memory,
-//     guest_ptr: GuestPtr,
-//     len: Len,
-// ) -> Result<Vec<u8>, wasmer::RuntimeError> {
-//     #[cfg(feature = "debug_memory")]
-//     tracing::debug!("reading bytes from guest to host at: {} {}", guest_ptr, len);
+pub fn read_bytes(
+    memory_view: &MemoryView,
+    guest_ptr: GuestPtr,
+    len: Len,
+) -> Result<Vec<u8>, wasmer::MemoryAccessError> {
+    #[cfg(feature = "debug_memory")]
+    tracing::debug!("reading bytes from guest to host at: {} {}", guest_ptr, len);
 
-//     WasmSlice::new(guest_ptr, len)?.read_to_vec()
-// }
+    WasmSlice::new(memory_view, guest_ptr.into(), len.into())?.read_to_vec()
+}
 
 /// Deserialize any DeserializeOwned type out of the guest from a guest pointer.
 pub fn from_guest_ptr<O>(
