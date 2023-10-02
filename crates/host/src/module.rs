@@ -156,7 +156,7 @@ impl SerializedModuleCache {
         &mut self,
         key: CacheKey,
         wasm: &[u8],
-    ) -> Result<Module, wasmer::RuntimeError> {
+    ) -> Result<(Store, Module), wasmer::RuntimeError> {
         let store = Store::new((self.cranelift)());
         let module = Module::from_binary(&store, wasm)
             .map_err(|e| wasm_error!(WasmErrorInner::Compile(e.to_string())))?;
@@ -164,19 +164,23 @@ impl SerializedModuleCache {
             .serialize()
             .map_err(|e| wasm_error!(WasmErrorInner::Compile(e.to_string())))?;
         self.put_item(key, Arc::new(serialized_module));
-        Ok(module)
+        Ok((store, module))
     }
 
     /// Given a wasm, attempts to get the serialized module for it from the cache.
     /// If the cache misses a new serialized module, will be built from the wasm.
-    pub fn get(&mut self, key: CacheKey, wasm: &[u8]) -> Result<Module, wasmer::RuntimeError> {
+    pub fn get(
+        &mut self,
+        key: CacheKey,
+        wasm: &[u8],
+    ) -> Result<(Store, Module), wasmer::RuntimeError> {
         match self.cache.get(&key) {
             Some(serialized_module) => {
                 let store = Store::new((self.cranelift)());
                 let module = unsafe { Module::deserialize(&store, (**serialized_module).clone()) }
                     .map_err(|e| wasm_error!(WasmErrorInner::Compile(e.to_string())))?;
                 self.touch(&key);
-                Ok(module)
+                Ok((store, module))
             }
             None => self.get_with_build_cache(key, wasm),
         }
@@ -189,7 +193,7 @@ impl SerializedModuleCache {
 pub struct ModuleCache {
     plru: MicroCache,
     key_map: PlruKeyMap,
-    cache: BTreeMap<CacheKey, Arc<Module>>,
+    cache: BTreeMap<CacheKey, Arc<(Mutex<Store>, Module)>>,
 }
 
 pub static MODULE_CACHE: Lazy<RwLock<ModuleCache>> =
@@ -202,8 +206,8 @@ impl ModuleCache {
         &mut self,
         key: CacheKey,
         wasm: &[u8],
-    ) -> Result<Arc<Module>, wasmer::RuntimeError> {
-        let module = match SERIALIZED_MODULE_CACHE.get() {
+    ) -> Result<Arc<(Mutex<Store>, Module)>, wasmer::RuntimeError> {
+        let (store, module) = match SERIALIZED_MODULE_CACHE.get() {
             Some(serialized_module_cache) => serialized_module_cache.write().get(key, wasm)?,
             None => {
                 return Err(wasmer::RuntimeError::user(Box::new(wasm_error!(
@@ -211,22 +215,26 @@ impl ModuleCache {
                 ))))
             }
         };
-        Ok(self.put_item(key, Arc::new(module)))
+        Ok(self.put_item(key, Arc::new((Mutex::new(store), module))))
     }
 
     /// Attempts to retrieve a module ready to build instances from. Builds a new
     /// module from the provided wasm and caches both the module and a serialized
     /// copy of the module if there is a miss.
-    pub fn get(&mut self, key: CacheKey, wasm: &[u8]) -> Result<Arc<Module>, wasmer::RuntimeError> {
+    pub fn get(
+        &mut self,
+        key: CacheKey,
+        wasm: &[u8],
+    ) -> Result<Arc<(Mutex<Store>, Module)>, wasmer::RuntimeError> {
         match self.get_item(&key) {
-            Some(module) => Ok(module),
+            Some(item) => Ok(item),
             None => self.get_with_build_cache(key, wasm),
         }
     }
 }
 
 impl PlruCache for ModuleCache {
-    type Item = Module;
+    type Item = (Mutex<Store>, Module);
 
     fn plru_mut(&mut self) -> &mut MicroCache {
         &mut self.plru
@@ -257,13 +265,13 @@ impl PlruCache for ModuleCache {
 pub struct InstanceCache {
     plru: MicroCache,
     key_map: PlruKeyMap,
-    cache: BTreeMap<CacheKey, Arc<Mutex<Instance>>>,
+    cache: BTreeMap<CacheKey, Arc<(Mutex<Store>, Mutex<Instance>)>>,
 }
 pub static INSTANCE_CACHE: Lazy<RwLock<InstanceCache>> =
     Lazy::new(|| RwLock::new(InstanceCache::default()));
 
 impl PlruCache for InstanceCache {
-    type Item = Mutex<Instance>;
+    type Item = (Mutex<Store>, Mutex<Instance>);
 
     fn plru_mut(&mut self) -> &mut MicroCache {
         &mut self.plru

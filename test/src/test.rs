@@ -18,39 +18,52 @@ pub fn short_circuit(
 }
 
 pub fn test_process_string(
-    env: FunctionEnv<Env>,
+    function_env: FunctionEnvMut<Env>,
     guest_ptr: GuestPtr,
     len: Len,
 ) -> Result<u64, wasmer::RuntimeError> {
-    let string: String = env.consume_bytes_from_guest(guest_ptr, len)?;
+    let (env, store_mut) = function_env.data_and_store_mut();
+    let string: String = env.consume_bytes_from_guest(&mut store_mut, guest_ptr, len)?;
     let processed_string = format!("host: {}", string);
-    env.move_data_to_guest(Ok::<String, WasmError>(processed_string))
+    env.move_data_to_guest(&mut store_mut, Ok::<String, WasmError>(processed_string))
 }
 
 pub fn test_process_struct(
-    env: FunctionEnv<Env>,
+    function_env: FunctionEnvMut<Env>,
     guest_ptr: GuestPtr,
     len: Len,
 ) -> Result<u64, wasmer::RuntimeError> {
-    let mut some_struct: SomeStruct = env.consume_bytes_from_guest(guest_ptr, len)?;
+    let (env, store_mut) = function_env.data_and_store_mut();
+    let mut some_struct: SomeStruct =
+        env.consume_bytes_from_guest(&mut store_mut, guest_ptr, len)?;
     some_struct.process();
-    env.move_data_to_guest(Ok::<SomeStruct, WasmError>(some_struct))
+    env.move_data_to_guest(&mut store_mut, Ok::<SomeStruct, WasmError>(some_struct))
 }
 
-pub fn debug(env: FunctionEnv<Env>, some_number: i32) -> i32 {
+pub fn debug(
+    function_env: FunctionEnvMut<Env>,
+    some_number: i32,
+) -> Result<(), wasmer::RuntimeError> {
+    let (env, store_mut) = function_env.data_and_store_mut();
     println!("debug {:?}", some_number);
-    // env.move_data_to_guest(())
-    0
+    env.move_data_to_guest(&mut store_mut, ());
+    Ok(())
 }
 
 pub fn err(env: FunctionEnvMut<Env>) -> Result<(), wasmer::RuntimeError> {
     Err(wasm_error!(WasmErrorInner::Guest("oh no!".into())).into())
 }
 
-pub fn pages(env: FunctionEnv<Env>, _: WasmSize) -> Result<WasmSize, wasmer::RuntimeError> {
+pub fn pages(
+    function_env: FunctionEnvMut<Env>,
+    _: WasmSize,
+) -> Result<WasmSize, wasmer::RuntimeError> {
+    let (env, store_mut) = function_env.data_and_store_mut();
     Ok(env
-        .memory_ref()
+        .memory
+        .as_ref()
         .ok_or(wasm_error!(WasmErrorInner::Memory))?
+        .view(&store_mut)
         .size()
         .0)
 }

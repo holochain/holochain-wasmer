@@ -1,4 +1,4 @@
-// use std::num::TryFromIntError;
+use std::num::TryFromIntError;
 
 use crate::guest::read_bytes;
 use crate::prelude::*;
@@ -9,52 +9,56 @@ use wasmer::TypedFunction;
 // use wasmer::WasmerEnv;
 use wasmer::AsStoreMut;
 use wasmer::AsStoreRef;
+use wasmer::StoreMut;
 use wasmer::Value;
 
 #[derive(Clone, Default)]
 pub struct Env {
-    memory: Option<Memory>,
-    // allocate: Option<TypedFunction<i32, i32>>,
-    deallocate: Option<TypedFunction<(i32, i32), ()>>,
+    pub memory: Option<Memory>,
+    pub allocate: Option<TypedFunction<i32, i32>>,
+    pub deallocate: Option<TypedFunction<(i32, i32), ()>>,
 }
 
 impl Env {
-    //     /// Given some input I that can be serialized, request an allocation from the
-    //     /// guest and copy the serialized bytes to the allocated pointer. The guest
-    //     /// MUST subsequently take ownership of these bytes or it will leak memory.
-    //     pub fn move_data_to_guest<I>(&self, input: I) -> Result<GuestPtrLen, wasmer::RuntimeError>
-    //     where
-    //         I: serde::Serialize + std::fmt::Debug,
-    //     {
-    //         let data = holochain_serialized_bytes::encode(&input).map_err(|e| wasm_error!(e))?;
-    //         let guest_ptr: GuestPtr = match self
-    //             .allocate_ref()
-    //             .ok_or(wasm_error!(WasmErrorInner::Memory))?
-    //             .call(&[Value::I32(
-    //                 data.len()
-    //                     .try_into()
-    //                     .map_err(|_| wasm_error!(WasmErrorInner::PointerMap))?,
-    //             )])
-    //             .map_err(|e| wasm_error!(e.to_string()))?
-    //             .get(0)
-    //         {
-    //             Some(Value::I32(guest_ptr)) => (*guest_ptr)
-    //                 .try_into()
-    //                 .map_err(|e: TryFromIntError| wasm_error!(e))?,
-    //             _ => return Err(wasm_error!(WasmErrorInner::PointerMap).into()),
-    //         };
-    //         let len: Len = match data.len().try_into() {
-    //             Ok(len) => len,
-    //             Err(e) => return Err(wasm_error!(e).into()),
-    //         };
-    //         crate::guest::write_bytes(
-    //             self.memory_ref()
-    //                 .ok_or(wasm_error!(WasmErrorInner::Memory))?,
-    //             guest_ptr,
-    //             &data,
-    //         )?;
-    //         Ok(merge_u32(guest_ptr, len)?)
-    //     }
+    /// Given some input I that can be serialized, request an allocation from the
+    /// guest and copy the serialized bytes to the allocated pointer. The guest
+    /// MUST subsequently take ownership of these bytes or it will leak memory.
+    pub fn move_data_to_guest<I>(
+        &self,
+        store_mut: &mut StoreMut,
+        input: I,
+    ) -> Result<GuestPtrLen, wasmer::RuntimeError>
+    where
+        I: serde::Serialize + std::fmt::Debug,
+    {
+        let data = holochain_serialized_bytes::encode(&input).map_err(|e| wasm_error!(e))?;
+        let guest_ptr: GuestPtr = self
+            .allocate
+            .as_ref()
+            .ok_or(wasm_error!(WasmErrorInner::Memory))?
+            .call(
+                store_mut,
+                data.len()
+                    .try_into()
+                    .map_err(|_| wasm_error!(WasmErrorInner::PointerMap))?,
+            )
+            .map_err(|e| wasm_error!(e.to_string()))?
+            .try_into()
+            .map_err(|e: TryFromIntError| wasm_error!(e))?;
+        let len: Len = match data.len().try_into() {
+            Ok(len) => len,
+            Err(e) => return Err(wasm_error!(e).into()),
+        };
+        crate::guest::write_bytes(
+            store_mut,
+            self.memory
+                .as_ref()
+                .ok_or(wasm_error!(WasmErrorInner::Memory))?,
+            guest_ptr,
+            &data,
+        )?;
+        Ok(merge_u32(guest_ptr, len)?)
+    }
 
     /// Given a pointer and length for a region of memory in the guest, copy the
     /// bytes to the host and attempt to deserialize type `O` from the data. The
@@ -62,6 +66,7 @@ impl Env {
     /// deserialization is successful.
     pub fn consume_bytes_from_guest<O>(
         &self,
+        store_mut: &mut StoreMut,
         guest_ptr: GuestPtr,
         len: Len,
     ) -> Result<O, wasmer::RuntimeError>
@@ -73,17 +78,16 @@ impl Env {
                 .memory
                 .as_ref()
                 .ok_or(wasm_error!(WasmErrorInner::Memory))?
-                .view(&STORE.as_store_ref()),
+                .view(&store_mut),
             guest_ptr,
             len,
         )
         .map_err(|_| wasm_error!(WasmErrorInner::Memory))?;
-        let mut store_mut = STORE.as_store_mut();
         self.deallocate
             .as_ref()
             .ok_or(wasm_error!(WasmErrorInner::Memory))?
             .call(
-                &mut store_mut,
+                store_mut,
                 guest_ptr
                     .try_into()
                     .map_err(|_| wasm_error!(WasmErrorInner::PointerMap))?,

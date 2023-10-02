@@ -11,6 +11,7 @@ use wasmer::Cranelift;
 use wasmer::Imports;
 use wasmer::Instance;
 use wasmer::Module;
+use wasmer::Store;
 use wasmer_middlewares::Metering;
 
 pub enum TestWasm {
@@ -64,7 +65,7 @@ impl TestWasm {
         }
     }
 
-    pub fn module(&self, metered: bool) -> Arc<Module> {
+    pub fn module(&self, metered: bool) -> Arc<(Mutex<Store>, Module)> {
         match MODULE_CACHE.write().get(self.key(metered), self.bytes()) {
             Ok(v) => v,
             Err(runtime_error) => match runtime_error.downcast::<WasmError>() {
@@ -97,14 +98,13 @@ impl TestWasm {
                             ))
                             .is_ok());
                     }
-                    Arc::new(
-                        SERIALIZED_MODULE_CACHE
-                            .get()
-                            .unwrap()
-                            .write()
-                            .get(self.key(metered), self.bytes())
-                            .unwrap(),
-                    )
+                    let (store, module) = SERIALIZED_MODULE_CACHE
+                        .get()
+                        .unwrap()
+                        .write()
+                        .get(self.key(metered), self.bytes())
+                        .unwrap();
+                    Arc::new((Mutex::new(store), module))
                 }
 
                 _ => unreachable!(),
@@ -113,11 +113,11 @@ impl TestWasm {
     }
 
     pub fn _instance(&self, metered: bool) -> Arc<Mutex<Instance>> {
-        let module = self.module(metered);
+        let (store, module) = *self.module(metered);
         let env = Env::default();
-        let imports: Imports = imports(&mut STORE.as_store_mut(), env);
+        let imports: Imports = imports(&mut store.get_mut().as_store_mut(), env);
         Arc::new(Mutex::new(
-            Instance::new(&mut STORE.as_store_mut(), &module, &imports).unwrap(),
+            Instance::new(&mut store.get_mut().as_store_mut(), &module, &imports).unwrap(),
         ))
     }
 
