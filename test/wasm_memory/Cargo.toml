@@ -12,6 +12,6 @@ path = "src/wasm.rs"
 [dependencies]
 holochain_wasmer_guest = { path = "../../crates/guest" }
 test_common = { path = "../common" }
-holochain_serialized_bytes = "=0.0.51"
+holochain_serialized_bytes = "=0.0.53"
 paste = "0.1"
 serde = "1"

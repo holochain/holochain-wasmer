@@ -7,10 +7,10 @@ use crate::prelude::*;
 use wasmer::Memory;
 use wasmer::TypedFunction;
 // use wasmer::WasmerEnv;
-use wasmer::AsStoreMut;
-use wasmer::AsStoreRef;
+// use wasmer::AsStoreMut;
+// use wasmer::AsStoreRef;
 use wasmer::StoreMut;
-use wasmer::Value;
+// use wasmer::Value;
 
 #[derive(Clone, Default)]
 pub struct Env {

@@ -114,10 +114,11 @@ impl TestWasm {
 
     pub fn _instance(&self, metered: bool) -> Arc<Mutex<Instance>> {
         let (store, module) = *self.module(metered);
+        let mut store = store.get_mut();
         let env = Env::default();
-        let imports: Imports = imports(&mut store.get_mut().as_store_mut(), env);
+        let imports: Imports = imports(&mut store.as_store_mut(), env);
         Arc::new(Mutex::new(
-            Instance::new(&mut store.get_mut().as_store_mut(), &module, &imports).unwrap(),
+            Instance::new(&mut store.as_store_mut(), &module, &imports).unwrap(),
         ))
     }
 

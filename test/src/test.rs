@@ -3,11 +3,11 @@ pub mod wasms;
 
 use holochain_wasmer_host::prelude::*;
 use test_common::SomeStruct;
-use wasmer::FunctionEnv;
+// use wasmer::FunctionEnv;
 use wasmer::FunctionEnvMut;
 
 pub fn short_circuit(
-    env: FunctionEnv<Env>,
+    _env: FunctionEnvMut<Env>,
     _: GuestPtr,
     _: Len,
 ) -> Result<u64, wasmer::RuntimeError> {
@@ -18,22 +18,22 @@ pub fn short_circuit(
 }
 
 pub fn test_process_string(
-    function_env: FunctionEnvMut<Env>,
+    mut function_env: FunctionEnvMut<Env>,
     guest_ptr: GuestPtr,
     len: Len,
 ) -> Result<u64, wasmer::RuntimeError> {
-    let (env, store_mut) = function_env.data_and_store_mut();
+    let (env, mut store_mut) = function_env.data_and_store_mut();
     let string: String = env.consume_bytes_from_guest(&mut store_mut, guest_ptr, len)?;
     let processed_string = format!("host: {}", string);
     env.move_data_to_guest(&mut store_mut, Ok::<String, WasmError>(processed_string))
 }
 
 pub fn test_process_struct(
-    function_env: FunctionEnvMut<Env>,
+    mut function_env: FunctionEnvMut<Env>,
     guest_ptr: GuestPtr,
     len: Len,
 ) -> Result<u64, wasmer::RuntimeError> {
-    let (env, store_mut) = function_env.data_and_store_mut();
+    let (env, mut store_mut) = function_env.data_and_store_mut();
     let mut some_struct: SomeStruct =
         env.consume_bytes_from_guest(&mut store_mut, guest_ptr, len)?;
     some_struct.process();
@@ -41,21 +41,21 @@ pub fn test_process_struct(
 }
 
 pub fn debug(
-    function_env: FunctionEnvMut<Env>,
+    mut function_env: FunctionEnvMut<Env>,
     some_number: i32,
 ) -> Result<(), wasmer::RuntimeError> {
-    let (env, store_mut) = function_env.data_and_store_mut();
+    let (env, mut store_mut) = function_env.data_and_store_mut();
     println!("debug {:?}", some_number);
     env.move_data_to_guest(&mut store_mut, ());
     Ok(())
 }
 
-pub fn err(env: FunctionEnvMut<Env>) -> Result<(), wasmer::RuntimeError> {
+pub fn err(_: FunctionEnvMut<Env>) -> Result<(), wasmer::RuntimeError> {
     Err(wasm_error!(WasmErrorInner::Guest("oh no!".into())).into())
 }
 
 pub fn pages(
-    function_env: FunctionEnvMut<Env>,
+    mut function_env: FunctionEnvMut<Env>,
     _: WasmSize,
 ) -> Result<WasmSize, wasmer::RuntimeError> {
     let (env, store_mut) = function_env.data_and_store_mut();
