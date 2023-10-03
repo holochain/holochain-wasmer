@@ -25,14 +25,14 @@ pub type SerializedModule = Bytes;
 
 #[derive(Clone)]
 pub struct ModuleWithStore {
-    pub module: Arc<Module>,
     pub store: Arc<Mutex<Store>>,
+    pub module: Arc<Module>,
 }
 
 #[derive(Clone)]
 pub struct InstanceWithStore {
-    pub instance: Arc<Mutex<Instance>>,
     pub store: Arc<Mutex<Store>>,
+    pub instance: Arc<Instance>,
 }
 
 /// Higher level trait over the plru cache to make it a bit easier to interact

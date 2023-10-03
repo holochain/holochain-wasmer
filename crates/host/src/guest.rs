@@ -2,11 +2,13 @@ use crate::prelude::*;
 use core::num::TryFromIntError;
 use holochain_serialized_bytes::prelude::*;
 // use parking_lot::Mutex;
-// use std::sync::Arc;
-use wasmer::AsStoreMut;
+use std::sync::Arc;
+// use wasmer::AsStoreMut;
 use wasmer::Instance;
 use wasmer::Memory;
 use wasmer::MemoryView;
+// use wasmer::Store;
+use wasmer::StoreMut;
 use wasmer::Value;
 use wasmer::WasmSlice;
 
@@ -54,7 +56,7 @@ use wasmer::WasmSlice;
 ///
 /// @see read_bytes()
 pub fn write_bytes(
-    store: &impl AsStoreMut,
+    store_mut: &mut StoreMut,
     memory: &Memory,
     guest_ptr: GuestPtr,
     slice: &[u8],
@@ -66,7 +68,9 @@ pub fn write_bytes(
     #[cfg(feature = "debug_memory")]
     tracing::debug!("writing bytes from host to guest at: {} {}", guest_ptr, len);
 
-    WasmSlice::new(&memory.view(store), guest_ptr.into(), len.into())?.write_slice(slice)?;
+    WasmSlice::new(&memory.view(store_mut), guest_ptr.into(), len.into())?.write_slice(slice)?;
+
+    // WasmSlice::new(&memory.view(store), guest_ptr.into(), len.into())?.write_slice(slice)?;
 
     // let ptr: WasmPtr<u8> = WasmPtr::new(guest_ptr);
     // // Write the length prefix immediately before the slice at the guest pointer position.
@@ -113,7 +117,7 @@ pub fn read_bytes(
 
 /// Deserialize any DeserializeOwned type out of the guest from a guest pointer.
 pub fn from_guest_ptr<O>(
-    store: &impl AsStoreMut,
+    store_mut: &mut StoreMut,
     memory: &Memory,
     guest_ptr: GuestPtr,
     len: Len,
@@ -121,8 +125,9 @@ pub fn from_guest_ptr<O>(
 where
     O: serde::de::DeserializeOwned + std::fmt::Debug,
 {
-    // let bytes = read_bytes(memory, guest_ptr, len)?;
-    let bytes = WasmSlice::new(&memory.view(store), guest_ptr.into(), len.into())?.read_to_vec()?;
+    let bytes =
+        WasmSlice::new(&memory.view(store_mut), guest_ptr.into(), len.into())?.read_to_vec()?;
+
     match holochain_serialized_bytes::decode(&bytes) {
         Ok(v) => Ok(v),
         Err(e) => {
@@ -136,9 +141,8 @@ where
 /// result is either a vector of bytes from the guest found at the location of the returned guest
 /// allocation pointer or a `RuntimeError` built from a `WasmError`.
 pub fn call<I, O>(
-    store: &mut impl AsStoreMut,
-    // instance: Arc<Mutex<Instance>>,
-    instance: Instance,
+    store_mut: &mut StoreMut,
+    instance: Arc<Instance>,
     f: &str,
     input: I,
 ) -> Result<O, wasmer::RuntimeError>
@@ -157,11 +161,12 @@ where
         .try_into()
         .map_err(|e: TryFromIntError| wasm_error!(WasmErrorInner::CallError(e.to_string())))?;
     let guest_input_length_value: Value = Value::I32(guest_input_length);
+
     let (guest_input_ptr, guest_input_ptr_value) = match instance
         .exports
         .get_function("__hc__allocate_1")
         .map_err(|e| wasm_error!(WasmErrorInner::CallError(e.to_string())))?
-        .call(store, &[guest_input_length_value.clone()])
+        .call(store_mut, &[guest_input_length_value.clone()])
         .map_err(|e| wasm_error!(WasmErrorInner::CallError(e.to_string())))?
         .get(0)
     {
@@ -183,7 +188,7 @@ where
 
     // Write the input payload into the guest at the offset specified by the allocation.
     write_bytes(
-        store,
+        store_mut,
         instance
             .exports
             .get_memory("memory")
@@ -198,8 +203,10 @@ where
         .exports
         .get_function(f)
         .map_err(|e| wasm_error!(WasmErrorInner::CallError(e.to_string())))?
-        .call(store, &[guest_input_ptr_value, guest_input_length_value])
-    {
+        .call(
+            store_mut,
+            &[guest_input_ptr_value, guest_input_length_value],
+        ) {
         Ok(v) => match v.get(0) {
             Some(Value::I64(i)) => {
                 let u: GuestPtrLen = (*i)
@@ -235,7 +242,7 @@ where
     // The host MUST discard any wasm instance that errors at this point to avoid memory leaks.
     // The WasmError in the result type here is for deserializing out of the guest.
     let return_value: Result<O, WasmError> = from_guest_ptr(
-        store,
+        store_mut,
         instance
             .exports
             .get_memory("memory")
@@ -250,7 +257,7 @@ where
         .get_function("__hc__deallocate_1")
         .map_err(|e| wasm_error!(WasmErrorInner::CallError(e.to_string())))?
         .call(
-            store,
+            store_mut,
             &[
                 Value::I32(
                     guest_return_ptr

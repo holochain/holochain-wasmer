@@ -9,8 +9,8 @@ use wasmer::imports;
 use wasmer::AsStoreMut;
 use wasmer::Function;
 use wasmer::FunctionEnv;
-use wasmer::FunctionEnvMut;
 use wasmer::Imports;
+use wasmer::StoreMut;
 
 /// ```
 /// # use wasmer::{Store, Function, FunctionEnv, FunctionEnvMut};
@@ -24,38 +24,37 @@ use wasmer::Imports;
 /// let f = Function::new_typed_with_env(&mut store, &env, sum);
 /// ```
 
-pub fn imports(store: &mut impl AsStoreMut, env: Env) -> Imports {
-    let function_env = FunctionEnv::new(store, env);
+pub fn imports(store: &mut StoreMut, function_env: &FunctionEnv<Env>) -> Imports {
     imports! {
         "env" => {
             "__hc__short_circuit_5" => Function::new_typed_with_env(
                 store,
-                &function_env,
+                function_env,
                 short_circuit
             ),
             "__hc__test_process_string_2" => Function::new_typed_with_env(
                 store,
-                &function_env,
+                function_env,
                 test_process_string
             ),
             "__hc__test_process_struct_2" => Function::new_typed_with_env(
                 store,
-                &function_env,
+                function_env,
                 test_process_struct
             ),
             "__hc__debug_1" => Function::new_typed_with_env(
                 store,
-                &function_env,
+                function_env,
                 debug
             ),
             "__hc__guest_err_1" => Function::new_typed_with_env(
                 store,
-                &function_env,
+                function_env,
                 err
             ),
             "__hc__pages_1" => Function::new_typed_with_env(
                 store,
-                &function_env,
+                function_env,
                 pages
             ),
         },

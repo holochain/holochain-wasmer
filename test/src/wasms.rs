@@ -4,12 +4,13 @@ use holochain_wasmer_host::module::ModuleWithStore;
 use holochain_wasmer_host::module::SerializedModuleCache;
 use holochain_wasmer_host::module::SERIALIZED_MODULE_CACHE;
 use holochain_wasmer_host::prelude::*;
-use parking_lot::Mutex;
+// use parking_lot::Mutex;
 use std::sync::Arc;
 use wasmer::wasmparser::Operator;
 use wasmer::AsStoreMut;
 use wasmer::CompilerConfig;
 use wasmer::Cranelift;
+use wasmer::FunctionEnv;
 use wasmer::Imports;
 use wasmer::Instance;
 use wasmer_middlewares::Metering;
@@ -112,19 +113,51 @@ impl TestWasm {
     }
 
     pub fn _instance(&self, metered: bool) -> InstanceWithStore {
-        let ModuleWithStore { store, module } = (*self.module(metered)).clone();
-        // let mut store = store.get_mut();
-        let env = Env::default();
-        let built_imports: Imports;
+        let module_with_store = self.module(metered);
+        let function_env;
+        let instance;
         {
-            let mut store_lock = store.lock();
-            built_imports = imports(&mut store_lock.as_store_mut(), env);
+            let mut store_lock = module_with_store.store.lock();
+            let mut store_mut = store_lock.as_store_mut();
+            function_env = FunctionEnv::new(&mut store_mut, Env::default());
+            let built_imports: Imports = imports(&mut store_mut, &function_env);
+            instance =
+                Instance::new(&mut store_mut, &module_with_store.module, &built_imports).unwrap();
         }
+
         {
-            let mut store_lock = store.lock();
-            Arc::new(Mutex::new(
-                Instance::new(&mut store_lock.as_store_mut(), &module, &built_imports).unwrap(),
-            ))
+            let mut store_lock = module_with_store.store.lock();
+            let mut function_env_mut = function_env.into_mut(&mut store_lock);
+            let (mut data_mut, mut store_mut) = function_env_mut.data_and_store_mut();
+            data_mut.memory = Some(instance.exports.get_memory("memory").unwrap().clone());
+            data_mut.deallocate = Some(
+                instance
+                    .exports
+                    .get_typed_function(&mut store_mut, "__hc__deallocate_1")
+                    .unwrap(),
+            );
+            data_mut.allocate = Some(
+                instance
+                    .exports
+                    .get_typed_function(&mut store_mut, "__hc__allocate_1")
+                    .unwrap(),
+            );
+        }
+
+        // let mut store_mut = (*module_with_store.store).lock().as_store_mut();
+        // let ModuleWithStore { store, module } = (*self.module(metered)).clone();
+        // let mut store = store.get_mut();
+        // let env = Env::default();
+        // let mut store_mut;
+        // {
+        //     let mut store_lock = *store.lock();
+        //     store_mut = store_lock.as_store_mut();
+        // }
+        // let mut store_mut = (*store).lock().as_store_mut();
+
+        InstanceWithStore {
+            store: module_with_store.store.clone(),
+            instance: Arc::new(instance),
         }
     }
 
