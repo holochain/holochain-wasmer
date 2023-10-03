@@ -1,4 +1,6 @@
 use crate::import::imports;
+use holochain_wasmer_host::module::InstanceWithStore;
+use holochain_wasmer_host::module::ModuleWithStore;
 use holochain_wasmer_host::module::SerializedModuleCache;
 use holochain_wasmer_host::module::SERIALIZED_MODULE_CACHE;
 use holochain_wasmer_host::prelude::*;
@@ -10,8 +12,6 @@ use wasmer::CompilerConfig;
 use wasmer::Cranelift;
 use wasmer::Imports;
 use wasmer::Instance;
-use wasmer::Module;
-use wasmer::Store;
 use wasmer_middlewares::Metering;
 
 pub enum TestWasm {
@@ -65,7 +65,7 @@ impl TestWasm {
         }
     }
 
-    pub fn module(&self, metered: bool) -> Arc<(Mutex<Store>, Module)> {
+    pub fn module(&self, metered: bool) -> Arc<ModuleWithStore> {
         match MODULE_CACHE.write().get(self.key(metered), self.bytes()) {
             Ok(v) => v,
             Err(runtime_error) => match runtime_error.downcast::<WasmError>() {
@@ -98,13 +98,12 @@ impl TestWasm {
                             ))
                             .is_ok());
                     }
-                    let (store, module) = SERIALIZED_MODULE_CACHE
+                    SERIALIZED_MODULE_CACHE
                         .get()
                         .unwrap()
                         .write()
                         .get(self.key(metered), self.bytes())
-                        .unwrap();
-                    Arc::new((Mutex::new(store), module))
+                        .unwrap()
                 }
 
                 _ => unreachable!(),
@@ -112,21 +111,28 @@ impl TestWasm {
         }
     }
 
-    pub fn _instance(&self, metered: bool) -> Arc<Mutex<Instance>> {
-        let (store, module) = *self.module(metered);
-        let mut store = store.get_mut();
+    pub fn _instance(&self, metered: bool) -> InstanceWithStore {
+        let ModuleWithStore { store, module } = (*self.module(metered)).clone();
+        // let mut store = store.get_mut();
         let env = Env::default();
-        let imports: Imports = imports(&mut store.as_store_mut(), env);
-        Arc::new(Mutex::new(
-            Instance::new(&mut store.as_store_mut(), &module, &imports).unwrap(),
-        ))
+        let built_imports: Imports;
+        {
+            let mut store_lock = store.lock();
+            built_imports = imports(&mut store_lock.as_store_mut(), env);
+        }
+        {
+            let mut store_lock = store.lock();
+            Arc::new(Mutex::new(
+                Instance::new(&mut store_lock.as_store_mut(), &module, &built_imports).unwrap(),
+            ))
+        }
     }
 
-    pub fn instance(&self) -> Arc<Mutex<Instance>> {
+    pub fn instance(&self) -> InstanceWithStore {
         self._instance(true)
     }
 
-    pub fn unmetered_instance(&self) -> Arc<Mutex<Instance>> {
+    pub fn unmetered_instance(&self) -> InstanceWithStore {
         self._instance(false)
     }
 }

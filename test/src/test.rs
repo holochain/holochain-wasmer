@@ -46,7 +46,7 @@ pub fn debug(
 ) -> Result<(), wasmer::RuntimeError> {
     let (env, mut store_mut) = function_env.data_and_store_mut();
     println!("debug {:?}", some_number);
-    env.move_data_to_guest(&mut store_mut, ());
+    env.move_data_to_guest(&mut store_mut, ())?;
     Ok(())
 }
 
