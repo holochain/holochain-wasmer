@@ -6,7 +6,6 @@ use crate::test_process_string;
 use crate::test_process_struct;
 use holochain_wasmer_host::prelude::*;
 use wasmer::imports;
-use wasmer::AsStoreMut;
 use wasmer::Function;
 use wasmer::FunctionEnv;
 use wasmer::Imports;
