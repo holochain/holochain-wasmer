@@ -2,15 +2,9 @@ use std::num::TryFromIntError;
 
 use crate::guest::read_bytes;
 use crate::prelude::*;
-// use wasmer::Function;
-// use wasmer::LazyInit;
 use wasmer::Memory;
 use wasmer::TypedFunction;
-// use wasmer::WasmerEnv;
-// use wasmer::AsStoreMut;
-// use wasmer::AsStoreRef;
 use wasmer::StoreMut;
-// use wasmer::Value;
 
 #[derive(Clone, Default)]
 pub struct Env {
