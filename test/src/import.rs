@@ -11,18 +11,6 @@ use wasmer::FunctionEnv;
 use wasmer::Imports;
 use wasmer::StoreMut;
 
-/// ```
-/// # use wasmer::{Store, Function, FunctionEnv, FunctionEnvMut};
-/// # let mut store = Store::default();
-/// # let env = FunctionEnv::new(&mut store, ());
-/// #
-/// fn sum(_env: FunctionEnvMut<()>, a: i32, b: i32) -> i32 {
-///     a + b
-/// }
-///
-/// let f = Function::new_typed_with_env(&mut store, &env, sum);
-/// ```
-
 pub fn imports(store: &mut StoreMut, function_env: &FunctionEnv<Env>) -> Imports {
     imports! {
         "env" => {

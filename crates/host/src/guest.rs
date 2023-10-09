@@ -135,7 +135,6 @@ where
     I: serde::Serialize + std::fmt::Debug,
     O: serde::de::DeserializeOwned + std::fmt::Debug,
 {
-    // let instance = instance.lock();
     // The guest will use the same crate for decoding if it uses the wasm common crate.
     let payload: Vec<u8> =
         holochain_serialized_bytes::encode(&input).map_err(|e| wasm_error!(e))?;

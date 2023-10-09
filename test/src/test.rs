@@ -3,7 +3,6 @@ pub mod wasms;
 
 use holochain_wasmer_host::prelude::*;
 use test_common::SomeStruct;
-// use wasmer::FunctionEnv;
 use wasmer::FunctionEnvMut;
 
 pub fn short_circuit(

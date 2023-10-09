@@ -11,7 +11,6 @@ use wasmer::Cranelift;
 use wasmer::Instance;
 use wasmer::Module;
 use wasmer::Store;
-// use wasmer::Universal;
 use bytes::Bytes;
 
 /// We expect cache keys to be produced via hashing so 32 bytes is enough for all
