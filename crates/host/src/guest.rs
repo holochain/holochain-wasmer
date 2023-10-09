@@ -67,18 +67,6 @@ pub fn write_bytes(
 
     WasmSlice::new(&memory.view(store_mut), guest_ptr.into(), len.into())?.write_slice(slice)?;
 
-    // WasmSlice::new(&memory.view(store), guest_ptr.into(), len.into())?.write_slice(slice)?;
-
-    // let ptr: WasmPtr<u8> = WasmPtr::new(guest_ptr);
-    // // Write the length prefix immediately before the slice at the guest pointer position.
-    // for (byte, cell) in slice.iter().zip(
-    //     ptr.deref(memory, 0, len)
-    //         .ok_or(wasm_error!(WasmErrorInner::Memory))?
-    //         .iter(),
-    // ) {
-    //     cell.set(*byte)
-    // }
-
     Ok(())
 }
 
