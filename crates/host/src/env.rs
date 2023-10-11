@@ -3,8 +3,8 @@ use std::num::TryFromIntError;
 use crate::guest::read_bytes;
 use crate::prelude::*;
 use wasmer::Memory;
-use wasmer::TypedFunction;
 use wasmer::StoreMut;
+use wasmer::TypedFunction;
 
 #[derive(Clone, Default)]
 pub struct Env {

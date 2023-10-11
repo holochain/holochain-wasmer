@@ -5,4 +5,3 @@ pub mod module;
 /// Updated for latest stable rust.
 pub mod plru;
 pub mod prelude;
-pub mod store;

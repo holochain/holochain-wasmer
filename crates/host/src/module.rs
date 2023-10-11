@@ -1,6 +1,7 @@
 use crate::plru::MicroCache;
 use crate::prelude::*;
 use bimap::BiMap;
+use bytes::Bytes;
 use holochain_wasmer_common::WasmError;
 use once_cell::sync::{Lazy, OnceCell};
 use parking_lot::Mutex;
@@ -11,7 +12,6 @@ use wasmer::Cranelift;
 use wasmer::Instance;
 use wasmer::Module;
 use wasmer::Store;
-use bytes::Bytes;
 
 /// We expect cache keys to be produced via hashing so 32 bytes is enough for all
 /// purposes.
