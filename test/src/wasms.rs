@@ -14,6 +14,10 @@ use wasmer::Imports;
 use wasmer::Instance;
 use wasmer_middlewares::Metering;
 
+
+use std::sync::atomic::{AtomicUsize, Ordering};
+static INSTANCE_COUNTER: AtomicUsize = AtomicUsize::new(0);
+
 pub enum TestWasm {
     Empty,
     Io,
@@ -67,7 +71,10 @@ impl TestWasm {
 
     pub fn module(&self, metered: bool) -> Arc<ModuleWithStore> {
         match MODULE_CACHE.write().get(self.key(metered), self.bytes()) {
-            Ok(v) => v,
+            Ok(v) => {
+                // println!("using cached module for {}", self.name());
+                v
+            },
             Err(runtime_error) => match runtime_error.downcast::<WasmError>() {
                 Ok(WasmError {
                     error: WasmErrorInner::UninitializedSerializedModuleCache,
@@ -112,6 +119,8 @@ impl TestWasm {
     }
 
     pub fn _instance(&self, metered: bool) -> InstanceWithStore {
+        let instance_count = INSTANCE_COUNTER.fetch_add(1, Ordering::SeqCst);
+        println!("creating instance for {} {}", self.name(), instance_count);
         let module_with_store = self.module(metered);
         let function_env;
         let instance;

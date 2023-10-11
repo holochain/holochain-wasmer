@@ -125,6 +125,9 @@ where
 /// Host calling guest for the function named `call` with the given `payload` in a vector of bytes
 /// result is either a vector of bytes from the guest found at the location of the returned guest
 /// allocation pointer or a `RuntimeError` built from a `WasmError`.
+/// The reason that this takes a separate store and instance is that the host does not neccessarily
+/// have access to an InstanceWithStore, such as the case when the guest is called from within a
+/// host function call.
 pub fn call<I, O>(
     store_mut: &mut StoreMut,
     instance: Arc<Instance>,
