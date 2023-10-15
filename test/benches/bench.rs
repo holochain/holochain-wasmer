@@ -38,7 +38,7 @@ pub fn wasm_instance(c: &mut Criterion) {
     ] {
         group.bench_function(BenchmarkId::new("wasm_instance", wasm.name()), |b| {
             b.iter(|| {
-                wasm.unmetered_instance();
+                let _drop = wasm.unmetered_instance();
             });
         });
     }

@@ -13,6 +13,8 @@ use wasmer::FunctionEnv;
 use wasmer::Imports;
 use wasmer::Instance;
 use wasmer_middlewares::Metering;
+use wasmer::Store;
+use wasmer::Module;
 
 
 use std::sync::atomic::{AtomicUsize, Ordering};
@@ -69,6 +71,54 @@ impl TestWasm {
         }
     }
 
+    pub fn uncached_module(&self) -> Arc<ModuleWithStore> {
+        let store = Store::new(Cranelift::default());
+        let module = Module::from_binary(&store, self.bytes()).unwrap();
+        Arc::new(ModuleWithStore {
+            module: Arc::new(module),
+            store: Arc::new(parking_lot::Mutex::new(store)),
+        })
+    }
+
+    pub fn serial_cache_module(&self, metered: bool) -> Arc<ModuleWithStore> {
+        match SERIALIZED_MODULE_CACHE.get() {
+            Some(cache) => {
+                cache.write().get(self.key(metered), self.bytes()).unwrap()
+            },
+            None => {
+                let cranelift_fn = || {
+                    let cost_function = |_operator: &Operator| -> u64 { 1 };
+                    let metering = Arc::new(Metering::new(10000000000, cost_function));
+                    let mut cranelift = Cranelift::default();
+                    cranelift.canonicalize_nans(true).push_middleware(metering);
+                    cranelift
+                };
+
+                let cranelift_fn_unmetered = || {
+                    let mut cranelift = Cranelift::default();
+                    cranelift.canonicalize_nans(true);
+                    cranelift
+                };
+
+                assert!(SERIALIZED_MODULE_CACHE
+                    .set(parking_lot::RwLock::new(
+                        SerializedModuleCache::default_with_cranelift(if metered {
+                            cranelift_fn
+                        } else {
+                            cranelift_fn_unmetered
+                        })
+                    ))
+                    .is_ok());
+                SERIALIZED_MODULE_CACHE
+                    .get()
+                    .unwrap()
+                    .write()
+                    .get(self.key(metered), self.bytes())
+                    .unwrap()
+            }
+        }
+    }
+
     pub fn module(&self, metered: bool) -> Arc<ModuleWithStore> {
         match MODULE_CACHE.write().get(self.key(metered), self.bytes()) {
             Ok(v) => {
@@ -120,8 +170,10 @@ impl TestWasm {
 
     pub fn _instance(&self, metered: bool) -> InstanceWithStore {
         let instance_count = INSTANCE_COUNTER.fetch_add(1, Ordering::SeqCst);
-        println!("creating instance for {} {}", self.name(), instance_count);
-        let module_with_store = self.module(metered);
+        // println!("creating instance for {} {}", self.name(), instance_count);
+        // let module_with_store = self.module(metered);
+        // let module_with_store = self.uncached_module();
+        let module_with_store = self.serial_cache_module(metered);
         let function_env;
         let instance;
         {
