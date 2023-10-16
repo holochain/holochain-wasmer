@@ -83,21 +83,19 @@ impl TestWasm {
                     cranelift
                 };
 
-                assert!(SERIALIZED_MODULE_CACHE
-                    .set(parking_lot::RwLock::new(
-                        SerializedModuleCache::default_with_cranelift(if metered {
-                            cranelift_fn
-                        } else {
-                            cranelift_fn_unmetered
-                        })
-                    ))
-                    .is_ok());
-                SERIALIZED_MODULE_CACHE
-                    .get()
-                    .unwrap()
-                    .write()
-                    .get(self.key(metered), self.bytes())
-                    .unwrap()
+                // This will error if the cache is already initialized
+                // which could happen if two tests are running in parallel.
+                // It doesn't matter which one wins, so we just ignore the error.
+                let _did_init_ok = SERIALIZED_MODULE_CACHE.set(parking_lot::RwLock::new(
+                    SerializedModuleCache::default_with_cranelift(if metered {
+                        cranelift_fn
+                    } else {
+                        cranelift_fn_unmetered
+                    }),
+                ));
+
+                // Just recurse now that the cache is initialized.
+                self.module(metered)
             }
         }
     }
