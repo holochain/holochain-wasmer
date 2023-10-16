@@ -12,12 +12,7 @@ use wasmer::Cranelift;
 use wasmer::FunctionEnv;
 use wasmer::Imports;
 use wasmer::Instance;
-use wasmer::Module;
-use wasmer::Store;
 use wasmer_middlewares::Metering;
-
-use std::sync::atomic::{AtomicUsize, Ordering};
-static INSTANCE_COUNTER: AtomicUsize = AtomicUsize::new(0);
 
 pub enum TestWasm {
     Empty,
@@ -70,15 +65,6 @@ impl TestWasm {
         }
     }
 
-    pub fn uncached_module(&self) -> Arc<ModuleWithStore> {
-        let store = Store::new(Cranelift::default());
-        let module = Module::from_binary(&store, self.bytes()).unwrap();
-        Arc::new(ModuleWithStore {
-            module: Arc::new(module),
-            store: Arc::new(parking_lot::Mutex::new(store)),
-        })
-    }
-
     pub fn module(&self, metered: bool) -> Arc<ModuleWithStore> {
         match SERIALIZED_MODULE_CACHE.get() {
             Some(cache) => cache.write().get(self.key(metered), self.bytes()).unwrap(),
@@ -117,7 +103,6 @@ impl TestWasm {
     }
 
     pub fn _instance(&self, metered: bool) -> InstanceWithStore {
-        let instance_count = INSTANCE_COUNTER.fetch_add(1, Ordering::SeqCst);
         let module_with_store = self.module(metered);
         let function_env;
         let instance;
