@@ -7,15 +7,15 @@ edition = "2021"
 [dependencies]
 holochain_wasmer_common = { path = "../crates/common", features = []}
 holochain_wasmer_host = { path = "../crates/host" }
-holochain_serialized_bytes = "=0.0.51"
+holochain_serialized_bytes = "=0.0.53"
 serde = "1"
 test_common = { path = "./common" }
-criterion = "0.3"
+criterion = { version = "0.3", features = ["html_reports"] }
 rand = "0.8"
 serde_bytes = "0.11"
 parking_lot = "0.12"
-wasmer = "=2.3.0"
-wasmer-middlewares = "=2.3.0"
+wasmer = "=4.2.2"
+wasmer-middlewares = "=4.2.2"
 test-fuzz = "=3.0.4"
 
 [dev-dependencies]

@@ -1,11 +1,13 @@
 use crate::prelude::*;
 use core::num::TryFromIntError;
 use holochain_serialized_bytes::prelude::*;
-use parking_lot::Mutex;
 use std::sync::Arc;
 use wasmer::Instance;
 use wasmer::Memory;
+use wasmer::MemoryView;
+use wasmer::StoreMut;
 use wasmer::Value;
+use wasmer::WasmSlice;
 
 /// Write a slice of bytes to the guest in a safe-ish way.
 ///
@@ -51,6 +53,7 @@ use wasmer::Value;
 ///
 /// @see read_bytes()
 pub fn write_bytes(
+    store_mut: &mut StoreMut,
     memory: &Memory,
     guest_ptr: GuestPtr,
     slice: &[u8],
@@ -62,15 +65,7 @@ pub fn write_bytes(
     #[cfg(feature = "debug_memory")]
     tracing::debug!("writing bytes from host to guest at: {} {}", guest_ptr, len);
 
-    let ptr: WasmPtr<u8, Array> = WasmPtr::new(guest_ptr);
-    // Write the length prefix immediately before the slice at the guest pointer position.
-    for (byte, cell) in slice.iter().zip(
-        ptr.deref(memory, 0, len)
-            .ok_or(wasm_error!(WasmErrorInner::Memory))?
-            .iter(),
-    ) {
-        cell.set(*byte)
-    }
+    WasmSlice::new(&memory.view(store_mut), guest_ptr.into(), len.into())?.write_slice(slice)?;
 
     Ok(())
 }
@@ -95,24 +90,19 @@ pub fn write_bytes(
 /// A better approach is to use an immutable deref from a `WasmPtr`, which checks against memory
 /// bounds for the guest, and map over the whole thing to a `Vec<u8>`.
 pub fn read_bytes(
-    memory: &Memory,
+    memory_view: &MemoryView,
     guest_ptr: GuestPtr,
     len: Len,
-) -> Result<Vec<u8>, wasmer::RuntimeError> {
+) -> Result<Vec<u8>, wasmer::MemoryAccessError> {
     #[cfg(feature = "debug_memory")]
     tracing::debug!("reading bytes from guest to host at: {} {}", guest_ptr, len);
 
-    let ptr: WasmPtr<u8, Array> = WasmPtr::new(guest_ptr);
-    Ok(ptr
-        .deref(memory, 0, len)
-        .ok_or(wasm_error!(WasmErrorInner::Memory))?
-        .iter()
-        .map(|cell| cell.get())
-        .collect::<Vec<u8>>())
+    WasmSlice::new(memory_view, guest_ptr.into(), len.into())?.read_to_vec()
 }
 
 /// Deserialize any DeserializeOwned type out of the guest from a guest pointer.
 pub fn from_guest_ptr<O>(
+    store_mut: &mut StoreMut,
     memory: &Memory,
     guest_ptr: GuestPtr,
     len: Len,
@@ -120,7 +110,9 @@ pub fn from_guest_ptr<O>(
 where
     O: serde::de::DeserializeOwned + std::fmt::Debug,
 {
-    let bytes = read_bytes(memory, guest_ptr, len)?;
+    let bytes =
+        WasmSlice::new(&memory.view(store_mut), guest_ptr.into(), len.into())?.read_to_vec()?;
+
     match holochain_serialized_bytes::decode(&bytes) {
         Ok(v) => Ok(v),
         Err(e) => {
@@ -133,8 +125,12 @@ where
 /// Host calling guest for the function named `call` with the given `payload` in a vector of bytes
 /// result is either a vector of bytes from the guest found at the location of the returned guest
 /// allocation pointer or a `RuntimeError` built from a `WasmError`.
+/// The reason that this takes a separate store and instance is that the host does not neccessarily
+/// have access to an InstanceWithStore, such as the case when the guest is called from within a
+/// host function call.
 pub fn call<I, O>(
-    instance: Arc<Mutex<Instance>>,
+    store_mut: &mut StoreMut,
+    instance: Arc<Instance>,
     f: &str,
     input: I,
 ) -> Result<O, wasmer::RuntimeError>
@@ -142,7 +138,6 @@ where
     I: serde::Serialize + std::fmt::Debug,
     O: serde::de::DeserializeOwned + std::fmt::Debug,
 {
-    let instance = instance.lock();
     // The guest will use the same crate for decoding if it uses the wasm common crate.
     let payload: Vec<u8> =
         holochain_serialized_bytes::encode(&input).map_err(|e| wasm_error!(e))?;
@@ -153,11 +148,12 @@ where
         .try_into()
         .map_err(|e: TryFromIntError| wasm_error!(WasmErrorInner::CallError(e.to_string())))?;
     let guest_input_length_value: Value = Value::I32(guest_input_length);
+
     let (guest_input_ptr, guest_input_ptr_value) = match instance
         .exports
         .get_function("__hc__allocate_1")
         .map_err(|e| wasm_error!(WasmErrorInner::CallError(e.to_string())))?
-        .call(&[guest_input_length_value.clone()])
+        .call(store_mut, &[guest_input_length_value.clone()])
         .map_err(|e| wasm_error!(WasmErrorInner::CallError(e.to_string())))?
         .get(0)
     {
@@ -179,6 +175,7 @@ where
 
     // Write the input payload into the guest at the offset specified by the allocation.
     write_bytes(
+        store_mut,
         instance
             .exports
             .get_memory("memory")
@@ -193,8 +190,10 @@ where
         .exports
         .get_function(f)
         .map_err(|e| wasm_error!(WasmErrorInner::CallError(e.to_string())))?
-        .call(&[guest_input_ptr_value, guest_input_length_value])
-    {
+        .call(
+            store_mut,
+            &[guest_input_ptr_value, guest_input_length_value],
+        ) {
         Ok(v) => match v.get(0) {
             Some(Value::I64(i)) => {
                 let u: GuestPtrLen = (*i)
@@ -230,6 +229,7 @@ where
     // The host MUST discard any wasm instance that errors at this point to avoid memory leaks.
     // The WasmError in the result type here is for deserializing out of the guest.
     let return_value: Result<O, WasmError> = from_guest_ptr(
+        store_mut,
         instance
             .exports
             .get_memory("memory")
@@ -243,17 +243,20 @@ where
         .exports
         .get_function("__hc__deallocate_1")
         .map_err(|e| wasm_error!(WasmErrorInner::CallError(e.to_string())))?
-        .call(&[
-            Value::I32(
-                guest_return_ptr
-                    .try_into()
-                    .map_err(|e: TryFromIntError| wasm_error!(e))?,
-            ),
-            Value::I32(
-                len.try_into()
-                    .map_err(|e: TryFromIntError| wasm_error!(e))?,
-            ),
-        ])
+        .call(
+            store_mut,
+            &[
+                Value::I32(
+                    guest_return_ptr
+                        .try_into()
+                        .map_err(|e: TryFromIntError| wasm_error!(e))?,
+                ),
+                Value::I32(
+                    len.try_into()
+                        .map_err(|e: TryFromIntError| wasm_error!(e))?,
+                ),
+            ],
+        )
         .map_err(|e| wasm_error!(WasmErrorInner::CallError(format!("{:?}", e))))?;
 
     return_value.map_err(|e| e.into())

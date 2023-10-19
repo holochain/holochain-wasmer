@@ -3,8 +3,8 @@ use criterion::Throughput;
 use criterion::{criterion_group, criterion_main, Criterion};
 use holochain_wasmer_host::prelude::*;
 use rand::prelude::*;
-use std::sync::Arc;
 use test::wasms::TestWasm;
+use wasmer::AsStoreMut;
 
 /// create a module
 pub fn wasm_module(c: &mut Criterion) {
@@ -38,38 +38,7 @@ pub fn wasm_instance(c: &mut Criterion) {
     ] {
         group.bench_function(BenchmarkId::new("wasm_instance", wasm.name()), |b| {
             b.iter(|| {
-                let module = wasm.module(false);
-                let env = Env::default();
-                let import_object: wasmer::ImportObject = imports! {
-                    "env" => {
-                        "__hc__short_circuit_5" => Function::new_native_with_env(
-                            module.store(),
-                            env.clone(),
-                            test::short_circuit
-                        ),
-                        "__hc__test_process_string_2" => Function::new_native_with_env(
-                            module.store(),
-                            env.clone(),
-                            test::test_process_string
-                        ),
-                        "__hc__test_process_struct_2" => Function::new_native_with_env(
-                            module.store(),
-                            env.clone(),
-                            test::test_process_struct
-                        ),
-                        "__hc__debug_1" => Function::new_native_with_env(
-                            module.store(),
-                            env.clone(),
-                            test::debug
-                        ),
-                        "__hc__pages_1" => Function::new_native_with_env(
-                            module.store(),
-                            env.clone(),
-                            test::pages
-                        ),
-                    },
-                };
-                let _ = wasmer::Instance::new(&module, &import_object).unwrap();
+                let _drop = wasm.unmetered_instance();
             });
         });
     }
@@ -81,7 +50,7 @@ pub fn wasm_instance(c: &mut Criterion) {
 pub fn wasm_call(c: &mut Criterion) {
     let mut group = c.benchmark_group("wasm_call");
 
-    let instance = TestWasm::Io.unmetered_instance();
+    let instance_with_store = TestWasm::Io.unmetered_instance();
 
     macro_rules! bench_call {
         ( $fs:expr; $t:tt; $n:ident; $build:expr; ) => {
@@ -100,8 +69,12 @@ pub fn wasm_call(c: &mut Criterion) {
                         &$n,
                         |b, _| {
                             b.iter(|| {
+                                let instance = instance_with_store.instance.clone();
+                                let mut store_lock = instance_with_store.store.lock();
+                                let mut store_mut = store_lock.as_store_mut();
                                 let _drop: test_common::$t = holochain_wasmer_host::guest::call(
-                                    Arc::clone(&instance),
+                                    &mut store_mut,
+                                    instance,
                                     f,
                                     &input,
                                 )
@@ -143,7 +116,7 @@ pub fn wasm_call(c: &mut Criterion) {
 pub fn wasm_call_n(c: &mut Criterion) {
     let mut group = c.benchmark_group("wasm_call_n");
 
-    let instance = TestWasm::Io.instance();
+    let instance_with_store = TestWasm::Io.instance();
 
     macro_rules! bench_n {
         ( $fs:expr; $t:ty; ) => {
@@ -161,12 +134,19 @@ pub fn wasm_call_n(c: &mut Criterion) {
                         &n,
                         |b, _| {
                             b.iter(|| {
-                                let _: $t = holochain_wasmer_host::guest::call(
-                                    Arc::clone(&instance),
-                                    f,
-                                    test_common::IntegerType::from(n),
-                                )
-                                .expect("failed deserialize");
+                                let instance = instance_with_store.instance.clone();
+                                let store = instance_with_store.store.clone();
+                                {
+                                    let mut store_lock = store.lock();
+                                    let mut store_mut = store_lock.as_store_mut();
+                                    let _: $t = holochain_wasmer_host::guest::call(
+                                        &mut store_mut,
+                                        instance,
+                                        f,
+                                        test_common::IntegerType::from(n),
+                                    )
+                                    .expect("failed deserialize");
+                                }
                             });
                         },
                     );
@@ -185,7 +165,7 @@ pub fn wasm_call_n(c: &mut Criterion) {
 pub fn test_process_string(c: &mut Criterion) {
     let mut group = c.benchmark_group("test_process_string");
 
-    let instance = TestWasm::Test.instance();
+    let instance_with_store = TestWasm::Test.instance();
 
     for n in vec![0, 1, 1_000, 1_000_000] {
         group.throughput(Throughput::Bytes(n));
@@ -193,12 +173,19 @@ pub fn test_process_string(c: &mut Criterion) {
         let input = test_common::StringType::from(".".repeat(n.try_into().unwrap()));
         group.bench_with_input(BenchmarkId::new("test_process_string", n), &n, |b, _| {
             b.iter(|| {
-                let _: test_common::StringType = holochain_wasmer_host::guest::call(
-                    Arc::clone(&instance),
-                    "process_string",
-                    &input,
-                )
-                .unwrap();
+                let instance = instance_with_store.instance.clone();
+                let store = instance_with_store.store.clone();
+                {
+                    let mut store_lock = store.lock();
+                    let mut store_mut = store_lock.as_store_mut();
+                    let _drop: test_common::StringType = holochain_wasmer_host::guest::call(
+                        &mut store_mut,
+                        instance,
+                        "process_string",
+                        &input,
+                    )
+                    .unwrap();
+                }
             });
         });
     }
@@ -216,10 +203,13 @@ pub fn test_instances(c: &mut Criterion) {
             let mut jhs = Vec::new();
             for _ in 0..25 {
                 let input = input.clone();
-                let instance = TestWasm::Test.instance();
+                let instance_with_store = TestWasm::Test.instance();
+                let instance = instance_with_store.instance.clone();
+                let store = instance_with_store.store.clone();
                 let jh = std::thread::spawn(move || {
                     let _: test_common::StringType = holochain_wasmer_host::guest::call(
-                        Arc::clone(&instance),
+                        &mut store.lock().as_store_mut(),
+                        instance,
                         "process_string",
                         &input,
                     )
