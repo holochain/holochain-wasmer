@@ -2,15 +2,19 @@ use std::num::TryFromIntError;
 
 use crate::guest::read_bytes;
 use crate::prelude::*;
+use wasmer::Global;
 use wasmer::Memory;
 use wasmer::StoreMut;
 use wasmer::TypedFunction;
+use wasmer_middlewares::metering::MeteringPoints;
 
 #[derive(Clone, Default)]
 pub struct Env {
     pub memory: Option<Memory>,
     pub allocate: Option<TypedFunction<i32, i32>>,
     pub deallocate: Option<TypedFunction<(i32, i32), ()>>,
+    pub wasmer_metering_points_exhausted: Option<Global>,
+    pub wasmer_metering_remaining_points: Option<Global>,
 }
 
 impl Env {
@@ -96,5 +100,32 @@ impl Env {
                 Err(wasm_error!(e).into())
             }
         }
+    }
+
+    /// Mimics upstream function of the same name but accesses the global directly from env.
+    /// https://github.com/wasmerio/wasmer/blob/master/lib/middlewares/src/metering.rs#L285
+    pub fn get_remaining_points(
+        &self,
+        store_mut: &mut StoreMut,
+    ) -> Result<MeteringPoints, wasmer::RuntimeError> {
+        let exhaused: i32 = self
+            .wasmer_metering_points_exhausted
+            .ok_or(wasm_error!(WasmErrorInner::Memory))?
+            .get(store_mut)
+            .try_into()
+            .map_err(|_| wasm_error!(WasmErrorInner::PointerMap))?;
+
+        if exhaused > 0 {
+            return Ok(MeteringPoints::Exhausted);
+        }
+
+        let points = self
+            .wasmer_metering_remaining_points
+            .ok_or(wasm_error!(WasmErrorInner::Memory))?
+            .get(store_mut)
+            .try_into()
+            .map_err(|_| wasm_error!(WasmErrorInner::PointerMap))?;
+
+        Ok(MeteringPoints::Remaining(points))
     }
 }
