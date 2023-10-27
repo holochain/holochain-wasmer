@@ -6,7 +6,8 @@ use test_common::SomeStruct;
 
 pub fn short_circuit(_: &Env, _: GuestPtr, _: Len) -> Result<u64, wasmer::RuntimeError> {
     Err(wasm_error!(WasmErrorInner::HostShortCircuit(
-        holochain_serialized_bytes::encode(&String::from("shorts")).map_err(|e| wasm_error!(e))?,
+        holochain_serialized_bytes::encode(&String::from("shorts"))
+            .map_err(|e| wasm_error!(e.to_string()))?,
     ))
     .into())
 }
@@ -29,6 +30,17 @@ pub fn test_process_struct(
     let mut some_struct: SomeStruct = env.consume_bytes_from_guest(guest_ptr, len)?;
     some_struct.process();
     env.move_data_to_guest(Ok::<SomeStruct, WasmError>(some_struct))
+}
+
+pub fn debug_ops_remaining(
+    env: &Env,
+    guest_ptr: GuestPtr,
+    len: Len,
+) -> Result<u64, wasmer::RuntimeError> {
+    let _: () = env.consume_bytes_from_guest(guest_ptr, len)?;
+    let ops_remaining = env.ops_remaining();
+    println!("ops_remaining {:?}", ops_remaining);
+    env.move_data_to_guest(ops_remaining)
 }
 
 /// Uses up all the gas in the metering system.
@@ -88,7 +100,9 @@ pub mod tests {
     fn infinite_loop() {
         // Instead of looping forever we want the metering to kick in and trap
         // the execution into an unreachable error.
-        let result: Result<(), _> = guest::call(TestWasm::Test.instance(), "loop_forever", ());
+        // let result: Result<(), _> = guest::call(TestWasm::Test.instance(), "loop_forever", ());
+        let result: Result<(), _> =
+            guest::call(TestWasm::Test.instance(), "loop_forever_debug", ());
         assert!(result.is_err());
     }
 

@@ -11,7 +11,9 @@ host_externs!(
     this_func_doesnt_exist_but_we_can_extern_it_anyway:1,
     test_process_string:2,
     test_process_struct:2,
-    short_circuit:5
+    short_circuit:5,
+    debug_ops_remaining:1,
+    burn_through_ops:1
 );
 
 #[no_mangle]
@@ -135,4 +137,13 @@ pub extern "C" fn try_ptr_fails_fast(guest_ptr: usize, len: usize) -> DoubleUSiz
 pub extern "C" fn loop_forever(_guest_ptr: usize, _len: usize) -> DoubleUSize {
     #[allow(clippy::empty_loop)]
     loop {}
+}
+
+/// This function is the same as loop forever but with debugging.
+#[no_mangle]
+pub extern "C" fn loop_forever_debug(_guest_ptr: usize, _len: usize) -> DoubleUSize {
+    #[allow(clippy::empty_loop)]
+    loop {
+        host_call::<(), u64>(__hc__debug_ops_remaining_1, ()).unwrap();
+    }
 }

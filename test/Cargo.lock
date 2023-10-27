@@ -640,7 +640,22 @@ version = "0.0.51"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "9805b3e01e7b5c144782a0823db4dc895fec18a9ccd45a492ce7c7bf157a9e38"
 dependencies = [
- "holochain_serialized_bytes_derive",
+ "holochain_serialized_bytes_derive 0.0.51",
+ "rmp-serde",
+ "serde",
+ "serde-transcode",
+ "serde_bytes",
+ "serde_json",
+ "thiserror",
+]
+
+[[package]]
+name = "holochain_serialized_bytes"
+version = "0.0.53"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "5f7a5fc7c745a107f8ebcb04caab7a6b7a8463e2811f07ced19c281977583de7"
+dependencies = [
+ "holochain_serialized_bytes_derive 0.0.53",
  "rmp-serde",
  "serde",
  "serde-transcode",
@@ -660,10 +675,20 @@ dependencies = [
 ]
 
 [[package]]
-name = "holochain_wasmer_common"
-version = "0.0.84"
+name = "holochain_serialized_bytes_derive"
+version = "0.0.53"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "ec3e0cf02005cbf0f514476d40e02125b26df6d4922d7a2c48a84fc588539d71"
 dependencies = [
- "holochain_serialized_bytes",
+ "quote",
+ "syn",
+]
+
+[[package]]
+name = "holochain_wasmer_common"
+version = "0.0.85"
+dependencies = [
+ "holochain_serialized_bytes 0.0.53",
  "serde",
  "serde_bytes",
  "test-fuzz",
@@ -674,10 +699,10 @@ dependencies = [
 
 [[package]]
 name = "holochain_wasmer_host"
-version = "0.0.84"
+version = "0.0.85"
 dependencies = [
  "bimap",
- "holochain_serialized_bytes",
+ "holochain_serialized_bytes 0.0.53",
  "holochain_wasmer_common",
  "once_cell",
  "parking_lot",
@@ -1480,12 +1505,12 @@ dependencies = [
 
 [[package]]
 name = "test"
-version = "0.0.84"
+version = "0.0.85"
 dependencies = [
  "criterion",
  "ctor",
  "env_logger",
- "holochain_serialized_bytes",
+ "holochain_serialized_bytes 0.0.51",
  "holochain_wasmer_common",
  "holochain_wasmer_host",
  "parking_lot",
@@ -1557,7 +1582,7 @@ dependencies = [
 
 [[package]]
 name = "test_common"
-version = "0.0.84"
+version = "0.0.85"
 dependencies = [
  "holochain_wasmer_common",
  "serde",
