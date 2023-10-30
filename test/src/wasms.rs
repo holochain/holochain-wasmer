@@ -71,7 +71,7 @@ impl TestWasm {
             None => {
                 let cranelift_fn = || {
                     let cost_function = |_operator: &Operator| -> u64 { 1 };
-                    let metering = Arc::new(Metering::new(10000000000, cost_function));
+                    let metering = Arc::new(Metering::new(10_000_000_000, cost_function));
                     let mut cranelift = Cranelift::default();
                     cranelift.canonicalize_nans(true).push_middleware(metering);
                     cranelift
@@ -129,6 +129,20 @@ impl TestWasm {
                     .exports
                     .get_typed_function(&store_mut, "__hc__allocate_1")
                     .unwrap(),
+            );
+            data_mut.wasmer_metering_points_exhausted = Some(
+                instance
+                    .exports
+                    .get_global("wasmer_metering_points_exhausted")
+                    .unwrap()
+                    .clone(),
+            );
+            data_mut.wasmer_metering_remaining_points = Some(
+                instance
+                    .exports
+                    .get_global("wasmer_metering_remaining_points")
+                    .unwrap()
+                    .clone(),
             );
         }
 

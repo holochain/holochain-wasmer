@@ -11,7 +11,8 @@ host_externs!(
     this_func_doesnt_exist_but_we_can_extern_it_anyway:1,
     test_process_string:2,
     test_process_struct:2,
-    short_circuit:5
+    short_circuit:5,
+    decrease_points:1
 );
 
 #[no_mangle]
@@ -133,4 +134,17 @@ pub extern "C" fn try_ptr_fails_fast(guest_ptr: usize, len: usize) -> DoubleUSiz
 pub extern "C" fn loop_forever(_guest_ptr: usize, _len: usize) -> DoubleUSize {
     #[allow(clippy::empty_loop)]
     loop {}
+}
+
+#[no_mangle]
+pub extern "C" fn decrease_points(guest_ptr: usize, len: usize) -> DoubleUSize {
+    let input: u64 = match host_args(guest_ptr, len) {
+        Ok(v) => v,
+        Err(err_ptr) => return err_ptr,
+    };
+    let result: u64 = try_ptr!(
+        host_call(__hc__decrease_points_1, input),
+        "could not decrease points"
+    );
+    return_ptr(result)
 }
