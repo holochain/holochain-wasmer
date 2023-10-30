@@ -110,6 +110,7 @@ impl Env {
     ) -> Result<MeteringPoints, wasmer::RuntimeError> {
         let exhaused: i32 = self
             .wasmer_metering_points_exhausted
+            .as_ref()
             .ok_or(wasm_error!(WasmErrorInner::Memory))?
             .get(store_mut)
             .try_into()
@@ -121,11 +122,63 @@ impl Env {
 
         let points = self
             .wasmer_metering_remaining_points
+            .as_ref()
             .ok_or(wasm_error!(WasmErrorInner::Memory))?
             .get(store_mut)
             .try_into()
             .map_err(|_| wasm_error!(WasmErrorInner::PointerMap))?;
 
         Ok(MeteringPoints::Remaining(points))
+    }
+
+    pub fn set_remaining_points(
+        &self,
+        store_mut: &mut StoreMut,
+        points: u64,
+    ) -> Result<(), wasmer::RuntimeError> {
+        self.wasmer_metering_remaining_points
+            .as_ref()
+            .ok_or(wasm_error!(WasmErrorInner::Memory))?
+            .set(store_mut, points.into())
+            .map_err(|_| wasm_error!(WasmErrorInner::PointerMap))?;
+
+        self.wasmer_metering_points_exhausted
+            .as_ref()
+            .ok_or(wasm_error!(WasmErrorInner::Memory))?
+            .set(store_mut, 0i32.into())
+            .map_err(|_| wasm_error!(WasmErrorInner::PointerMap))?;
+        Ok(())
+    }
+
+    pub fn decrease_points(
+        &self,
+        store_mut: &mut StoreMut,
+        points: u64,
+    ) -> Result<MeteringPoints, wasmer::RuntimeError> {
+        match self.get_remaining_points(store_mut) {
+            Ok(MeteringPoints::Remaining(remaining)) => {
+                if remaining < points {
+                    self.wasmer_metering_remaining_points
+                        .as_ref()
+                        .ok_or(wasm_error!(WasmErrorInner::Memory))?
+                        .set(store_mut, 0i32.into())
+                        .map_err(|_| wasm_error!(WasmErrorInner::PointerMap))?;
+                    self.wasmer_metering_points_exhausted
+                        .as_ref()
+                        .ok_or(wasm_error!(WasmErrorInner::Memory))?
+                        .set(store_mut, 1i32.into())
+                        .map_err(|_| wasm_error!(WasmErrorInner::PointerMap))?;
+                    Ok(MeteringPoints::Exhausted)
+                } else {
+                    self.wasmer_metering_remaining_points
+                        .as_ref()
+                        .ok_or(wasm_error!(WasmErrorInner::Memory))?
+                        .set(store_mut, (remaining - points).into())
+                        .map_err(|_| wasm_error!(WasmErrorInner::PointerMap))?;
+                    Ok(MeteringPoints::Remaining(remaining - points))
+                }
+            }
+            v => v,
+        }
     }
 }
