@@ -2,21 +2,9 @@
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [0.0.86]
 
-### Added
-
-### Changed
-
-- Bumped holochain_serialized_bytes to v0.0.52
-
-### Deprecated
-
-### Removed
-
-### Fixed
-
-### Security
+- Support wasmer 4.x
 
 ## [0.0.73] - 2021-07-20
 

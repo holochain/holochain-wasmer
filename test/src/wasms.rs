@@ -1,10 +1,17 @@
-use crate::import::import_object;
-use crate::wasmparser::Operator;
+use crate::import::imports;
+use holochain_wasmer_host::module::InstanceWithStore;
+use holochain_wasmer_host::module::ModuleWithStore;
 use holochain_wasmer_host::module::SerializedModuleCache;
 use holochain_wasmer_host::module::SERIALIZED_MODULE_CACHE;
 use holochain_wasmer_host::prelude::*;
-use parking_lot::Mutex;
 use std::sync::Arc;
+use wasmer::wasmparser::Operator;
+use wasmer::AsStoreMut;
+use wasmer::CompilerConfig;
+use wasmer::Cranelift;
+use wasmer::FunctionEnv;
+use wasmer::Imports;
+use wasmer::Instance;
 use wasmer_middlewares::Metering;
 
 pub enum TestWasm {
@@ -58,66 +65,84 @@ impl TestWasm {
         }
     }
 
-    pub fn module(&self, metered: bool) -> Arc<Module> {
-        match MODULE_CACHE.write().get(self.key(metered), self.bytes()) {
-            Ok(v) => v,
-            Err(runtime_error) => match runtime_error.downcast::<WasmError>() {
-                Ok(WasmError {
-                    error: WasmErrorInner::UninitializedSerializedModuleCache,
-                    ..
-                }) => {
-                    {
-                        let cranelift_fn = || {
-                            let cost_function = |_operator: &Operator| -> u64 { 1 };
-                            let metering = Arc::new(Metering::new(10000000000, cost_function));
-                            let mut cranelift = Cranelift::default();
-                            cranelift.canonicalize_nans(true).push_middleware(metering);
-                            cranelift
-                        };
+    pub fn module(&self, metered: bool) -> Arc<ModuleWithStore> {
+        match SERIALIZED_MODULE_CACHE.get() {
+            Some(cache) => cache.write().get(self.key(metered), self.bytes()).unwrap(),
+            None => {
+                let cranelift_fn = || {
+                    let cost_function = |_operator: &Operator| -> u64 { 1 };
+                    let metering = Arc::new(Metering::new(10000000000, cost_function));
+                    let mut cranelift = Cranelift::default();
+                    cranelift.canonicalize_nans(true).push_middleware(metering);
+                    cranelift
+                };
 
-                        let cranelift_fn_unmetered = || {
-                            let mut cranelift = Cranelift::default();
-                            cranelift.canonicalize_nans(true);
-                            cranelift
-                        };
+                let cranelift_fn_unmetered = || {
+                    let mut cranelift = Cranelift::default();
+                    cranelift.canonicalize_nans(true);
+                    cranelift
+                };
 
-                        assert!(SERIALIZED_MODULE_CACHE
-                            .set(parking_lot::RwLock::new(
-                                SerializedModuleCache::default_with_cranelift(if metered {
-                                    cranelift_fn
-                                } else {
-                                    cranelift_fn_unmetered
-                                })
-                            ))
-                            .is_ok());
-                    }
-                    Arc::new(
-                        SERIALIZED_MODULE_CACHE
-                            .get()
-                            .unwrap()
-                            .write()
-                            .get(self.key(metered), self.bytes())
-                            .unwrap(),
-                    )
-                }
+                // This will error if the cache is already initialized
+                // which could happen if two tests are running in parallel.
+                // It doesn't matter which one wins, so we just ignore the error.
+                let _did_init_ok = SERIALIZED_MODULE_CACHE.set(parking_lot::RwLock::new(
+                    SerializedModuleCache::default_with_cranelift(if metered {
+                        cranelift_fn
+                    } else {
+                        cranelift_fn_unmetered
+                    }),
+                ));
 
-                _ => unreachable!(),
-            },
+                // Just recurse now that the cache is initialized.
+                self.module(metered)
+            }
         }
     }
 
-    pub fn _instance(&self, metered: bool) -> Arc<Mutex<Instance>> {
-        let module = self.module(metered);
-        let env = Env::default();
-        let import_object: ImportObject = import_object(module.store(), &env);
-        Arc::new(Mutex::new(Instance::new(&module, &import_object).unwrap()))
+    pub fn _instance(&self, metered: bool) -> InstanceWithStore {
+        let module_with_store = self.module(metered);
+        let function_env;
+        let instance;
+        {
+            let mut store_lock = module_with_store.store.lock();
+            let mut store_mut = store_lock.as_store_mut();
+            function_env = FunctionEnv::new(&mut store_mut, Env::default());
+            let built_imports: Imports = imports(&mut store_mut, &function_env);
+            instance =
+                Instance::new(&mut store_mut, &module_with_store.module, &built_imports).unwrap();
+        }
+
+        {
+            let mut store_lock = module_with_store.store.lock();
+            let mut function_env_mut = function_env.into_mut(&mut store_lock);
+            let (data_mut, store_mut) = function_env_mut.data_and_store_mut();
+            data_mut.memory = Some(instance.exports.get_memory("memory").unwrap().clone());
+            data_mut.deallocate = Some(
+                instance
+                    .exports
+                    .get_typed_function(&store_mut, "__hc__deallocate_1")
+                    .unwrap(),
+            );
+            data_mut.allocate = Some(
+                instance
+                    .exports
+                    .get_typed_function(&store_mut, "__hc__allocate_1")
+                    .unwrap(),
+            );
+        }
+
+        InstanceWithStore {
+            store: module_with_store.store.clone(),
+            instance: Arc::new(instance),
+        }
     }
 
-    pub fn instance(&self) -> Arc<Mutex<Instance>> {
+    pub fn instance(&self) -> InstanceWithStore {
         self._instance(true)
     }
 
-    pub fn unmetered_instance(&self) -> Arc<Mutex<Instance>> {
+    pub fn unmetered_instance(&self) -> InstanceWithStore {
         self._instance(false)
     }
 }

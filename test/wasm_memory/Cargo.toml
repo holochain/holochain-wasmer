@@ -1,6 +1,6 @@
 [package]
 name = "test_wasm_memory"
-version = "2.0.0"
+version = "0.0.84"
 authors = [ "thedavidmeister", "thedavidmeister@gmail.com" ]
 edition = "2021"
 

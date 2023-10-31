@@ -2,7 +2,7 @@
 name = "holochain_wasmer_common"
 description = "commons for both host and guest"
 license = "Apache-2.0"
-version = "0.0.84"
+version = "0.0.86"
 authors = [ "thedavidmeister", "thedavidmeister@gmail.com" ]
 edition = "2021"
 
@@ -18,5 +18,4 @@ default = []
 error_as_host = []
 
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
-wasmer = "=2.3.0"
-wasmer-engine = "=2.3.0"
+wasmer = "=4.2.2"
