@@ -3,9 +3,7 @@ use crate::prelude::*;
 use bimap::BiMap;
 use bytes::Bytes;
 use holochain_wasmer_common::WasmError;
-use once_cell::sync::{Lazy, OnceCell};
 use parking_lot::Mutex;
-use parking_lot::RwLock;
 use std::collections::BTreeMap;
 use std::sync::Arc;
 use wasmer::Cranelift;
@@ -123,8 +121,6 @@ pub struct SerializedModuleCache {
     cranelift: fn() -> Cranelift,
 }
 
-pub static SERIALIZED_MODULE_CACHE: OnceCell<RwLock<SerializedModuleCache>> = OnceCell::new();
-
 impl PlruCache for SerializedModuleCache {
     type Item = SerializedModule;
 
@@ -214,8 +210,6 @@ pub struct InstanceCache {
     key_map: PlruKeyMap,
     cache: BTreeMap<CacheKey, Arc<InstanceWithStore>>,
 }
-pub static INSTANCE_CACHE: Lazy<RwLock<InstanceCache>> =
-    Lazy::new(|| RwLock::new(InstanceCache::default()));
 
 impl PlruCache for InstanceCache {
     type Item = InstanceWithStore;

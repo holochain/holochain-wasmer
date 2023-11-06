@@ -203,7 +203,7 @@ pub fn test_instances(c: &mut Criterion) {
             let mut jhs = Vec::new();
             for _ in 0..25 {
                 let input = input.clone();
-                let instance_with_store = TestWasm::Test.instance();
+                let instance_with_store = TestWasm::Test.unmetered_instance();
                 let instance = instance_with_store.instance.clone();
                 let store = instance_with_store.store.clone();
                 let jh = std::thread::spawn(move || {
