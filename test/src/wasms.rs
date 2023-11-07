@@ -1,8 +1,11 @@
 use crate::import::imports;
+use holochain_wasmer_host::module::InstanceCache;
 use holochain_wasmer_host::module::InstanceWithStore;
 use holochain_wasmer_host::module::ModuleWithStore;
 use holochain_wasmer_host::module::SerializedModuleCache;
 use holochain_wasmer_host::prelude::*;
+use once_cell::sync::{Lazy, OnceCell};
+use parking_lot::RwLock;
 use std::sync::Arc;
 use wasmer::wasmparser::Operator;
 use wasmer::AsStoreMut;
@@ -12,9 +15,6 @@ use wasmer::FunctionEnv;
 use wasmer::Imports;
 use wasmer::Instance;
 use wasmer_middlewares::Metering;
-use parking_lot::RwLock;
-use once_cell::sync::{Lazy, OnceCell};
-use holochain_wasmer_host::module::InstanceCache;
 
 pub enum TestWasm {
     Empty,

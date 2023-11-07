@@ -57,19 +57,20 @@ pub fn decrease_points(
 ) -> Result<u64, wasmer::RuntimeError> {
     let (env, mut store_mut) = function_env.data_and_store_mut();
     let points: u64 = env.consume_bytes_from_guest(&mut store_mut, guest_ptr, len)?;
-    println!(
-        "decrease_points before: {:?}",
-        env.get_remaining_points(&mut store_mut)?
-    );
+    let points_before = env.get_remaining_points(&mut store_mut)?;
     let remaining_points = env.decrease_points(&mut store_mut, points)?;
-    println!("decrease_points after: {:?}", remaining_points);
+    let points_after = env.get_remaining_points(&mut store_mut)?;
+    assert_eq!(points_after, remaining_points);
     env.move_data_to_guest(
         &mut store_mut,
-        Ok::<u64, WasmError>(match remaining_points {
-            MeteringPoints::Remaining(remaining_points) => remaining_points,
+        Ok::<(u64, u64), WasmError>(match (points_before, remaining_points) {
+            (
+                MeteringPoints::Remaining(points_before),
+                MeteringPoints::Remaining(remaining_points),
+            ) => (points_before, remaining_points),
             // This will error on the guest because it will require at least 1 point
             // to deserialize this value.
-            MeteringPoints::Exhausted => 0,
+            _ => (0, 0),
         }),
     )
 }
@@ -369,15 +370,38 @@ pub mod tests {
     #[test]
     fn decrease_points_test() {
         let InstanceWithStore { store, instance } = TestWasm::Test.instance();
+        let dec_by = 1_000_000_u64;
+        let points_before: u64 = instance
+            .exports
+            .get_global("wasmer_metering_remaining_points")
+            .unwrap()
+            .get(&mut store.lock().as_store_mut())
+            .unwrap_i64()
+            .try_into()
+            .unwrap();
 
-        let result: Result<u64, _> = guest::call(
+        let (before_decrease, after_decrease): (u64, u64) = guest::call(
             &mut store.lock().as_store_mut(),
-            instance,
+            instance.clone(),
             "decrease_points",
-            1_000_000_u64,
+            dec_by,
+        )
+        .unwrap();
+
+        let points_after: u64 = instance
+            .exports
+            .get_global("wasmer_metering_remaining_points")
+            .unwrap()
+            .get(&mut store.lock().as_store_mut())
+            .unwrap_i64()
+            .try_into()
+            .unwrap();
+
+        assert!(before_decrease - after_decrease == dec_by);
+        assert!(
+            points_before > before_decrease
+                && before_decrease > after_decrease
+                && after_decrease > points_after
         );
-        dbg!(&result);
-        // .unwrap();
-        // assert_eq!(result, 999);
     }
 }

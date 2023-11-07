@@ -142,7 +142,7 @@ pub extern "C" fn decrease_points(guest_ptr: usize, len: usize) -> DoubleUSize {
         Ok(v) => v,
         Err(err_ptr) => return err_ptr,
     };
-    let result: u64 = try_ptr!(
+    let result: (u64, u64) = try_ptr!(
         host_call(__hc__decrease_points_1, input),
         "could not decrease points"
     );
