@@ -774,6 +774,7 @@ version = "0.0.86"
 dependencies = [
  "bimap",
  "bytes",
+ "hex",
  "holochain_serialized_bytes",
  "holochain_wasmer_common",
  "parking_lot",
