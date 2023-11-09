@@ -3,11 +3,11 @@ use criterion::Throughput;
 use criterion::{criterion_group, criterion_main, Criterion};
 use holochain_wasmer_host::prelude::*;
 use rand::prelude::*;
+use tempfile::TempDir;
 use test::wasms::TestWasm;
 use wasmer::AsStoreMut;
 use wasmer::Module;
 use wasmer::Store;
-use tempfile::TempDir;
 
 /// compile a module
 pub fn wasm_module_compile(c: &mut Criterion) {
@@ -44,8 +44,8 @@ pub fn wasm_module_deserialize_from_file(c: &mut Criterion) {
         group.bench_function(
             BenchmarkId::new("wasm_module_deserialize_from_file", wasm.name()),
             |b| {
-                b.iter(|| {
-                    unsafe { Module::deserialize_from_file(&Store::default(), &path).unwrap(); }
+                b.iter(|| unsafe {
+                    Module::deserialize_from_file(&Store::default(), &path).unwrap();
                 })
             },
         );

@@ -1,10 +1,13 @@
 use crate::plru::MicroCache;
 use crate::prelude::*;
 use bimap::BiMap;
+use bytes::BufMut;
 use bytes::Bytes;
+use bytes::BytesMut;
 use holochain_wasmer_common::WasmError;
 use parking_lot::Mutex;
 use std::collections::BTreeMap;
+use std::fs::File;
 use std::path::PathBuf;
 use std::sync::Arc;
 use wasmer::Cranelift;
@@ -178,29 +181,35 @@ impl SerializedModuleCache {
         let store = Store::new((self.cranelift)());
 
         let maybe_module_path = self.module_path(key);
-        let module = match maybe_module_path
-            .as_ref()
-            .map(|module_path| std::fs::read(module_path))
-        {
-            Some(Ok(serialized_module)) => {
-                self.put_item(key, Arc::new(serialized_module.clone().into()));
-                unsafe { Module::deserialize(&store, serialized_module) }
-                    .map_err(|e| wasm_error!(WasmErrorInner::Compile(e.to_string())))?
-            }
+        let (module, serialized_module) = match maybe_module_path.as_ref().map(|module_path| {
+            // We do this the long way to get `Bytes` instead of `Vec<u8>` so
+            // that the clone when we both deserialize and cache is cheap.
+            let mut file = File::open(module_path)
+                .map_err(|e| wasm_error!(WasmErrorInner::Compile(e.to_string())))?;
+            let mut bytes_mut = BytesMut::new().writer();
+            std::io::copy(&mut file, &mut bytes_mut)
+                .map_err(|e| wasm_error!(WasmErrorInner::Compile(e.to_string())))?;
+            Ok::<bytes::Bytes, wasmer::RuntimeError>(bytes_mut.into_inner().freeze())
+        }) {
+            Some(Ok(serialized_module)) => (
+                unsafe { Module::deserialize(&store, serialized_module.clone()) }
+                    .map_err(|e| wasm_error!(WasmErrorInner::Compile(e.to_string())))?,
+                serialized_module,
+            ),
             _fs_miss => {
                 let module = Module::from_binary(&store, wasm)
                     .map_err(|e| wasm_error!(WasmErrorInner::Compile(e.to_string())))?;
                 let serialized_module = module
                     .serialize()
                     .map_err(|e| wasm_error!(WasmErrorInner::Compile(e.to_string())))?;
-                self.put_item(key, Arc::new(serialized_module.clone()));
                 if let Some(module_path) = maybe_module_path {
                     std::fs::write(module_path, &serialized_module)
                         .map_err(|e| wasm_error!(WasmErrorInner::Compile(e.to_string())))?;
                 }
-                module
+                (module, serialized_module)
             }
         };
+        self.put_item(key, Arc::new(serialized_module.clone()));
 
         Ok(Arc::new(ModuleWithStore {
             store: Arc::new(Mutex::new(store)),
