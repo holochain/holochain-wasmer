@@ -108,7 +108,7 @@ impl Env {
         &self,
         store_mut: &mut StoreMut,
     ) -> Result<MeteringPoints, wasmer::RuntimeError> {
-        let exhaused: i32 = self
+        let exhausted: i32 = self
             .wasmer_metering_points_exhausted
             .as_ref()
             .ok_or(wasm_error!(WasmErrorInner::Memory))?
