@@ -116,7 +116,7 @@ impl Env {
             .try_into()
             .map_err(|_| wasm_error!(WasmErrorInner::PointerMap))?;
 
-        if exhaused > 0 {
+        if exhausted > 0 {
             return Ok(MeteringPoints::Exhausted);
         }
 
