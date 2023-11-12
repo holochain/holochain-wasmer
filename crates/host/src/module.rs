@@ -119,11 +119,11 @@ pub trait PlruCache {
 /// be deserialized before it can be used to build instances. The deserialization
 /// process is far faster than compiling and much slower than instance building.
 pub struct SerializedModuleCache {
-    plru: MicroCache,
-    key_map: PlruKeyMap,
-    cache: BTreeMap<CacheKey, Arc<SerializedModule>>,
-    cranelift: fn() -> Cranelift,
-    maybe_fs_dir: Option<PathBuf>,
+    pub plru: MicroCache,
+    pub key_map: PlruKeyMap,
+    pub cache: BTreeMap<CacheKey, Arc<SerializedModule>>,
+    pub cranelift: fn() -> Cranelift,
+    pub maybe_fs_dir: Option<PathBuf>,
 }
 
 impl PlruCache for SerializedModuleCache {
