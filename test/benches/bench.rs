@@ -116,7 +116,7 @@ pub fn wasm_call(c: &mut Criterion) {
 pub fn wasm_call_n(c: &mut Criterion) {
     let mut group = c.benchmark_group("wasm_call_n");
 
-    let instance_with_store = TestWasm::Io.instance();
+    let instance_with_store = TestWasm::Io.unmetered_instance();
 
     macro_rules! bench_n {
         ( $fs:expr; $t:ty; ) => {
@@ -165,7 +165,7 @@ pub fn wasm_call_n(c: &mut Criterion) {
 pub fn test_process_string(c: &mut Criterion) {
     let mut group = c.benchmark_group("test_process_string");
 
-    let instance_with_store = TestWasm::Test.instance();
+    let instance_with_store = TestWasm::Test.unmetered_instance();
 
     for n in vec![0, 1, 1_000, 1_000_000] {
         group.throughput(Throughput::Bytes(n));
@@ -203,7 +203,7 @@ pub fn test_instances(c: &mut Criterion) {
             let mut jhs = Vec::new();
             for _ in 0..25 {
                 let input = input.clone();
-                let instance_with_store = TestWasm::Test.instance();
+                let instance_with_store = TestWasm::Test.unmetered_instance();
                 let instance = instance_with_store.instance.clone();
                 let store = instance_with_store.store.clone();
                 let jh = std::thread::spawn(move || {

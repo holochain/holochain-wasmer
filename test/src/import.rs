@@ -1,4 +1,5 @@
 use crate::debug;
+use crate::decrease_points;
 use crate::err;
 use crate::pages;
 use crate::short_circuit;
@@ -33,6 +34,11 @@ pub fn imports(store: &mut StoreMut, function_env: &FunctionEnv<Env>) -> Imports
                 store,
                 function_env,
                 debug
+            ),
+            "__hc__decrease_points_1" => Function::new_typed_with_env(
+                store,
+                function_env,
+                decrease_points
             ),
             "__hc__guest_err_1" => Function::new_typed_with_env(
                 store,

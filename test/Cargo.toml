@@ -17,6 +17,7 @@ parking_lot = "0.12"
 wasmer = "=4.2.2"
 wasmer-middlewares = "=4.2.2"
 test-fuzz = "=3.0.4"
+once_cell = "1"
 
 [dev-dependencies]
 env_logger = "0.8"

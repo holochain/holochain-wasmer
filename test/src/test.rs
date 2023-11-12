@@ -4,6 +4,7 @@ pub mod wasms;
 use holochain_wasmer_host::prelude::*;
 use test_common::SomeStruct;
 use wasmer::FunctionEnvMut;
+use wasmer_middlewares::metering::MeteringPoints;
 
 pub fn short_circuit(
     _env: FunctionEnvMut<Env>,
@@ -49,6 +50,31 @@ pub fn debug(
     Ok(())
 }
 
+pub fn decrease_points(
+    mut function_env: FunctionEnvMut<Env>,
+    guest_ptr: GuestPtr,
+    len: Len,
+) -> Result<u64, wasmer::RuntimeError> {
+    let (env, mut store_mut) = function_env.data_and_store_mut();
+    let points: u64 = env.consume_bytes_from_guest(&mut store_mut, guest_ptr, len)?;
+    let points_before = env.get_remaining_points(&mut store_mut)?;
+    let remaining_points = env.decrease_points(&mut store_mut, points)?;
+    let points_after = env.get_remaining_points(&mut store_mut)?;
+    assert_eq!(points_after, remaining_points);
+    env.move_data_to_guest(
+        &mut store_mut,
+        Ok::<(u64, u64), WasmError>(match (points_before, remaining_points) {
+            (
+                MeteringPoints::Remaining(points_before),
+                MeteringPoints::Remaining(remaining_points),
+            ) => (points_before, remaining_points),
+            // This will error on the guest because it will require at least 1 point
+            // to deserialize this value.
+            _ => (0, 0),
+        }),
+    )
+}
+
 pub fn err(_: FunctionEnvMut<Env>) -> Result<(), wasmer::RuntimeError> {
     Err(wasm_error!(WasmErrorInner::Guest("oh no!".into())).into())
 }
@@ -91,7 +117,8 @@ pub mod tests {
             vec![
                 "__hc__short_circuit_5".to_string(),
                 "__hc__test_process_string_2".to_string(),
-                "__hc__test_process_struct_2".to_string()
+                "__hc__test_process_struct_2".to_string(),
+                "__hc__decrease_points_1".to_string(),
             ],
             module
                 .imports()
@@ -289,7 +316,7 @@ pub mod tests {
             Err(runtime_error) => assert_eq!(
                 WasmError {
                     file: "src/wasm.rs".into(),
-                    line: 100,
+                    line: 101,
                     error: WasmErrorInner::Guest("oh no!".into()),
                 },
                 runtime_error.downcast().unwrap(),
@@ -330,7 +357,7 @@ pub mod tests {
                 assert_eq!(
                     WasmError {
                         file: "src/wasm.rs".into(),
-                        line: 128,
+                        line: 129,
                         error: WasmErrorInner::Guest("it fails!: ()".into()),
                     },
                     runtime_error.downcast().unwrap(),
@@ -338,5 +365,43 @@ pub mod tests {
             }
             Ok(_) => unreachable!(),
         };
+    }
+
+    #[test]
+    fn decrease_points_test() {
+        let InstanceWithStore { store, instance } = TestWasm::Test.instance();
+        let dec_by = 1_000_000_u64;
+        let points_before: u64 = instance
+            .exports
+            .get_global("wasmer_metering_remaining_points")
+            .unwrap()
+            .get(&mut store.lock().as_store_mut())
+            .unwrap_i64()
+            .try_into()
+            .unwrap();
+
+        let (before_decrease, after_decrease): (u64, u64) = guest::call(
+            &mut store.lock().as_store_mut(),
+            instance.clone(),
+            "decrease_points",
+            dec_by,
+        )
+        .unwrap();
+
+        let points_after: u64 = instance
+            .exports
+            .get_global("wasmer_metering_remaining_points")
+            .unwrap()
+            .get(&mut store.lock().as_store_mut())
+            .unwrap_i64()
+            .try_into()
+            .unwrap();
+
+        assert!(before_decrease - after_decrease == dec_by);
+        assert!(
+            points_before > before_decrease
+                && before_decrease > after_decrease
+                && after_decrease > points_after
+        );
     }
 }
