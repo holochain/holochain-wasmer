@@ -164,11 +164,9 @@ impl SerializedModuleCache {
     }
 
     fn module_path(&self, key: CacheKey) -> Option<PathBuf> {
-        self.maybe_fs_dir.as_ref().map(|dir_path| {
-            let mut path = dir_path.clone();
-            path.push(hex::encode(key));
-            path
-        })
+        self.maybe_fs_dir
+            .as_ref()
+            .map(|dir_path| dir_path.clone().join(hex::encode(key)))
     }
 
     /// Given a wasm, compiles with cranelift, serializes the result, adds it to
