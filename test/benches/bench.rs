@@ -3,8 +3,54 @@ use criterion::Throughput;
 use criterion::{criterion_group, criterion_main, Criterion};
 use holochain_wasmer_host::prelude::*;
 use rand::prelude::*;
+use tempfile::TempDir;
 use test::wasms::TestWasm;
 use wasmer::AsStoreMut;
+use wasmer::Module;
+use wasmer::Store;
+
+/// compile a module
+pub fn wasm_module_compile(c: &mut Criterion) {
+    let mut group = c.benchmark_group("wasm_module_compile");
+
+    for wasm in vec![
+        TestWasm::Empty,
+        TestWasm::Io,
+        TestWasm::Test,
+        TestWasm::Memory,
+    ] {
+        group.bench_function(BenchmarkId::new("wasm_module_compile", wasm.name()), |b| {
+            b.iter(|| {
+                Module::from_binary(&Store::default(), wasm.bytes()).unwrap();
+            })
+        });
+    }
+}
+
+/// deserialize a module from a file
+pub fn wasm_module_deserialize_from_file(c: &mut Criterion) {
+    let mut group = c.benchmark_group("wasm_module_deserialize_from_file");
+
+    for wasm in vec![
+        TestWasm::Empty,
+        TestWasm::Io,
+        TestWasm::Test,
+        TestWasm::Memory,
+    ] {
+        let tmpdir = TempDir::new().unwrap();
+        let path = tmpdir.path().join(wasm.name());
+        let module = Module::from_binary(&Store::default(), wasm.bytes()).unwrap();
+        module.serialize_to_file(&path).unwrap();
+        group.bench_function(
+            BenchmarkId::new("wasm_module_deserialize_from_file", wasm.name()),
+            |b| {
+                b.iter(|| unsafe {
+                    Module::deserialize_from_file(&Store::default(), &path).unwrap();
+                })
+            },
+        );
+    }
+}
 
 /// create a module
 pub fn wasm_module(c: &mut Criterion) {
@@ -228,6 +274,8 @@ pub fn test_instances(c: &mut Criterion) {
 
 criterion_group!(
     benches,
+    wasm_module_compile,
+    wasm_module_deserialize_from_file,
     wasm_module,
     wasm_instance,
     wasm_call,
