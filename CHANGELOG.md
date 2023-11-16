@@ -2,6 +2,11 @@
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.0.87]
+
+- support file cache for serialized modules
+- host function metering support
+
 ## [0.0.86]
 
 - Support wasmer 4.x
