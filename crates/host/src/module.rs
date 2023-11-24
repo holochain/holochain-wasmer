@@ -24,13 +24,13 @@ pub type PlruKeyMap = BiMap<usize, CacheKey>;
 /// Modules serialize to a vec of bytes as per wasmer.
 pub type SerializedModule = Bytes;
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct ModuleWithStore {
     pub store: Arc<Mutex<Store>>,
     pub module: Arc<Module>,
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct InstanceWithStore {
     pub store: Arc<Mutex<Store>>,
     pub instance: Arc<Instance>,
@@ -118,6 +118,7 @@ pub trait PlruCache {
 /// then serialized by wasmer and can be cached. A serialized wasm module must still
 /// be deserialized before it can be used to build instances. The deserialization
 /// process is far faster than compiling and much slower than instance building.
+#[derive(Debug)]
 pub struct SerializedModuleCache {
     pub plru: MicroCache,
     pub key_map: PlruKeyMap,
@@ -242,7 +243,7 @@ impl SerializedModuleCache {
 /// calls but also introduces the possibility of memory corruption or other bad
 /// state that is inappropriate to persist/reuse/access across calls. It is the
 /// responsibility of the host to discard instances that are not eligible for reuse.
-#[derive(Default)]
+#[derive(Default, Debug)]
 pub struct InstanceCache {
     plru: MicroCache,
     key_map: PlruKeyMap,
