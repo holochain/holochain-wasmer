@@ -8,6 +8,8 @@ use holochain_wasmer_common::WasmError;
 use parking_lot::Mutex;
 use std::collections::BTreeMap;
 use std::fs::File;
+use std::fs::OpenOptions;
+use std::io::Write;
 use std::path::PathBuf;
 use std::sync::Arc;
 use wasmer::Cranelift;
@@ -183,11 +185,22 @@ impl SerializedModuleCache {
         let (module, serialized_module) = match maybe_module_path.as_ref().map(|module_path| {
             // We do this the long way to get `Bytes` instead of `Vec<u8>` so
             // that the clone when we both deserialize and cache is cheap.
-            let mut file = File::open(module_path)
-                .map_err(|e| wasm_error!(WasmErrorInner::Compile(e.to_string())))?;
+            let mut file = File::open(module_path).map_err(|e| {
+                wasm_error!(WasmErrorInner::Compile(format!(
+                    "{} Path: {}",
+                    e,
+                    module_path.display()
+                )))
+            })?;
             let mut bytes_mut = BytesMut::new().writer();
-            std::io::copy(&mut file, &mut bytes_mut)
-                .map_err(|e| wasm_error!(WasmErrorInner::Compile(e.to_string())))?;
+
+            std::io::copy(&mut file, &mut bytes_mut).map_err(|e| {
+                wasm_error!(WasmErrorInner::Compile(format!(
+                    "{} Path: {}",
+                    e,
+                    module_path.display()
+                )))
+            })?;
             Ok::<bytes::Bytes, wasmer::RuntimeError>(bytes_mut.into_inner().freeze())
         }) {
             Some(Ok(serialized_module)) => (
@@ -201,10 +214,35 @@ impl SerializedModuleCache {
                 let serialized_module = module
                     .serialize()
                     .map_err(|e| wasm_error!(WasmErrorInner::Compile(e.to_string())))?;
+
                 if let Some(module_path) = maybe_module_path {
-                    std::fs::write(module_path, &serialized_module)
-                        .map_err(|e| wasm_error!(WasmErrorInner::Compile(e.to_string())))?;
+                    if let Some(parent) = module_path.parent() {
+                        if let Err(e) = std::fs::create_dir_all(parent) {
+                            tracing::error!("{} Path: {}", e, module_path.display());
+                        }
+                    }
+
+                    match OpenOptions::new()
+                        .write(true)
+                        // Using create_new here so that cache stampedes don't
+                        // cause corruption. Each file can only be written once.
+                        .create_new(true)
+                        .open(&module_path)
+                    {
+                        Ok(mut file) => {
+                            if let Err(e) = file.write_all(&serialized_module) {
+                                tracing::error!("{} Path: {}", e, module_path.display());
+                            }
+                        }
+                        Err(e) => {
+                            // This is just a warning because it is expected that
+                            // multiple concurrent calls to build the same wasm
+                            // will sometimes happen.
+                            tracing::warn!("{} Path: {}", e, module_path.display());
+                        }
+                    }
                 }
+
                 (module, serialized_module)
             }
         };
