@@ -216,12 +216,6 @@ impl SerializedModuleCache {
                     .map_err(|e| wasm_error!(WasmErrorInner::Compile(e.to_string())))?;
 
                 if let Some(module_path) = maybe_module_path {
-                    if let Some(parent) = module_path.parent() {
-                        if let Err(e) = std::fs::create_dir_all(parent) {
-                            tracing::error!("{} Path: {}", e, module_path.display());
-                        }
-                    }
-
                     match OpenOptions::new()
                         .write(true)
                         // Using create_new here so that cache stampedes don't
