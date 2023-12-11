@@ -12,9 +12,12 @@ use std::fs::OpenOptions;
 use std::io::Write;
 use std::path::PathBuf;
 use std::sync::Arc;
+use wasmer::BaseTunables;
 use wasmer::Cranelift;
+use wasmer::Engine;
 use wasmer::Instance;
 use wasmer::Module;
+use wasmer::NativeEngineExt;
 use wasmer::Store;
 
 /// We expect cache keys to be produced via hashing so 32 bytes is enough for all
@@ -172,6 +175,18 @@ impl SerializedModuleCache {
             .map(|dir_path| dir_path.clone().join(hex::encode(key)))
     }
 
+    fn store(&self) -> Store {
+        let mut engine: Engine = (self.cranelift)().into();
+        // Workaround for invalid memory access on iOS.
+        // https://github.com/holochain/holochain/issues/3096
+        engine.set_tunables(BaseTunables {
+            static_memory_bound: 0x4000.into(),
+            static_memory_offset_guard_size: 0x1_0000,
+            dynamic_memory_offset_guard_size: 0x1_0000,
+        });
+        Store::new(engine)
+    }
+
     /// Given a wasm, compiles with cranelift, serializes the result, adds it to
     /// the cache and returns that.
     fn get_with_build_cache(
@@ -179,7 +194,7 @@ impl SerializedModuleCache {
         key: CacheKey,
         wasm: &[u8],
     ) -> Result<Arc<ModuleWithStore>, wasmer::RuntimeError> {
-        let store = Store::new((self.cranelift)());
+        let store = self.store();
 
         let maybe_module_path = self.module_path(key);
         let (module, serialized_module) = match maybe_module_path.as_ref().map(|module_path| {
@@ -257,7 +272,7 @@ impl SerializedModuleCache {
     ) -> Result<Arc<ModuleWithStore>, wasmer::RuntimeError> {
         match self.cache.get(&key) {
             Some(serialized_module) => {
-                let store = Store::new((self.cranelift)());
+                let store = self.store();
                 let module = unsafe { Module::deserialize(&store, (**serialized_module).clone()) }
                     .map_err(|e| wasm_error!(WasmErrorInner::Compile(e.to_string())))?;
                 self.touch(&key);
