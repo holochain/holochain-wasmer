@@ -286,6 +286,40 @@ impl SerializedModuleCache {
     }
 }
 
+/// Caches deserialized wasm modules. Deserialization of cached modules from
+/// the cache to create callable instances is slow. Therefore deserialized
+/// modules are cached.
+#[derive(Default, Debug)]
+pub struct ModuleCache {
+    plru: MicroCache,
+    key_map: PlruKeyMap,
+    cache: BTreeMap<CacheKey, Arc<ModuleWithStore>>,
+}
+
+impl PlruCache for ModuleCache {
+    type Item = ModuleWithStore;
+
+    fn plru_mut(&mut self) -> &mut MicroCache {
+        &mut self.plru
+    }
+
+    fn key_map_mut(&mut self) -> &mut PlruKeyMap {
+        &mut self.key_map
+    }
+
+    fn key_map(&self) -> &PlruKeyMap {
+        &self.key_map
+    }
+
+    fn cache(&self) -> &BTreeMap<CacheKey, Arc<Self::Item>> {
+        &self.cache
+    }
+
+    fn cache_mut(&mut self) -> &mut BTreeMap<CacheKey, Arc<Self::Item>> {
+        &mut self.cache
+    }
+}
+
 /// Caches wasm instances. Reusing wasm instances allows maximum speed in function
 /// calls but also introduces the possibility of memory corruption or other bad
 /// state that is inappropriate to persist/reuse/access across calls. It is the
