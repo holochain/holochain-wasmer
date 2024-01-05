@@ -1,19 +1,20 @@
 use crate::import::imports;
-use holochain_wasmer_host::module::InstanceCache;
 use holochain_wasmer_host::module::InstanceWithStore;
-use holochain_wasmer_host::module::ModuleWithStore;
 use holochain_wasmer_host::module::SerializedModuleCache;
 use holochain_wasmer_host::prelude::*;
-use once_cell::sync::{Lazy, OnceCell};
+use once_cell::sync::OnceCell;
 use parking_lot::RwLock;
 use std::sync::Arc;
 use wasmer::wasmparser::Operator;
 use wasmer::AsStoreMut;
 use wasmer::CompilerConfig;
 use wasmer::Cranelift;
+use wasmer::Engine;
 use wasmer::FunctionEnv;
 use wasmer::Imports;
 use wasmer::Instance;
+use wasmer::Module;
+use wasmer::Store;
 use wasmer_middlewares::Metering;
 
 pub enum TestWasm {
@@ -26,8 +27,6 @@ pub enum TestWasm {
 pub static SERIALIZED_MODULE_CACHE: OnceCell<RwLock<SerializedModuleCache>> = OnceCell::new();
 pub static SERIALIZED_MODULE_CACHE_UNMETERED: OnceCell<RwLock<SerializedModuleCache>> =
     OnceCell::new();
-pub static INSTANCE_CACHE: Lazy<RwLock<InstanceCache>> =
-    Lazy::new(|| RwLock::new(InstanceCache::default()));
 
 impl TestWasm {
     pub fn bytes(&self) -> &[u8] {
@@ -81,7 +80,7 @@ impl TestWasm {
         }
     }
 
-    pub fn module(&self, metered: bool) -> Arc<ModuleWithStore> {
+    pub fn module(&self, metered: bool) -> Arc<Module> {
         match self.module_cache(metered).get() {
             Some(cache) => cache.write().get(self.key(metered), self.bytes()).unwrap(),
             None => {
@@ -90,24 +89,27 @@ impl TestWasm {
                     let metering = Arc::new(Metering::new(10_000_000_000, cost_function));
                     let mut cranelift = Cranelift::default();
                     cranelift.canonicalize_nans(true).push_middleware(metering);
-                    cranelift
+                    Engine::from(cranelift)
                 };
 
                 let cranelift_fn_unmetered = || {
                     let mut cranelift = Cranelift::default();
                     cranelift.canonicalize_nans(true);
-                    cranelift
+                    Engine::from(cranelift)
                 };
 
                 // This will error if the cache is already initialized
                 // which could happen if two tests are running in parallel.
                 // It doesn't matter which one wins, so we just ignore the error.
                 let _did_init_ok = self.module_cache(metered).set(parking_lot::RwLock::new(
-                    SerializedModuleCache::default_with_cranelift(if metered {
-                        cranelift_fn
-                    } else {
-                        cranelift_fn_unmetered
-                    }),
+                    SerializedModuleCache::default_with_cranelift(
+                        if metered {
+                            cranelift_fn
+                        } else {
+                            cranelift_fn_unmetered
+                        },
+                        None,
+                    ),
                 ));
 
                 // Just recurse now that the cache is initialized.
@@ -117,55 +119,47 @@ impl TestWasm {
     }
 
     pub fn _instance(&self, metered: bool) -> InstanceWithStore {
-        let module_with_store = self.module(metered);
+        let module = self.module(metered);
         let function_env;
-        let instance;
-        {
-            let mut store_lock = module_with_store.store.lock();
-            let mut store_mut = store_lock.as_store_mut();
-            function_env = FunctionEnv::new(&mut store_mut, Env::default());
-            let built_imports: Imports = imports(&mut store_mut, &function_env);
-            instance =
-                Instance::new(&mut store_mut, &module_with_store.module, &built_imports).unwrap();
-        }
+        let mut store = Store::default();
+        function_env = FunctionEnv::new(&mut store, Env::default());
+        let built_imports: Imports = imports(&mut store.as_store_mut(), &function_env);
+        let instance = Instance::new(&mut store, &module, &built_imports).unwrap();
 
-        {
-            let mut store_lock = module_with_store.store.lock();
-            let mut function_env_mut = function_env.into_mut(&mut store_lock);
-            let (data_mut, store_mut) = function_env_mut.data_and_store_mut();
-            data_mut.memory = Some(instance.exports.get_memory("memory").unwrap().clone());
-            data_mut.deallocate = Some(
+        let mut function_env_mut = function_env.into_mut(&mut store);
+        let (data_mut, store_mut) = function_env_mut.data_and_store_mut();
+        data_mut.memory = Some(instance.exports.get_memory("memory").unwrap().clone());
+        data_mut.deallocate = Some(
+            instance
+                .exports
+                .get_typed_function(&store_mut, "__hc__deallocate_1")
+                .unwrap(),
+        );
+        data_mut.allocate = Some(
+            instance
+                .exports
+                .get_typed_function(&store_mut, "__hc__allocate_1")
+                .unwrap(),
+        );
+        if metered {
+            data_mut.wasmer_metering_points_exhausted = Some(
                 instance
                     .exports
-                    .get_typed_function(&store_mut, "__hc__deallocate_1")
-                    .unwrap(),
+                    .get_global("wasmer_metering_points_exhausted")
+                    .unwrap()
+                    .clone(),
             );
-            data_mut.allocate = Some(
+            data_mut.wasmer_metering_remaining_points = Some(
                 instance
                     .exports
-                    .get_typed_function(&store_mut, "__hc__allocate_1")
-                    .unwrap(),
+                    .get_global("wasmer_metering_remaining_points")
+                    .unwrap()
+                    .clone(),
             );
-            if metered {
-                data_mut.wasmer_metering_points_exhausted = Some(
-                    instance
-                        .exports
-                        .get_global("wasmer_metering_points_exhausted")
-                        .unwrap()
-                        .clone(),
-                );
-                data_mut.wasmer_metering_remaining_points = Some(
-                    instance
-                        .exports
-                        .get_global("wasmer_metering_remaining_points")
-                        .unwrap()
-                        .clone(),
-                );
-            }
         }
 
         InstanceWithStore {
-            store: module_with_store.store.clone(),
+            store: Arc::new(Mutex::new(store)),
             instance: Arc::new(instance),
         }
     }

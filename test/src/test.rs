@@ -98,7 +98,7 @@ pub mod tests {
     use super::*;
     use crate::wasms;
     use holochain_wasmer_host::module::InstanceWithStore;
-    use holochain_wasmer_host::module::ModuleWithStore;
+    use std::thread;
     use test_common::StringType;
     use wasmer::AsStoreMut;
     use wasms::TestWasm;
@@ -110,7 +110,7 @@ pub mod tests {
 
     #[test]
     fn host_externs_toolable() {
-        let ModuleWithStore { module, .. } = (*TestWasm::Test.module(false)).clone();
+        let module = (*TestWasm::Test.module(false)).clone();
         // Imports will be the minimal set of functions actually used by the wasm
         // NOT the complete list defined by `host_externs!`.
         assert_eq!(
@@ -246,6 +246,50 @@ pub mod tests {
         let expected_string = format!("host: guest: {}", &starter_string);
 
         assert_eq!(&String::from(result), &expected_string,);
+    }
+
+    #[test]
+    fn concurrent_calls() {
+        let some_inner = "foo";
+        let some_struct = SomeStruct::new(some_inner.into());
+
+        let InstanceWithStore {
+            store: store_1,
+            instance: instance_1,
+        } = TestWasm::Test.instance();
+        let InstanceWithStore {
+            store: store_2,
+            instance: instance_2,
+        } = TestWasm::Test.instance();
+
+        let call_1 = thread::spawn({
+            let some_struct = some_struct.clone();
+            move || {
+                let result: SomeStruct = guest::call(
+                    &mut store_1.lock().as_store_mut(),
+                    instance_1,
+                    "native_type",
+                    some_struct.clone(),
+                )
+                .expect("native type handling");
+                assert_eq!(some_struct, result);
+            }
+        });
+        let call_2 = thread::spawn({
+            let some_struct = some_struct.clone();
+            move || {
+                let result: SomeStruct = guest::call(
+                    &mut store_2.lock().as_store_mut(),
+                    instance_2,
+                    "native_type",
+                    some_struct.clone(),
+                )
+                .expect("native type handling");
+                assert_eq!(some_struct, result);
+            }
+        });
+        assert!(matches!(call_1.join(), Ok(())));
+        assert!(matches!(call_2.join(), Ok(())));
     }
 
     #[test]

@@ -12,12 +12,9 @@ use std::fs::OpenOptions;
 use std::io::Write;
 use std::path::PathBuf;
 use std::sync::Arc;
-use wasmer::BaseTunables;
-use wasmer::Cranelift;
 use wasmer::Engine;
 use wasmer::Instance;
 use wasmer::Module;
-use wasmer::NativeEngineExt;
 use wasmer::Store;
 
 /// We expect cache keys to be produced via hashing so 32 bytes is enough for all
@@ -128,7 +125,8 @@ pub struct SerializedModuleCache {
     pub plru: MicroCache,
     pub key_map: PlruKeyMap,
     pub cache: BTreeMap<CacheKey, Arc<SerializedModule>>,
-    pub cranelift: fn() -> Cranelift,
+    pub compiling_engine: fn() -> Engine,
+    pub runtime_engine: Engine,
     pub maybe_fs_dir: Option<PathBuf>,
 }
 
@@ -159,13 +157,18 @@ impl PlruCache for SerializedModuleCache {
 impl SerializedModuleCache {
     /// Build a default `SerializedModuleCache` with a `Cranelift` that will be used
     /// to compile modules for serialization as needed.
-    pub fn default_with_cranelift(cranelift: fn() -> Cranelift) -> Self {
+    pub fn default_with_cranelift(
+        make_compiling_engine: fn() -> Engine,
+        maybe_fs_dir: Option<PathBuf>,
+    ) -> Self {
+        let compiling_engine = make_compiling_engine;
         Self {
-            cranelift,
+            compiling_engine,
+            runtime_engine: Engine::default(),
             plru: MicroCache::default(),
             key_map: PlruKeyMap::default(),
             cache: BTreeMap::default(),
-            maybe_fs_dir: None,
+            maybe_fs_dir,
         }
     }
 
@@ -175,27 +178,13 @@ impl SerializedModuleCache {
             .map(|dir_path| dir_path.clone().join(hex::encode(key)))
     }
 
-    fn store(&self) -> Store {
-        let mut engine: Engine = (self.cranelift)().into();
-        // Workaround for invalid memory access on iOS.
-        // https://github.com/holochain/holochain/issues/3096
-        engine.set_tunables(BaseTunables {
-            static_memory_bound: 0x4000.into(),
-            static_memory_offset_guard_size: 0x1_0000,
-            dynamic_memory_offset_guard_size: 0x1_0000,
-        });
-        Store::new(engine)
-    }
-
     /// Given a wasm, compiles with cranelift, serializes the result, adds it to
     /// the cache and returns that.
     fn get_with_build_cache(
         &mut self,
         key: CacheKey,
         wasm: &[u8],
-    ) -> Result<Arc<ModuleWithStore>, wasmer::RuntimeError> {
-        let store = self.store();
-
+    ) -> Result<Arc<Module>, wasmer::RuntimeError> {
         let maybe_module_path = self.module_path(key);
         let (module, serialized_module) = match maybe_module_path.as_ref().map(|module_path| {
             // We do this the long way to get `Bytes` instead of `Vec<u8>` so
@@ -218,13 +207,20 @@ impl SerializedModuleCache {
             })?;
             Ok::<bytes::Bytes, wasmer::RuntimeError>(bytes_mut.into_inner().freeze())
         }) {
-            Some(Ok(serialized_module)) => (
-                unsafe { Module::deserialize(&store, serialized_module.clone()) }
-                    .map_err(|e| wasm_error!(WasmErrorInner::Compile(e.to_string())))?,
-                serialized_module,
-            ),
+            Some(Ok(serialized_module)) => {
+                let deserialized_module =
+                    unsafe { Module::deserialize(&self.runtime_engine, serialized_module.clone()) }
+                        .map_err(|e| wasm_error!(WasmErrorInner::Compile(e.to_string())))?;
+                (deserialized_module, serialized_module)
+            }
+            // no serialized module found on the file system, so serialize the
+            // wasm binary and write it to the file system
             _fs_miss => {
-                let module = Module::from_binary(&store, wasm)
+                // Each module needs to be compiled with a new engine because
+                // of middleware like metering. Middleware is compiled into the
+                // module once and available in all instances created from it.
+                let compiling_engine = (self.compiling_engine)();
+                let module = Module::from_binary(&compiling_engine, wasm)
                     .map_err(|e| wasm_error!(WasmErrorInner::Compile(e.to_string())))?;
                 let serialized_module = module
                     .serialize()
@@ -252,34 +248,41 @@ impl SerializedModuleCache {
                     }
                 }
 
+                // deserialize the module to be returned for instantiation
+                //
+                // A new middleware per module is required, hence a new engine
+                // per module is needed too. Serialization allows for uncoupling
+                // the module from the engine that was used for compilation.
+                // After that a new engine can be created to deserialize the
+                // module again.
+                // This procedure facilitates caching of modules that can be
+                // instatiated with fresh stores free from state. Instance
+                // creation is highly performant which makes caching of instances
+                // and stores unnecessary.
+                let module = unsafe {
+                    Module::deserialize(&self.runtime_engine, serialized_module.clone())
+                        .map_err(|e| wasm_error!(WasmErrorInner::Compile(e.to_string())))?
+                };
+
                 (module, serialized_module)
             }
         };
         self.put_item(key, Arc::new(serialized_module.clone()));
 
-        Ok(Arc::new(ModuleWithStore {
-            store: Arc::new(Mutex::new(store)),
-            module: Arc::new(module),
-        }))
+        Ok(Arc::new(module))
     }
 
     /// Given a wasm, attempts to get the serialized module for it from the cache.
-    /// If the cache misses a new serialized module, will be built from the wasm.
-    pub fn get(
-        &mut self,
-        key: CacheKey,
-        wasm: &[u8],
-    ) -> Result<Arc<ModuleWithStore>, wasmer::RuntimeError> {
+    /// If the cache misses, a new serialized module will be built from the wasm.
+    pub fn get(&mut self, key: CacheKey, wasm: &[u8]) -> Result<Arc<Module>, wasmer::RuntimeError> {
         match self.cache.get(&key) {
             Some(serialized_module) => {
-                let store = self.store();
-                let module = unsafe { Module::deserialize(&store, (**serialized_module).clone()) }
-                    .map_err(|e| wasm_error!(WasmErrorInner::Compile(e.to_string())))?;
+                let module = unsafe {
+                    Module::deserialize(&self.runtime_engine, (**serialized_module).clone())
+                }
+                .map_err(|e| wasm_error!(WasmErrorInner::Compile(e.to_string())))?;
                 self.touch(&key);
-                Ok(Arc::new(ModuleWithStore {
-                    store: Arc::new(Mutex::new(store)),
-                    module: Arc::new(module),
-                }))
+                Ok(Arc::new(module))
             }
             None => self.get_with_build_cache(key, wasm),
         }
@@ -287,17 +290,17 @@ impl SerializedModuleCache {
 }
 
 /// Caches deserialized wasm modules. Deserialization of cached modules from
-/// the cache to create callable instances is slow. Therefore deserialized
-/// modules are cached.
+/// the cache to create callable instances is slow. Therefore modules are
+/// cached in memory after deserialization.
 #[derive(Default, Debug)]
 pub struct ModuleCache {
     plru: MicroCache,
     key_map: PlruKeyMap,
-    cache: BTreeMap<CacheKey, Arc<ModuleWithStore>>,
+    cache: BTreeMap<CacheKey, Arc<Module>>,
 }
 
 impl PlruCache for ModuleCache {
-    type Item = ModuleWithStore;
+    type Item = Module;
 
     fn plru_mut(&mut self) -> &mut MicroCache {
         &mut self.plru
