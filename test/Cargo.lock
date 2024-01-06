@@ -792,7 +792,7 @@ dependencies = [
 
 [[package]]
 name = "holochain_wasmer_host"
-version = "0.0.90"
+version = "0.0.91"
 dependencies = [
  "bimap",
  "bytes",
