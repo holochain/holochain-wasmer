@@ -6,6 +6,7 @@ use bytes::Bytes;
 use bytes::BytesMut;
 use holochain_wasmer_common::WasmError;
 use parking_lot::Mutex;
+use parking_lot::RwLock;
 use std::collections::BTreeMap;
 use std::fs::File;
 use std::fs::OpenOptions;
@@ -125,7 +126,7 @@ pub struct SerializedModuleCache {
     pub plru: MicroCache,
     pub key_map: PlruKeyMap,
     pub cache: BTreeMap<CacheKey, Arc<SerializedModule>>,
-    pub compiling_engine: fn() -> Engine,
+    pub make_compiling_engine: fn() -> Engine,
     pub runtime_engine: Engine,
     pub maybe_fs_dir: Option<PathBuf>,
 }
@@ -161,9 +162,8 @@ impl SerializedModuleCache {
         make_compiling_engine: fn() -> Engine,
         maybe_fs_dir: Option<PathBuf>,
     ) -> Self {
-        let compiling_engine = make_compiling_engine;
         Self {
-            compiling_engine,
+            make_compiling_engine,
             runtime_engine: Engine::default(),
             plru: MicroCache::default(),
             key_map: PlruKeyMap::default(),
@@ -209,7 +209,7 @@ impl SerializedModuleCache {
         }) {
             Some(Ok(serialized_module)) => {
                 let deserialized_module =
-                    unsafe { Module::deserialize(&self.runtime_engine, serialized_module.clone()) }
+                    unsafe { Module::deserialize(&Engine::default(), serialized_module.clone()) }
                         .map_err(|e| wasm_error!(WasmErrorInner::Compile(e.to_string())))?;
                 (deserialized_module, serialized_module)
             }
@@ -219,8 +219,8 @@ impl SerializedModuleCache {
                 // Each module needs to be compiled with a new engine because
                 // of middleware like metering. Middleware is compiled into the
                 // module once and available in all instances created from it.
-                let compiling_engine = (self.compiling_engine)();
-                let module = Module::from_binary(&compiling_engine, wasm)
+                // let wasm = include_bytes!("/Users/jost/Desktop/holochain/holochain-wasmer/test/test_wasm/target/wasm32-unknown-unknown/release/test_wasm.wasm");
+                let module = Module::from_binary(&(self.make_compiling_engine)(), wasm)
                     .map_err(|e| wasm_error!(WasmErrorInner::Compile(e.to_string())))?;
                 let serialized_module = module
                     .serialize()
@@ -293,13 +293,13 @@ impl SerializedModuleCache {
 /// the cache to create callable instances is slow. Therefore modules are
 /// cached in memory after deserialization.
 #[derive(Default, Debug)]
-pub struct ModuleCache {
+pub struct DeserializedModuleCache {
     plru: MicroCache,
     key_map: PlruKeyMap,
     cache: BTreeMap<CacheKey, Arc<Module>>,
 }
 
-impl PlruCache for ModuleCache {
+impl PlruCache for DeserializedModuleCache {
     type Item = Module;
 
     fn plru_mut(&mut self) -> &mut MicroCache {
@@ -323,37 +323,90 @@ impl PlruCache for ModuleCache {
     }
 }
 
-/// Caches wasm instances. Reusing wasm instances allows maximum speed in function
-/// calls but also introduces the possibility of memory corruption or other bad
-/// state that is inappropriate to persist/reuse/access across calls. It is the
-/// responsibility of the host to discard instances that are not eligible for reuse.
-#[derive(Default, Debug)]
-pub struct InstanceCache {
-    plru: MicroCache,
-    key_map: PlruKeyMap,
-    cache: BTreeMap<CacheKey, Arc<InstanceWithStore>>,
+#[derive(Debug)]
+pub struct ModuleCache {
+    serialized_module_cache: Arc<RwLock<SerializedModuleCache>>,
+    deserialized_module_cache: Arc<RwLock<DeserializedModuleCache>>,
 }
 
-impl PlruCache for InstanceCache {
-    type Item = InstanceWithStore;
-
-    fn plru_mut(&mut self) -> &mut MicroCache {
-        &mut self.plru
+impl ModuleCache {
+    pub fn new(make_compiling_engine: fn() -> Engine, maybe_fs_dir: Option<PathBuf>) -> Self {
+        let serialized_module_cache = Arc::new(RwLock::new(
+            SerializedModuleCache::default_with_cranelift(make_compiling_engine, maybe_fs_dir),
+        ));
+        let deserialized_module_cache = Arc::new(RwLock::new(DeserializedModuleCache::default()));
+        ModuleCache {
+            serialized_module_cache,
+            deserialized_module_cache,
+        }
     }
 
-    fn key_map_mut(&mut self) -> &mut PlruKeyMap {
-        &mut self.key_map
+    pub fn get(&self, key: CacheKey, wasm: &[u8]) -> Result<Arc<Module>, wasmer::RuntimeError> {
+        // check deserialized module cache first for module
+        {
+            let mut deserialized_cache = self.deserialized_module_cache.write();
+            if let Some(module) = deserialized_cache.get_item(&key) {
+                return Ok(module);
+            }
+        }
+        // get module from serialized cache otherwise
+        // if cache does not contain module, it will be built from wasm bytes
+        // and then cached in serialized cache
+        let module;
+        {
+            let mut serialized_cache = self.serialized_module_cache.write();
+            module = serialized_cache.get(key, wasm)?;
+        }
+        // cache in deserialized module cache too
+        {
+            let mut deserialized_cache = self.deserialized_module_cache.write();
+            deserialized_cache.put_item(key, module.clone());
+        }
+        Ok(module)
     }
+}
 
-    fn key_map(&self) -> &PlruKeyMap {
-        &self.key_map
+#[test]
+fn cache_test() {
+    // simple example wasm taken from wasmer docs
+    // https://docs.rs/wasmer/latest/wasmer/struct.Module.html#example
+    let wasm: Vec<u8> = vec![
+        0x00, 0x61, 0x73, 0x6d, 0x01, 0x00, 0x00, 0x00, 0x01, 0x06, 0x01, 0x60, 0x01, 0x7f, 0x01,
+        0x7f, 0x03, 0x02, 0x01, 0x00, 0x07, 0x0b, 0x01, 0x07, 0x61, 0x64, 0x64, 0x5f, 0x6f, 0x6e,
+        0x65, 0x00, 0x00, 0x0a, 0x09, 0x01, 0x07, 0x00, 0x20, 0x00, 0x41, 0x01, 0x6a, 0x0b, 0x00,
+        0x1a, 0x04, 0x6e, 0x61, 0x6d, 0x65, 0x01, 0x0a, 0x01, 0x00, 0x07, 0x61, 0x64, 0x64, 0x5f,
+        0x6f, 0x6e, 0x65, 0x02, 0x07, 0x01, 0x00, 0x01, 0x00, 0x02, 0x70, 0x30,
+    ];
+    let make_compiling_engine = || Engine::default();
+    let module_cache = ModuleCache::new(make_compiling_engine, None);
+    assert_eq!(
+        module_cache.serialized_module_cache.read().cache.is_empty(),
+        true
+    );
+    assert_eq!(
+        module_cache
+            .deserialized_module_cache
+            .read()
+            .cache
+            .is_empty(),
+        true
+    );
+
+    let key: CacheKey = [0u8; 32].into();
+    let module = module_cache.get(key.clone(), &wasm).unwrap();
+
+    // make sure module has been stored in serialized cache under key
+    {
+        let serialized_cached_module = module_cache.serialized_module_cache.write().get_item(&key);
+        assert_eq!(matches!(serialized_cached_module, Some(_)), true);
     }
-
-    fn cache(&self) -> &BTreeMap<CacheKey, Arc<Self::Item>> {
-        &self.cache
-    }
-
-    fn cache_mut(&mut self) -> &mut BTreeMap<CacheKey, Arc<Self::Item>> {
-        &mut self.cache
+    // make sure module has been stored in deserialized cache under key
+    {
+        let deserialized_cached_module = module_cache
+            .deserialized_module_cache
+            .write()
+            .get_item(&key)
+            .unwrap();
+        assert_eq!(*deserialized_cached_module, *module);
     }
 }
