@@ -12,11 +12,21 @@ use std::fs::File;
 use std::fs::OpenOptions;
 use std::io::Write;
 use std::path::PathBuf;
+use std::str::FromStr;
 use std::sync::Arc;
+use tracing::info;
+use wasmer::wasmparser;
+use wasmer::CompileError;
+use wasmer::CompilerConfig;
+use wasmer::CpuFeature;
+use wasmer::Cranelift;
 use wasmer::Engine;
 use wasmer::Instance;
 use wasmer::Module;
 use wasmer::Store;
+use wasmer::Target;
+use wasmer::Triple;
+use wasmer_middlewares::Metering;
 
 /// We expect cache keys to be produced via hashing so 32 bytes is enough for all
 /// purposes.
@@ -115,6 +125,53 @@ pub trait PlruCache {
         }
         maybe_item
     }
+}
+
+#[cfg(not(test))]
+/// one hundred giga ops
+pub const WASM_METERING_LIMIT: u64 = 100_000_000_000;
+
+#[cfg(test)]
+/// ten mega ops.
+/// We don't want tests to run forever, and it can take several minutes for 100 giga ops to run.
+pub const WASM_METERING_LIMIT: u64 = 10_000_000;
+
+/// Generate an engine with a wasm compiler
+/// and Metering (use limits) in place.
+pub fn cranelift() -> Engine {
+    let cost_function = |_operator: &wasmparser::Operator| -> u64 { 1 };
+    // @todo 100 giga-ops is totally arbitrary cutoff so we probably
+    // want to make the limit configurable somehow.
+    let metering = Arc::new(Metering::new(WASM_METERING_LIMIT, cost_function));
+    let mut compiler = Cranelift::default();
+    compiler.canonicalize_nans(true).push_middleware(metering);
+    Engine::from(compiler)
+}
+
+/// Take WASM binary and prepare a wasmer Module suitable for iOS
+pub fn build_ios_module(wasm: &[u8]) -> Result<Module, CompileError> {
+    info!(
+        "Found wasm and was instructed to serialize it for ios in wasmer format, doing so now..."
+    );
+    let compiler_config = cranelift();
+    let store = Store::new(compiler_config);
+    Module::from_binary(&store, wasm)
+}
+
+/// Configuration of a Target for wasmer for iOS
+pub fn wasmer_ios_target() -> Target {
+    // use what I see in
+    // platform ios headless example
+    // https://github.com/wasmerio/wasmer/blob/447c2e3a152438db67be9ef649327fabcad6f5b8/examples/platform_ios_headless.rs#L38-L53
+    let triple = Triple::from_str("aarch64-apple-ios").unwrap();
+    let cpu_feature = CpuFeature::set();
+    Target::new(triple, cpu_feature)
+}
+
+/// Generate a Dylib Engine suitable for iOS.
+/// Useful for re-building an iOS Module from a preserialized WASM Module.
+pub fn ios_dylib_headless_engine() -> Engine {
+    Engine::default()
 }
 
 /// Cache for serialized modules. These are fully compiled wasm modules that are
@@ -330,9 +387,9 @@ pub struct ModuleCache {
 }
 
 impl ModuleCache {
-    pub fn new(make_compiling_engine: fn() -> Engine, maybe_fs_dir: Option<PathBuf>) -> Self {
+    pub fn new(maybe_fs_dir: Option<PathBuf>) -> Self {
         let serialized_module_cache = Arc::new(RwLock::new(
-            SerializedModuleCache::default_with_cranelift(make_compiling_engine, maybe_fs_dir),
+            SerializedModuleCache::default_with_cranelift(cranelift, maybe_fs_dir),
         ));
         let deserialized_module_cache = Arc::new(RwLock::new(DeserializedModuleCache::default()));
         ModuleCache {
@@ -377,8 +434,7 @@ fn cache_test() {
         0x1a, 0x04, 0x6e, 0x61, 0x6d, 0x65, 0x01, 0x0a, 0x01, 0x00, 0x07, 0x61, 0x64, 0x64, 0x5f,
         0x6f, 0x6e, 0x65, 0x02, 0x07, 0x01, 0x00, 0x01, 0x00, 0x02, 0x70, 0x30,
     ];
-    let make_compiling_engine = || Engine::default();
-    let module_cache = ModuleCache::new(make_compiling_engine, None);
+    let module_cache = ModuleCache::new(None);
     assert_eq!(
         module_cache.serialized_module_cache.read().cache.is_empty(),
         true
