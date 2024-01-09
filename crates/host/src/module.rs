@@ -23,6 +23,7 @@ use wasmer::Cranelift;
 use wasmer::Engine;
 use wasmer::Instance;
 use wasmer::Module;
+use wasmer::NativeEngineExt;
 use wasmer::Store;
 use wasmer::Target;
 use wasmer::Triple;
@@ -138,11 +139,12 @@ pub const WASM_METERING_LIMIT: u64 = 10_000_000;
 
 /// Generate an engine with a wasm compiler
 /// and Metering (use limits) in place.
-pub fn cranelift() -> Engine {
+pub fn make_compiler_engine() -> Engine {
     let cost_function = |_operator: &wasmparser::Operator| -> u64 { 1 };
     // @todo 100 giga-ops is totally arbitrary cutoff so we probably
     // want to make the limit configurable somehow.
     let metering = Arc::new(Metering::new(WASM_METERING_LIMIT, cost_function));
+    // the only place where the wasm compiler engine is set
     let mut compiler = Cranelift::default();
     compiler.canonicalize_nans(true).push_middleware(metering);
     Engine::from(compiler)
@@ -153,8 +155,8 @@ pub fn build_ios_module(wasm: &[u8]) -> Result<Module, CompileError> {
     info!(
         "Found wasm and was instructed to serialize it for ios in wasmer format, doing so now..."
     );
-    let compiler_config = cranelift();
-    let store = Store::new(compiler_config);
+    let compiler_engine = make_compiler_engine();
+    let store = Store::new(compiler_engine);
     Module::from_binary(&store, wasm)
 }
 
@@ -168,10 +170,10 @@ pub fn wasmer_ios_target() -> Target {
     Target::new(triple, cpu_feature)
 }
 
-/// Generate a Dylib Engine suitable for iOS.
+/// Generate a runtime `Engine` without compiler suitable for iOS.
 /// Useful for re-building an iOS Module from a preserialized WASM Module.
-pub fn ios_dylib_headless_engine() -> Engine {
-    Engine::default()
+pub fn make_ios_runtime_engine() -> Engine {
+    Engine::headless()
 }
 
 /// Cache for serialized modules. These are fully compiled wasm modules that are
@@ -183,7 +185,11 @@ pub struct SerializedModuleCache {
     pub plru: MicroCache,
     pub key_map: PlruKeyMap,
     pub cache: BTreeMap<CacheKey, Arc<SerializedModule>>,
-    pub make_compiling_engine: fn() -> Engine,
+    // a function to create a new compiler engine for every module
+    pub make_compiler_engine: fn() -> Engine,
+    // the runtime engine has to live as long as the module;
+    // keeping it in the cache and using it for all modules
+    // make sure of that
     pub runtime_engine: Engine,
     pub maybe_fs_dir: Option<PathBuf>,
 }
@@ -213,14 +219,14 @@ impl PlruCache for SerializedModuleCache {
 }
 
 impl SerializedModuleCache {
-    /// Build a default `SerializedModuleCache` with a `Cranelift` that will be used
-    /// to compile modules for serialization as needed.
-    pub fn default_with_cranelift(
-        make_compiling_engine: fn() -> Engine,
+    /// Build a default `SerializedModuleCache` with a fn to create an `Engine`
+    /// that will be used to compile modules from wasms as needed.
+    pub fn default_with_engine(
+        make_compiler_engine: fn() -> Engine,
         maybe_fs_dir: Option<PathBuf>,
     ) -> Self {
         Self {
-            make_compiling_engine,
+            make_compiler_engine,
             runtime_engine: Engine::default(),
             plru: MicroCache::default(),
             key_map: PlruKeyMap::default(),
@@ -235,7 +241,7 @@ impl SerializedModuleCache {
             .map(|dir_path| dir_path.clone().join(hex::encode(key)))
     }
 
-    /// Given a wasm, compiles with cranelift, serializes the result, adds it to
+    /// Given a wasm, compiles with compiler engine, serializes the result, adds it to
     /// the cache and returns that.
     fn get_with_build_cache(
         &mut self,
@@ -276,8 +282,8 @@ impl SerializedModuleCache {
                 // Each module needs to be compiled with a new engine because
                 // of middleware like metering. Middleware is compiled into the
                 // module once and available in all instances created from it.
-                // let wasm = include_bytes!("/Users/jost/Desktop/holochain/holochain-wasmer/test/test_wasm/target/wasm32-unknown-unknown/release/test_wasm.wasm");
-                let module = Module::from_binary(&(self.make_compiling_engine)(), wasm)
+                let compiler_engine = (self.make_compiler_engine)();
+                let module = Module::from_binary(&compiler_engine, wasm)
                     .map_err(|e| wasm_error!(WasmErrorInner::Compile(e.to_string())))?;
                 let serialized_module = module
                     .serialize()
@@ -310,8 +316,10 @@ impl SerializedModuleCache {
                 // A new middleware per module is required, hence a new engine
                 // per module is needed too. Serialization allows for uncoupling
                 // the module from the engine that was used for compilation.
-                // After that a new engine can be created to deserialize the
-                // module again.
+                // After that another engine can be used to deserialize the
+                // module again. The engine has to live as long as the module to
+                // prevent memory access out of bounds errors.
+                //
                 // This procedure facilitates caching of modules that can be
                 // instatiated with fresh stores free from state. Instance
                 // creation is highly performant which makes caching of instances
@@ -389,7 +397,7 @@ pub struct ModuleCache {
 impl ModuleCache {
     pub fn new(maybe_fs_dir: Option<PathBuf>) -> Self {
         let serialized_module_cache = Arc::new(RwLock::new(
-            SerializedModuleCache::default_with_cranelift(cranelift, maybe_fs_dir),
+            SerializedModuleCache::default_with_engine(make_compiler_engine, maybe_fs_dir),
         ));
         let deserialized_module_cache = Arc::new(RwLock::new(DeserializedModuleCache::default()));
         ModuleCache {
