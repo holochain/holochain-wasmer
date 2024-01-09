@@ -102,7 +102,7 @@ impl TestWasm {
                 // which could happen if two tests are running in parallel.
                 // It doesn't matter which one wins, so we just ignore the error.
                 let _did_init_ok = self.module_cache(metered).set(parking_lot::RwLock::new(
-                    SerializedModuleCache::default_with_cranelift(
+                    SerializedModuleCache::default_with_engine(
                         if metered {
                             cranelift_fn
                         } else {
