@@ -276,7 +276,7 @@ criterion_group!(
     benches,
     wasm_module_compile,
     wasm_module_deserialize_from_file,
-    wasm_module,
+    // wasm_module,
     // wasm_instance,
     wasm_call,
     wasm_call_n,
