@@ -28,6 +28,7 @@ use wasmer::NativeEngineExt;
 use wasmer::Store;
 use wasmer::Target;
 use wasmer::Triple;
+use wasmer_compiler_llvm::LLVM;
 use wasmer_middlewares::Metering;
 
 /// We expect cache keys to be produced via hashing so 32 bytes is enough for all
@@ -146,8 +147,9 @@ pub fn make_compiler_engine() -> Engine {
     // want to make the limit configurable somehow.
     let metering = Arc::new(Metering::new(WASM_METERING_LIMIT, cost_function));
     // the only place where the wasm compiler engine is set
-    let mut compiler = Cranelift::default();
-    compiler.canonicalize_nans(true).push_middleware(metering);
+    let mut compiler = LLVM::default();
+    compiler.canonicalize_nans(true);
+    compiler.push_middleware(metering);
     Engine::from(compiler)
 }
 
@@ -281,7 +283,7 @@ impl SerializedModuleCache {
         }) {
             Some(Ok(serialized_module)) => {
                 let deserialized_module =
-                    unsafe { Module::deserialize(&Engine::default(), serialized_module.clone()) }
+                    unsafe { Module::deserialize(&self.runtime_engine, serialized_module.clone()) }
                         .map_err(|e| wasm_error!(WasmErrorInner::Compile(e.to_string())))?;
                 (deserialized_module, serialized_module)
             }
