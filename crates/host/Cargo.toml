@@ -2,7 +2,7 @@
 name = "holochain_wasmer_host"
 description = "wasm host code"
 license = "Apache-2.0"
-version = "0.0.91"
+version = "0.0.90"
 authors = [ "thedavidmeister", "thedavidmeister@gmail.com" ]
 edition = "2021"
 
