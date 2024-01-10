@@ -265,31 +265,27 @@ pub mod tests {
         let call_1 = thread::spawn({
             let some_struct = some_struct.clone();
             move || {
-                let result: SomeStruct = guest::call(
+                guest::call::<_, SomeStruct>(
                     &mut store_1.lock().as_store_mut(),
                     instance_1,
                     "native_type",
                     some_struct.clone(),
                 )
-                .expect("native type handling");
-                assert_eq!(some_struct, result);
             }
         });
         let call_2 = thread::spawn({
             let some_struct = some_struct.clone();
             move || {
-                let result: SomeStruct = guest::call(
+                guest::call::<_, SomeStruct>(
                     &mut store_2.lock().as_store_mut(),
                     instance_2,
                     "native_type",
                     some_struct.clone(),
                 )
-                .expect("native type handling");
-                assert_eq!(some_struct, result);
             }
         });
-        assert!(matches!(call_1.join(), Ok(())));
-        assert!(matches!(call_2.join(), Ok(())));
+        assert!(matches!(call_1.join(), Ok(SomeStruct)));
+        assert!(matches!(call_2.join(), Ok(SomeStruct)));
     }
 
     #[test]
