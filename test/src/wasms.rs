@@ -120,9 +120,8 @@ impl TestWasm {
 
     pub fn _instance(&self, metered: bool) -> InstanceWithStore {
         let module = self.module(metered);
-        let function_env;
         let mut store = Store::default();
-        function_env = FunctionEnv::new(&mut store, Env::default());
+        let function_env = FunctionEnv::new(&mut store, Env::default());
         let built_imports: Imports = imports(&mut store.as_store_mut(), &function_env);
         let instance = Instance::new(&mut store, &module, &built_imports).unwrap();
 

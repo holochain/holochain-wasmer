@@ -9,7 +9,6 @@ edition = "2021"
 [dependencies]
 wasmer = "=4.2.4"
 wasmer-middlewares = "=4.2.4"
-wasmer-compiler-llvm = "=4.2.4"
 holochain_wasmer_common = { version = "=0.0.90", path = "../common" }
 holochain_serialized_bytes = "=0.0.53"
 serde = "1"
