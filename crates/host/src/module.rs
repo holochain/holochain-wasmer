@@ -20,6 +20,7 @@ use wasmer::CompileError;
 use wasmer::CompilerConfig;
 use wasmer::CpuFeature;
 use wasmer::Cranelift;
+use wasmer::DeserializeError;
 use wasmer::Engine;
 use wasmer::Instance;
 use wasmer::Module;
@@ -150,6 +151,12 @@ pub fn make_compiler_engine() -> Engine {
     Engine::from(compiler)
 }
 
+/// Generate a runtime `Engine` without compiler suitable for iOS.
+/// Useful for re-building an iOS Module from a preserialized WASM Module.
+pub fn make_ios_runtime_engine() -> Engine {
+    Engine::headless()
+}
+
 /// Take WASM binary and prepare a wasmer Module suitable for iOS
 pub fn build_ios_module(wasm: &[u8]) -> Result<Module, CompileError> {
     info!(
@@ -160,6 +167,13 @@ pub fn build_ios_module(wasm: &[u8]) -> Result<Module, CompileError> {
     Module::from_binary(&store, wasm)
 }
 
+/// Take a previously compiled module for iOS, stored in a file,
+/// and deserialize it.
+pub fn precompiled_module(dylib_path: &PathBuf) -> Result<Module, DeserializeError> {
+    let engine = make_ios_runtime_engine();
+    unsafe { Module::deserialize_from_file(&engine, dylib_path) }
+}
+
 /// Configuration of a Target for wasmer for iOS
 pub fn wasmer_ios_target() -> Target {
     // use what I see in
@@ -168,12 +182,6 @@ pub fn wasmer_ios_target() -> Target {
     let triple = Triple::from_str("aarch64-apple-ios").unwrap();
     let cpu_feature = CpuFeature::set();
     Target::new(triple, cpu_feature)
-}
-
-/// Generate a runtime `Engine` without compiler suitable for iOS.
-/// Useful for re-building an iOS Module from a preserialized WASM Module.
-pub fn make_ios_runtime_engine() -> Engine {
-    Engine::headless()
 }
 
 /// Cache for serialized modules. These are fully compiled wasm modules that are
