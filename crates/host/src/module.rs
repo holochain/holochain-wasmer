@@ -167,11 +167,10 @@ pub fn build_ios_module(wasm: &[u8]) -> Result<Module, CompileError> {
     Module::from_binary(&store, wasm)
 }
 
-/// Take a previously compiled module for iOS, stored in a file,
-/// and deserialize it.
-pub fn precompiled_module(dylib_path: &PathBuf) -> Result<Module, DeserializeError> {
+/// Deserialize a previously compiled module for iOS from a file.
+pub fn get_ios_module_from_file(path: &PathBuf) -> Result<Module, DeserializeError> {
     let engine = make_ios_runtime_engine();
-    unsafe { Module::deserialize_from_file(&engine, dylib_path) }
+    unsafe { Module::deserialize_from_file(&engine, path) }
 }
 
 /// Configuration of a Target for wasmer for iOS
@@ -235,7 +234,9 @@ impl SerializedModuleCache {
     ) -> Self {
         Self {
             make_compiler_engine,
-            runtime_engine: Engine::default(),
+            // the engine to execute function calls on instances does not
+            // require a compiler
+            runtime_engine: Engine::headless(),
             plru: MicroCache::default(),
             key_map: PlruKeyMap::default(),
             cache: BTreeMap::default(),
