@@ -16,6 +16,7 @@ use std::str::FromStr;
 use std::sync::Arc;
 use tracing::info;
 use wasmer::wasmparser;
+use wasmer::BaseTunables;
 use wasmer::CompileError;
 use wasmer::CompilerConfig;
 use wasmer::CpuFeature;
@@ -291,7 +292,14 @@ impl SerializedModuleCache {
                 // Each module needs to be compiled with a new engine because
                 // of middleware like metering. Middleware is compiled into the
                 // module once and available in all instances created from it.
-                let compiler_engine = (self.make_compiler_engine)();
+                let mut compiler_engine = (self.make_compiler_engine)();
+                // Workaround for invalid memory access on iOS.
+                // https://github.com/holochain/holochain/issues/3096
+                compiler_engine.set_tunables(BaseTunables {
+                    static_memory_bound: 0x4000.into(),
+                    static_memory_offset_guard_size: 0x1_0000,
+                    dynamic_memory_offset_guard_size: 0x1_0000,
+                });
                 let module = Module::from_binary(&compiler_engine, wasm)
                     .map_err(|e| wasm_error!(WasmErrorInner::Compile(e.to_string())))?;
                 let serialized_module = module
