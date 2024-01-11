@@ -281,7 +281,7 @@ impl SerializedModuleCache {
         }) {
             Some(Ok(serialized_module)) => {
                 let deserialized_module =
-                    unsafe { Module::deserialize(&Engine::default(), serialized_module.clone()) }
+                    unsafe { Module::deserialize(&self.runtime_engine, serialized_module.clone()) }
                         .map_err(|e| wasm_error!(WasmErrorInner::Compile(e.to_string())))?;
                 (deserialized_module, serialized_module)
             }
