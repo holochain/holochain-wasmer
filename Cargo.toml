@@ -1,3 +1,5 @@
 [workspace]
 members = ["crates/host", "crates/common"]
 exclude = ["test"]
+
+resolver = "2"
