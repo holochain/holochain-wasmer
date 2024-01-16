@@ -4,8 +4,15 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
-- **BREAKING CHANGE:** Instance cache in host crate has been removed in favor of a deserialized module cache `DeserializedModuleCache`. An abstraction for caching (serialized & deserialized modules) called `ModuleCache` was added.
-- Refactor: All logic related to modules and wasmer caching from `holochain` has been moved to the host crate. Consequently functions for wasmer development under iOS need to be imported from there.
+## [0.0.92] - 2024-01-16
+
+### Added
+- Deserialized module cache `DeserializedModuleCache` was reinstated.
+- An abstraction for caching (serialized & deserialized modules) called `ModuleCache` was added.
+- All logic related to modules and wasmer caching from `holochain` has been moved to the host crate. Consequently functions for wasmer development under iOS need to be imported from there.
+
+### Removed
+- **BREAKING CHANGE:** Instance cache in host crate has been removed in favor of a deserialized module cache `DeserializedModuleCache`.
 
 ## [0.0.90]
 
