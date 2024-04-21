@@ -30,4 +30,5 @@ jobs:
             nix-env -if https://github.com/cachix/cachix/tarball/${CACHIX_REV} \
               --substituters 'https://cache.nixos.org https://cachix.cachix.org' \
               --trusted-public-keys 'cachix.cachix.org-1:eWNHQldwUO7G2VkjpnjDbWwy4KQ/HNxht7H4SSoMckM= cache.nixos.org-1:6NCHdD59X431o0gWypbMrAURkbJ16ZPMQFGspcDShjY='
+      - uses: mxschmitt/action-tmate@v3
       - run: nix develop --command ${{ matrix.script }}
