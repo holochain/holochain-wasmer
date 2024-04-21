@@ -1,13 +1,13 @@
 [package]
 name = "test"
 version = "0.0.90"
-authors = [ "thedavidmeister", "thedavidmeister@gmail.com" ]
+authors = ["thedavidmeister", "thedavidmeister@gmail.com"]
 edition = "2021"
 
 [dependencies]
-holochain_wasmer_common = { path = "../crates/common", features = []}
+holochain_wasmer_common = { path = "../crates/common", features = [] }
 holochain_wasmer_host = { path = "../crates/host" }
-holochain_serialized_bytes = "=0.0.53"
+holochain_serialized_bytes = "=0.0.54"
 serde = "1"
 test_common = { path = "./common" }
 criterion = { version = "0.3", features = ["html_reports"] }
@@ -30,7 +30,7 @@ harness = false
 
 [lib]
 name = "test"
-crate-type = [ "cdylib", "rlib" ]
+crate-type = ["cdylib", "rlib"]
 path = "src/test.rs"
 
 [profile.release]

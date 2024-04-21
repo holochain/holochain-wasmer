@@ -284,8 +284,8 @@ pub mod tests {
                 )
             }
         });
-        assert!(matches!(call_1.join(), Ok(SomeStruct)));
-        assert!(matches!(call_2.join(), Ok(SomeStruct)));
+        assert!(matches!(call_1.join(), Ok(_)));
+        assert!(matches!(call_2.join(), Ok(_)));
     }
 
     #[test]
