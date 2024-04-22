@@ -5,6 +5,8 @@ fn main() {
 
     println!("cargo:rerun-if-changed=*");
 
+    let path = std::env::var_os("PATH").unwrap();
+
     for &m in ["test_wasm", "wasm_memory", "wasm_empty", "wasm_io"].iter() {
         let cargo_toml = Path::new(m).join("Cargo.toml");
 
@@ -18,7 +20,9 @@ fn main() {
             .arg("--release")
             .arg("--target")
             .arg("wasm32-unknown-unknown")
+            .env_clear()
             .env("CARGO_TARGET_DIR", &out_dir)
+            .env("PATH", path.clone())
             .status()
             .unwrap();
 
