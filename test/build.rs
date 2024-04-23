@@ -29,7 +29,7 @@ fn main() {
             // .env_clear()
             // .env("PATH", path.clone())
             .env("CARGO_TARGET_DIR", &out_dir)
-            .env_remove("RUSTFLAGS")
+            .env_remove("CARGO_ENCODED_RUSTFLAGS")
             .status()
             .unwrap();
 
