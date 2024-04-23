@@ -5,13 +5,6 @@ fn main() {
 
     println!("cargo:rerun-if-changed=*");
 
-    let _path = std::env::var_os("PATH").unwrap();
-
-    for (k, v) in std::env::vars_os() {
-        let k = k.to_string_lossy().to_string();
-        let v = v.to_string_lossy().to_string();
-        println!("cargo:warning={k}={v}");
-    }
 
     for &m in ["test_wasm", "wasm_memory", "wasm_empty", "wasm_io"].iter() {
         let cargo_toml = Path::new(m).join("Cargo.toml");
