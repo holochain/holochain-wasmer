@@ -9,6 +9,7 @@ on:
 jobs:
   test:
     strategy:
+      fail-fast: false
       matrix:
         script: ["./test.sh", "./bench.sh"]
         os: ["ubuntu-latest", "macos-latest"]
