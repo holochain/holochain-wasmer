@@ -5,6 +5,7 @@ fn main() {
 
     println!("cargo:rerun-if-changed=*");
 
+
     for &m in ["test_wasm", "wasm_memory", "wasm_empty", "wasm_io"].iter() {
         let cargo_toml = Path::new(m).join("Cargo.toml");
 
@@ -19,6 +20,7 @@ fn main() {
             .arg("--target")
             .arg("wasm32-unknown-unknown")
             .env("CARGO_TARGET_DIR", &out_dir)
+            .env_remove("CARGO_ENCODED_RUSTFLAGS")
             .status()
             .unwrap();
 

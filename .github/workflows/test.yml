@@ -6,16 +6,14 @@ on:
       - develop
   pull_request: {}
 
-env:
-  HOLOCHAIN_REPO: "/var/tmp/holochain_repo"
-  CACHIX_REV: "v1.2"
-
 jobs:
   test:
-    runs-on: ubuntu-latest
     strategy:
+      fail-fast: false
       matrix:
         script: ["./test.sh", "./bench.sh"]
+        os: ["ubuntu-latest", "macos-latest"]
+    runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
       - name: Install nix
@@ -26,9 +24,4 @@ jobs:
         with:
           name: holochain-ci
           authToken: "${{ secrets.CACHIX_AUTH_TOKEN }}"
-          installCommand: |
-            nix-env -if https://github.com/cachix/cachix/tarball/${CACHIX_REV} \
-              --substituters 'https://cache.nixos.org https://cachix.cachix.org' \
-              --trusted-public-keys 'cachix.cachix.org-1:eWNHQldwUO7G2VkjpnjDbWwy4KQ/HNxht7H4SSoMckM= cache.nixos.org-1:6NCHdD59X431o0gWypbMrAURkbJ16ZPMQFGspcDShjY='
-      - uses: mxschmitt/action-tmate@v3
       - run: nix develop --command ${{ matrix.script }}
