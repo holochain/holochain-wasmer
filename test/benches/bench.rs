@@ -274,19 +274,17 @@ pub fn test_instances(c: &mut Criterion) {
 
 criterion_group!(
     benches,
-    // wasm_module_compile,
-    // wasm_module_deserialize_from_file,
-
+    wasm_module_compile,
+    wasm_module_deserialize_from_file,
     // currently the bench fails because such numerous deserialization of modules causes memory leaks
     // because of an upstream issue where the memory for deserialization is kept as long as the engine lives
     // https://github.com/wasmerio/wasmer/issues/4377#issuecomment-1879386384
     // this shouldn't affect Holochain in practice because we're only deserializing every module once.
     // wasm_module,
     // wasm_instance,
-
-    // wasm_call,
-    // wasm_call_n,
-    // test_process_string,
+    wasm_call,
+    wasm_call_n,
+    test_process_string,
     test_instances,
 );
 
