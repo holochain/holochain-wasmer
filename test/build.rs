@@ -19,8 +19,6 @@ fn main() {
             .arg("--release")
             .arg("--target")
             .arg("wasm32-unknown-unknown")
-            // .env_clear()
-            // .env("PATH", path.clone())
             .env("CARGO_TARGET_DIR", &out_dir)
             .env_remove("CARGO_ENCODED_RUSTFLAGS")
             .status()
