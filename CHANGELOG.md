@@ -4,6 +4,11 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+## [0.0.93] - 2024-04-24
+
+### Changed
+- **BREAKING CHANGE:** Holochain serialization updated to v0.0.54 which in turn contains a breaking change in how the conductor API serializes enums.
+
 ## [0.0.92] - 2024-01-16
 
 ### Added
