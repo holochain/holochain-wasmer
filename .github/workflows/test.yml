@@ -24,5 +24,4 @@ jobs:
         with:
           name: holochain-ci
           authToken: "${{ secrets.CACHIX_AUTH_TOKEN }}"
-      - uses: mxschmitt/action-tmate@v3
       - run: nix develop --command ${{ matrix.script }}
