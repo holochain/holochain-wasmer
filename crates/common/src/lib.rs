@@ -39,19 +39,11 @@ pub type DoubleUSize = u64;
 pub type DoubleUSize = u128;
 
 pub fn merge_u64(a: u64, b: u64) -> Result<u128, WasmError> {
-    Ok(
-        (u128::try_from(a).map_err(|_| wasm_error!(WasmErrorInner::PointerMap))?
-            << (std::mem::size_of::<u64>() * 8))
-            | u128::try_from(b).map_err(|_| wasm_error!(WasmErrorInner::PointerMap))?,
-    )
+    Ok((u128::from(a) << (std::mem::size_of::<u64>() * 8)) | u128::from(b))
 }
 
 pub fn merge_u32(a: u32, b: u32) -> Result<u64, WasmError> {
-    Ok(
-        (u64::try_from(a).map_err(|_| wasm_error!(WasmErrorInner::PointerMap))?
-            << (std::mem::size_of::<u32>() * 8))
-            | u64::try_from(b).map_err(|_| wasm_error!(WasmErrorInner::PointerMap))?,
-    )
+    Ok((u64::from(a) << (std::mem::size_of::<u32>() * 8)) | u64::from(b))
 }
 
 /// Given 2x `u32`, return a `DoubleUSize` merged.

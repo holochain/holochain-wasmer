@@ -242,7 +242,7 @@ pub fn test_process_string(c: &mut Criterion) {
 pub fn test_instances(c: &mut Criterion) {
     let mut group = c.benchmark_group("test_instances");
     group.throughput(Throughput::Bytes(1_000));
-    group.sample_size(100);
+    group.sample_size(60);
     let input = test_common::StringType::from(".".repeat(1000));
     group.bench_with_input(BenchmarkId::new("test_instances", 1000), &1000, |b, _| {
         b.iter(|| {
@@ -280,7 +280,6 @@ criterion_group!(
     // because of an upstream issue where the memory for deserialization is kept as long as the engine lives
     // https://github.com/wasmerio/wasmer/issues/4377#issuecomment-1879386384
     // this shouldn't affect Holochain in practice because we're only deserializing every module once.
-
     // wasm_module,
     // wasm_instance,
     wasm_call,

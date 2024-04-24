@@ -3,18 +3,18 @@ name = "holochain_wasmer_guest"
 description = "wasm guest code"
 license = "Apache-2.0"
 version = "0.0.92"
-authors = [ "thedavidmeister", "thedavidmeister@gmail.com" ]
+authors = ["thedavidmeister", "thedavidmeister@gmail.com"]
 edition = "2021"
 
 [workspace]
 
 [lib]
 name = "holochain_wasmer_guest"
-crate-type = [ "cdylib", "rlib" ]
+crate-type = ["cdylib", "rlib"]
 path = "src/guest.rs"
 
 [dependencies]
-holochain_serialized_bytes = { version = "=0.0.53", features = [] }
+holochain_serialized_bytes = { version = "=0.0.54", features = [] }
 holochain_wasmer_common = { version = "=0.0.92", path = "../common" }
 serde = "1"
 tracing = "0.1"

@@ -155,7 +155,7 @@ where
         .map_err(|e| wasm_error!(WasmErrorInner::CallError(e.to_string())))?
         .call(store_mut, &[guest_input_length_value.clone()])
         .map_err(|e| wasm_error!(WasmErrorInner::CallError(e.to_string())))?
-        .get(0)
+        .first()
     {
         Some(Value::I32(guest_input_ptr)) => (
             (*guest_input_ptr)
@@ -194,7 +194,7 @@ where
             store_mut,
             &[guest_input_ptr_value, guest_input_length_value],
         ) {
-        Ok(v) => match v.get(0) {
+        Ok(v) => match v.first() {
             Some(Value::I64(i)) => {
                 let u: GuestPtrLen = (*i)
                     .try_into()
