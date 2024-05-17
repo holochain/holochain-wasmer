@@ -60,7 +60,8 @@ where
     O: serde::de::DeserializeOwned + std::fmt::Debug,
 {
     // Call the host function and receive the length of the serialized result.
-    let input_bytes = holochain_serialized_bytes::encode(&input).map_err(|e| wasm_error!(e))?;
+    let mut input_bytes = holochain_serialized_bytes::encode(&input).map_err(|e| wasm_error!(e))?;
+    input_bytes.shrink_to_fit();
     let input_len: usize = input_bytes.len();
     let input_guest_ptr = crate::allocation::write_bytes(input_bytes);
 
@@ -89,12 +90,10 @@ where
     R: Serialize + std::fmt::Debug,
 {
     match holochain_serialized_bytes::encode::<Result<R, WasmError>>(&Ok(return_value)) {
-        Ok(bytes) => {
+        Ok(mut bytes) => {
             let len: usize = bytes.len();
-            match merge_usize(write_bytes(bytes), len) {
-                Ok(v) => v,
-                Err(e) => return_err_ptr(e),
-            }
+            bytes.shrink_to_fit();
+            merge_usize(write_bytes(bytes), len).unwrap_or_else(|e| return_err_ptr(e))
         }
         Err(e) => return_err_ptr(wasm_error!(WasmErrorInner::Serialize(e))),
     }
@@ -107,23 +106,24 @@ where
 /// for `wasm32-unknown-unknown` target.
 #[inline(always)]
 pub fn return_err_ptr(wasm_error: WasmError) -> DoubleUSize {
-    let bytes = match holochain_serialized_bytes::encode::<Result<(), WasmError>>(&Err(wasm_error))
-    {
-        Ok(bytes) => bytes,
-        Err(e) => match holochain_serialized_bytes::encode::<Result<(), WasmError>>(&Err(
-            wasm_error!(WasmErrorInner::Serialize(e)),
-        )) {
+    let mut bytes =
+        match holochain_serialized_bytes::encode::<Result<(), WasmError>>(&Err(wasm_error)) {
             Ok(bytes) => bytes,
-            // At this point we've errored while erroring
-            Err(_) => match holochain_serialized_bytes::encode::<Result<(), WasmError>>(&Err(
-                wasm_error!(WasmErrorInner::ErrorWhileError),
+            Err(e) => match holochain_serialized_bytes::encode::<Result<(), WasmError>>(&Err(
+                wasm_error!(WasmErrorInner::Serialize(e)),
             )) {
                 Ok(bytes) => bytes,
-                // At this point we failed to serialize a unit variant so IDK ¯\_(ツ)_/¯
-                Err(_) => panic!("Failed to error"),
+                // At this point we've errored while erroring
+                Err(_) => match holochain_serialized_bytes::encode::<Result<(), WasmError>>(&Err(
+                    wasm_error!(WasmErrorInner::ErrorWhileError),
+                )) {
+                    Ok(bytes) => bytes,
+                    // At this point we failed to serialize a unit variant so IDK ¯\_(ツ)_/¯
+                    Err(_) => panic!("Failed to error"),
+                },
             },
-        },
-    };
+        };
+    bytes.shrink_to_fit();
     let len = bytes.len();
     merge_usize(write_bytes(bytes), len).expect("Failed to build return value")
 }
