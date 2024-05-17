@@ -18,4 +18,4 @@ default = []
 error_as_host = []
 
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
-wasmer = "=4.3.0"
+wasmer = "=4.2.8"
