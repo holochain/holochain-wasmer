@@ -62,6 +62,10 @@ where
     // Call the host function and receive the length of the serialized result.
     let mut input_bytes = holochain_serialized_bytes::encode(&input).map_err(|e| wasm_error!(e))?;
     input_bytes.shrink_to_fit();
+    debug_assert!(
+        input_bytes.capacity() == input_bytes.len(),
+        "Capacity should equal length, dealloc would fail"
+    );
     let input_len: usize = input_bytes.len();
     let input_guest_ptr = crate::allocation::write_bytes(input_bytes);
 
@@ -93,6 +97,10 @@ where
         Ok(mut bytes) => {
             let len: usize = bytes.len();
             bytes.shrink_to_fit();
+            debug_assert!(
+                bytes.capacity() == bytes.len(),
+                "Capacity should equal length, dealloc would fail"
+            );
             merge_usize(write_bytes(bytes), len).unwrap_or_else(|e| return_err_ptr(e))
         }
         Err(e) => return_err_ptr(wasm_error!(WasmErrorInner::Serialize(e))),
@@ -124,6 +132,10 @@ pub fn return_err_ptr(wasm_error: WasmError) -> DoubleUSize {
             },
         };
     bytes.shrink_to_fit();
+    debug_assert!(
+        bytes.capacity() == bytes.len(),
+        "Capacity should equal length, dealloc would fail"
+    );
     let len = bytes.len();
     merge_usize(write_bytes(bytes), len).expect("Failed to build return value")
 }
