@@ -1,3 +1,4 @@
+#!/usr/bin/env bash
 set -euxo pipefail
 
 export RUST_BACKTRACE=full
@@ -8,7 +9,7 @@ cargo fmt
 
 cargo clippy
 ( cd test && cargo clippy )
-( cd crates/guest && cargo clippy )
+( cd crates/guest && cargo clippy --target wasm32-unknown-unknown )
 
 # tests the root workspace that doesn't include any wasm code
 cargo test ${1-} -- --nocapture

@@ -2,13 +2,13 @@
 
 ## How to update holonix
 
-This repository uses `niv` to manage Nix dependencies.
-The following command will launch a transient shell with `niv` installed and update the holonix revision.
+This repository uses the `rustDev` shell from [Holonix](https://github.com/holochain/holochain/blob/develop/nix/modules/devShells.nix).
 
-```shell
-nix-shell -p niv --run "niv update"
-```
+To update Holonix, run the following command:
 
+```bash
+nix flake update
+````
 
 ## Why?
 
@@ -243,7 +243,7 @@ e.g. for nice callback handling.
 It's really easy to make a mistake in the data handling (see below) and end up
 with memory leaks or serialization mistakes, missing tracing or whatever else.
 
-Use the `holochain_wasmer_host` crate to do as much heavy lifing as possible.
+Use the `holochain_wasmer_host` crate to do as much heavy lifting as possible.
 
 The `test_process_struct` shows a good minimal example of an import function:
 
