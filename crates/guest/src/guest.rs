@@ -62,6 +62,9 @@ where
     // Call the host function and receive the length of the serialized result.
     let mut input_bytes = holochain_serialized_bytes::encode(&input).map_err(|e| wasm_error!(e))?;
     input_bytes.shrink_to_fit();
+    if input_bytes.capacity() != input_bytes.len() {
+        tracing::warn!("Capacity should equal length, dealloc will fail");
+    }
     debug_assert!(
         input_bytes.capacity() == input_bytes.len(),
         "Capacity should equal length, dealloc would fail"
@@ -97,6 +100,9 @@ where
         Ok(mut bytes) => {
             let len: usize = bytes.len();
             bytes.shrink_to_fit();
+            if bytes.capacity() != bytes.len() {
+                tracing::warn!("Capacity should equal length, dealloc will fail");
+            }
             debug_assert!(
                 bytes.capacity() == bytes.len(),
                 "Capacity should equal length, dealloc would fail"
@@ -132,6 +138,9 @@ pub fn return_err_ptr(wasm_error: WasmError) -> DoubleUSize {
             },
         };
     bytes.shrink_to_fit();
+    if bytes.capacity() != bytes.len() {
+        tracing::warn!("Capacity should equal length, dealloc will fail");
+    }
     debug_assert!(
         bytes.capacity() == bytes.len(),
         "Capacity should equal length, dealloc would fail"
