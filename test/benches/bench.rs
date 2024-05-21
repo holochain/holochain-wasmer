@@ -282,10 +282,10 @@ criterion_group!(
     // this shouldn't affect Holochain in practice because we're only deserializing every module once.
     // wasm_module,
     // wasm_instance,
+    // test_instances,
     wasm_call,
     wasm_call_n,
     test_process_string,
-    test_instances,
 );
 
 criterion_main!(benches);
