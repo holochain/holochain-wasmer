@@ -2,15 +2,15 @@
 name = "holochain_wasmer_host"
 description = "wasm host code"
 license = "Apache-2.0"
-version = "0.0.94"
+version = "0.0.95"
 authors = ["thedavidmeister", "thedavidmeister@gmail.com"]
 edition = "2021"
 
 [dependencies]
-wasmer = "=4.2.8"
-wasmer-middlewares = "=4.2.8"
-holochain_wasmer_common = { version = "=0.0.94", path = "../common" }
-holochain_serialized_bytes = "=0.0.54"
+wasmer = "=4.3.1"
+wasmer-middlewares = "=4.3.1"
+holochain_wasmer_common = { version = "=0.0.95", path = "../common" }
+holochain_serialized_bytes = "=0.0.55"
 serde = "1"
 tracing = "0.1"
 parking_lot = "0.12"
