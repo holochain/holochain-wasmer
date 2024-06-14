@@ -21,7 +21,11 @@
                     inputs.holochain-flake.devShells.${system}.rustDev
                 ];
                 packages = [
+                  pkgs.cmake
+                  pkgs.clang
+                  pkgs.llvmPackages.libclang.lib
                 ];
+                LIBCLANG_PATH="${pkgs.llvmPackages.libclang.lib}/lib";
             };
         };
     };
