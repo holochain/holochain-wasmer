@@ -15,7 +15,13 @@ cargo clippy
 cargo test ${1-} -- --nocapture
 
 # test that everything builds
-cargo build --release --manifest-path test/test_wasm/Cargo.toml --target wasm32-unknown-unknown
+cargo build --release --manifest-path test/test_wasm/Cargo.toml --target wasm32-unknown-unknown --features wasmer_sys
 
-# build wasm and run the "full" tests
-cargo test --release --manifest-path test/Cargo.toml ${1-} -- --nocapture
+# build wasm and run the "full" tests for wasmer_sys
+cargo test --release --manifest-path test/Cargo.toml --features wasmer_wamr ${1-} -- --nocapture 
+
+# test that everything builds
+cargo build --release --manifest-path test/test_wasm/Cargo.toml --target wasm32-unknown-unknown  --no-default-features --features wasmer_wamr
+
+# build wasm and run the "full" tests for wasmer_wamr
+cargo test --release --manifest-path test/Cargo.toml --no-default-features --features wasmer_wamr  ${1-} -- --nocapture

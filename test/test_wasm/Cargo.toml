@@ -14,3 +14,8 @@ holochain_wasmer_guest = { path = "../../crates/guest" }
 test_common = { path = "../common" }
 holochain_serialized_bytes = "=0.0.55"
 serde = "1"
+
+[features]
+default = []
+wasmer_sys = []
+wasmer_wamr = []
