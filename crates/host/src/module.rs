@@ -159,13 +159,11 @@ pub fn make_engine() -> Engine {
     // Workaround for invalid memory access on iOS.
     // https://github.com/holochain/holochain/issues/3096
     let mut engine = Engine::from(compiler);
-    engine.set_tunables(
-        BaseTunables {
-            static_memory_bound: 0x4000.into(),
-            static_memory_offset_guard_size: 0x1_0000,
-            dynamic_memory_offset_guard_size: 0x1_0000,
-        }
-    );
+    engine.set_tunables(BaseTunables {
+        static_memory_bound: 0x4000.into(),
+        static_memory_offset_guard_size: 0x1_0000,
+        dynamic_memory_offset_guard_size: 0x1_0000,
+    });
 
     engine
 }
@@ -249,10 +247,7 @@ impl PlruCache for SerializedModuleCache {
 impl SerializedModuleCache {
     /// Build a default `SerializedModuleCache` with a fn to create an `Engine`
     /// that will be used to compile modules from wasms as needed.
-    pub fn default_with_engine(
-        make_engine: fn() -> Engine,
-        maybe_fs_dir: Option<PathBuf>,
-    ) -> Self {
+    pub fn default_with_engine(make_engine: fn() -> Engine, maybe_fs_dir: Option<PathBuf>) -> Self {
         Self {
             make_engine,
             // the engine to execute function calls on instances does not
