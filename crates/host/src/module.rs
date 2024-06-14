@@ -12,14 +12,20 @@ use std::fs::File;
 use std::fs::OpenOptions;
 use std::io::Write;
 use std::path::PathBuf;
-use std::str::FromStr;
 use std::sync::Arc;
 use tracing::info;
+#[cfg(feature = "wasmer_sys")]
 use wasmer::sys::BaseTunables;
+#[cfg(feature = "wasmer_sys")]
 use wasmer::wasmparser;
+#[cfg(feature = "wasmer_wamr")]
+use wasmer::CApiEngine;
 use wasmer::CompileError;
+#[cfg(feature = "wasmer_sys")]
 use wasmer::CompilerConfig;
+#[cfg(feature = "wasmer_sys")]
 use wasmer::CpuFeature;
+#[cfg(feature = "wasmer_sys")]
 use wasmer::Cranelift;
 use wasmer::DeserializeError;
 use wasmer::Engine;
@@ -27,8 +33,7 @@ use wasmer::Instance;
 use wasmer::Module;
 use wasmer::NativeEngineExt;
 use wasmer::Store;
-use wasmer::Target;
-use wasmer::Triple;
+#[cfg(feature = "wasmer_sys")]
 use wasmer_middlewares::Metering;
 
 /// We expect cache keys to be produced via hashing so 32 bytes is enough for all
@@ -139,9 +144,10 @@ pub const WASM_METERING_LIMIT: u64 = 100_000_000_000;
 /// We don't want tests to run forever, and it can take several minutes for 100 giga ops to run.
 pub const WASM_METERING_LIMIT: u64 = 10_000_000;
 
+#[cfg(feature = "wasmer_sys")]
 /// Generate an engine with a wasm compiler
 /// and Metering (use limits) in place.
-pub fn make_compiler_engine() -> Engine {
+pub fn make_engine() -> Engine {
     let cost_function = |_operator: &wasmparser::Operator| -> u64 { 1 };
     // @todo 100 giga-ops is totally arbitrary cutoff so we probably
     // want to make the limit configurable somehow.
@@ -149,13 +155,27 @@ pub fn make_compiler_engine() -> Engine {
     // the only place where the wasm compiler engine is set
     let mut compiler = Cranelift::default();
     compiler.canonicalize_nans(true).push_middleware(metering);
-    Engine::from(compiler)
+
+    // Workaround for invalid memory access on iOS.
+    // https://github.com/holochain/holochain/issues/3096
+    let mut engine = Engine::from(compiler);
+    engine.set_tunables(
+        BaseTunables {
+            static_memory_bound: 0x4000.into(),
+            static_memory_offset_guard_size: 0x1_0000,
+            dynamic_memory_offset_guard_size: 0x1_0000,
+        }
+    );
+
+    engine
 }
 
-/// Generate a runtime `Engine` without compiler suitable for iOS.
-/// Useful for re-building an iOS Module from a preserialized WASM Module.
-pub fn make_ios_runtime_engine() -> Engine {
-    Engine::headless()
+#[cfg(feature = "wasmer_wamr")]
+/// Generate an engine with a wasm interpreter
+/// The interpreter used (wasm micro runtime) does not support gas metering
+/// See tracking issue: https://github.com/bytecodealliance/wasm-micro-runtime/issues/2163
+pub fn make_engine() -> Engine {
+    Engine::from(CApiEngine::default())
 }
 
 /// Take WASM binary and prepare a wasmer Module suitable for iOS
@@ -194,7 +214,7 @@ pub struct SerializedModuleCache {
     pub key_map: PlruKeyMap,
     pub cache: BTreeMap<CacheKey, Arc<SerializedModule>>,
     // a function to create a new compiler engine for every module
-    pub make_compiler_engine: fn() -> Engine,
+    pub make_engine: fn() -> Engine,
     // the runtime engine has to live as long as the module;
     // keeping it in the cache and using it for all modules
     // make sure of that
@@ -230,11 +250,11 @@ impl SerializedModuleCache {
     /// Build a default `SerializedModuleCache` with a fn to create an `Engine`
     /// that will be used to compile modules from wasms as needed.
     pub fn default_with_engine(
-        make_compiler_engine: fn() -> Engine,
+        make_engine: fn() -> Engine,
         maybe_fs_dir: Option<PathBuf>,
     ) -> Self {
         Self {
-            make_compiler_engine,
+            make_engine,
             // the engine to execute function calls on instances does not
             // require a compiler
             runtime_engine: Engine::headless(),
@@ -293,14 +313,7 @@ impl SerializedModuleCache {
                 // Each module needs to be compiled with a new engine because
                 // of middleware like metering. Middleware is compiled into the
                 // module once and available in all instances created from it.
-                let mut compiler_engine = (self.make_compiler_engine)();
-                // Workaround for invalid memory access on iOS.
-                // https://github.com/holochain/holochain/issues/3096
-                compiler_engine.set_tunables(BaseTunables {
-                    static_memory_bound: 0x4000.into(),
-                    static_memory_offset_guard_size: 0x1_0000,
-                    dynamic_memory_offset_guard_size: 0x1_0000,
-                });
+                let compiler_engine = (self.make_engine)();
                 let module = Module::from_binary(&compiler_engine, wasm)
                     .map_err(|e| wasm_error!(WasmErrorInner::Compile(e.to_string())))?;
                 let serialized_module = module
@@ -415,7 +428,7 @@ pub struct ModuleCache {
 impl ModuleCache {
     pub fn new(maybe_fs_dir: Option<PathBuf>) -> Self {
         let serialized_module_cache = Arc::new(RwLock::new(
-            SerializedModuleCache::default_with_engine(make_compiler_engine, maybe_fs_dir),
+            SerializedModuleCache::default_with_engine(make_engine, maybe_fs_dir),
         ));
         let deserialized_module_cache = Arc::new(RwLock::new(DeserializedModuleCache::default()));
         ModuleCache {
