@@ -10,6 +10,11 @@ crate-type = [ "cdylib", "rlib" ]
 path = "src/common.rs"
 
 [dependencies]
-holochain_wasmer_common = { path = "../../crates/common" }
+holochain_wasmer_common = { path = "../../crates/common", default-features = false }
 serde = "1"
 serde_bytes = "0.11"
+
+[features]
+default = ["wasmer_sys"]
+wasmer_sys = ["holochain_wasmer_common/wasmer_sys"]
+wasmer_wamr = ["holochain_wasmer_common/wasmer_wamr"]

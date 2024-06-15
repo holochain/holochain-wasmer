@@ -10,8 +10,13 @@ crate-type = ["cdylib", "rlib"]
 path = "src/wasm.rs"
 
 [dependencies]
-holochain_wasmer_guest = { path = "../../crates/guest" }
-test_common = { path = "../common" }
+holochain_wasmer_guest = { path = "../../crates/guest", default-features = false }
+test_common = { path = "../common", default-features = false }
 holochain_serialized_bytes = "=0.0.55"
 paste = "0.1"
 serde = "1"
+
+[features]
+default = ["wasmer_sys"]
+wasmer_sys = ["holochain_wasmer_guest/wasmer_sys", "test_common/wasmer_sys"]
+wasmer_wamr = ["holochain_wasmer_guest/wasmer_wamr", "test_common/wasmer_wamr"]

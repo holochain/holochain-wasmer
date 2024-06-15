@@ -10,4 +10,9 @@ crate-type = [ "cdylib", "rlib" ]
 path = "src/wasm.rs"
 
 [dependencies]
-holochain_wasmer_guest = { path = "../../crates/guest" }
+holochain_wasmer_guest = { path = "../../crates/guest", default-features = false}
+
+[features]
+default = ["wasmer_sys"]
+wasmer_sys = ["holochain_wasmer_guest/wasmer_sys"]
+wasmer_wamr = ["holochain_wasmer_guest/wasmer_wamr"]

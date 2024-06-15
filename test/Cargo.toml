@@ -5,11 +5,11 @@ authors = ["thedavidmeister", "thedavidmeister@gmail.com"]
 edition = "2021"
 
 [dependencies]
-holochain_wasmer_common = { path = "../crates/common", default-features = false}
+holochain_wasmer_common = { path = "../crates/common", default-features = false }
 holochain_wasmer_host = { path = "../crates/host", default-features = false }
 holochain_serialized_bytes = "=0.0.55"
 serde = "1"
-test_common = { path = "./common" }
+test_common = { path = "./common", default-features = false }
 criterion = { version = "0.5", features = ["html_reports"] }
 rand = "0.8"
 serde_bytes = "0.11"
@@ -19,7 +19,7 @@ test-fuzz = "=3.0.4"
 once_cell = "1"
 tempfile = "3"
 
-wasmer-middlewares = { git = "https://github.com/wasmerio/wasmer.git", branch = "wamr", package = "wasmer-middlewares" }
+wasmer-middlewares = { git = "https://github.com/wasmerio/wasmer.git", branch = "wamr", package = "wasmer-middlewares", optional = true }
 
 [dev-dependencies]
 env_logger = "0.8"
@@ -39,6 +39,6 @@ debug = true
 
 [features]
 debug_memory = ["holochain_wasmer_host/debug_memory"]
-default = []
-wasmer_sys = ["wasmer/default", "holochain_wasmer_host/wasmer_sys", "holochain_wasmer_common/wasmer_sys"]
-wasmer_wamr = ["wasmer/wamr", "holochain_wasmer_host/wasmer_wamr", "holochain_wasmer_common/wasmer_wamr"]
+default = ["wasmer_sys"]
+wasmer_sys = ["wasmer-middlewares", "wasmer/default", "holochain_wasmer_host/wasmer_sys", "holochain_wasmer_common/wasmer_sys", "test_common/wasmer_sys"]
+wasmer_wamr = ["wasmer/wamr", "holochain_wasmer_host/wasmer_wamr", "holochain_wasmer_common/wasmer_wamr", "test_common/wasmer_wamr"]
