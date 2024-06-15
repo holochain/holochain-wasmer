@@ -12,27 +12,31 @@ use std::fs::File;
 use std::fs::OpenOptions;
 use std::io::Write;
 use std::path::PathBuf;
+use std::str::FromStr;
 use std::sync::Arc;
+#[cfg(feature = "wasmer_sys")]
 use tracing::info;
 #[cfg(feature = "wasmer_sys")]
 use wasmer::sys::BaseTunables;
 #[cfg(feature = "wasmer_sys")]
 use wasmer::wasmparser;
-#[cfg(feature = "wasmer_wamr")]
-use wasmer::CApiEngine;
+#[cfg(feature = "wasmer_sys")]
 use wasmer::CompileError;
 #[cfg(feature = "wasmer_sys")]
 use wasmer::CompilerConfig;
-#[cfg(feature = "wasmer_sys")]
 use wasmer::CpuFeature;
 #[cfg(feature = "wasmer_sys")]
 use wasmer::Cranelift;
+#[cfg(feature = "wasmer_sys")]
 use wasmer::DeserializeError;
 use wasmer::Engine;
 use wasmer::Instance;
 use wasmer::Module;
+#[cfg(feature = "wasmer_sys")]
 use wasmer::NativeEngineExt;
 use wasmer::Store;
+use wasmer::Target;
+use wasmer::Triple;
 #[cfg(feature = "wasmer_sys")]
 use wasmer_middlewares::Metering;
 
@@ -173,22 +177,24 @@ pub fn make_engine() -> Engine {
 /// The interpreter used (wasm micro runtime) does not support gas metering
 /// See tracking issue: https://github.com/bytecodealliance/wasm-micro-runtime/issues/2163
 pub fn make_engine() -> Engine {
-    Engine::from(CApiEngine::default())
+    Engine::default()
 }
 
+#[cfg(feature = "wasmer_sys")]
 /// Take WASM binary and prepare a wasmer Module suitable for iOS
 pub fn build_ios_module(wasm: &[u8]) -> Result<Module, CompileError> {
     info!(
         "Found wasm and was instructed to serialize it for ios in wasmer format, doing so now..."
     );
-    let compiler_engine = make_compiler_engine();
+    let compiler_engine = make_engine();
     let store = Store::new(compiler_engine);
     Module::from_binary(&store, wasm)
 }
 
+#[cfg(feature = "wasmer_sys")]
 /// Deserialize a previously compiled module for iOS from a file.
 pub fn get_ios_module_from_file(path: &PathBuf) -> Result<Module, DeserializeError> {
-    let engine = make_ios_runtime_engine();
+    let engine = Engine::headless();
     unsafe { Module::deserialize_from_file(&engine, path) }
 }
 
@@ -245,6 +251,7 @@ impl PlruCache for SerializedModuleCache {
 }
 
 impl SerializedModuleCache {
+    #[cfg(feature = "wasmer_sys")]
     /// Build a default `SerializedModuleCache` with a fn to create an `Engine`
     /// that will be used to compile modules from wasms as needed.
     pub fn default_with_engine(make_engine: fn() -> Engine, maybe_fs_dir: Option<PathBuf>) -> Self {
@@ -253,6 +260,22 @@ impl SerializedModuleCache {
             // the engine to execute function calls on instances does not
             // require a compiler
             runtime_engine: Engine::headless(),
+            plru: MicroCache::default(),
+            key_map: PlruKeyMap::default(),
+            cache: BTreeMap::default(),
+            maybe_fs_dir,
+        }
+    }
+
+    #[cfg(feature = "wasmer_wamr")]
+    /// Build a default `SerializedModuleCache` with a fn to create an `Engine`
+    /// that will be used to compile modules from wasms as needed.
+    pub fn default_with_engine(make_engine: fn() -> Engine, maybe_fs_dir: Option<PathBuf>) -> Self {
+        Self {
+            make_engine,
+            // the engine to execute function calls on instances does not
+            // require a compiler
+            runtime_engine: Engine::default(),
             plru: MicroCache::default(),
             key_map: PlruKeyMap::default(),
             cache: BTreeMap::default(),

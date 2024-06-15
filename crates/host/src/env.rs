@@ -6,6 +6,7 @@ use wasmer::Global;
 use wasmer::Memory;
 use wasmer::StoreMut;
 use wasmer::TypedFunction;
+#[cfg(feature = "wasmer_sys")]
 use wasmer_middlewares::metering::MeteringPoints;
 
 #[derive(Clone, Default)]
@@ -102,6 +103,7 @@ impl Env {
         }
     }
 
+    #[cfg(feature = "wasmer_sys")]
     /// Mimics upstream function of the same name but accesses the global directly from env.
     /// https://github.com/wasmerio/wasmer/blob/master/lib/middlewares/src/metering.rs#L285
     pub fn get_remaining_points(
@@ -131,6 +133,7 @@ impl Env {
         Ok(MeteringPoints::Remaining(points))
     }
 
+    #[cfg(feature = "wasmer_sys")]
     pub fn set_remaining_points(
         &self,
         store_mut: &mut StoreMut,
@@ -150,6 +153,7 @@ impl Env {
         Ok(())
     }
 
+    #[cfg(feature = "wasmer_sys")]
     pub fn decrease_points(
         &self,
         store_mut: &mut StoreMut,
