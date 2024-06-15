@@ -4,6 +4,7 @@ pub mod wasms;
 use holochain_wasmer_host::prelude::*;
 use test_common::SomeStruct;
 use wasmer::FunctionEnvMut;
+#[cfg(feature = "wasmer_sys")]
 use wasmer_middlewares::metering::MeteringPoints;
 
 pub fn short_circuit(
@@ -50,6 +51,7 @@ pub fn debug(
     Ok(())
 }
 
+#[cfg(feature = "wasmer_sys")]
 pub fn decrease_points(
     mut function_env: FunctionEnvMut<Env>,
     guest_ptr: GuestPtr,
@@ -73,6 +75,18 @@ pub fn decrease_points(
             _ => (0, 0),
         }),
     )
+}
+
+#[cfg(feature = "wasmer_wamr")]
+pub fn decrease_points(
+    _function_env: FunctionEnvMut<Env>,
+    _guest_ptr: GuestPtr,
+    _len: Len,
+) -> Result<u64, wasmer::RuntimeError> {
+    Err(wasm_error!(WasmErrorInner::Guest(
+        "Metering is not supported in wasmer_wamr".into()
+    ))
+    .into())
 }
 
 pub fn err(_: FunctionEnvMut<Env>) -> Result<(), wasmer::RuntimeError> {
@@ -408,6 +422,7 @@ pub mod tests {
     }
 
     #[test]
+    #[cfg_attr(not(feature = "wasmer_sys"), ignore)]
     fn decrease_points_test() {
         let InstanceWithStore { store, instance } = TestWasm::Test.instance();
         let dec_by = 1_000_000_u64;
