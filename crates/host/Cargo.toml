@@ -9,7 +9,7 @@ edition = "2021"
 [dependencies]
 wasmer = { git = "https://github.com/wasmerio/wasmer.git", branch = "wamr", package = "wasmer", default-features = false}
 wasmer-middlewares = { git = "https://github.com/wasmerio/wasmer.git", branch = "wamr", package = "wasmer-middlewares", optional = true }
-holochain_wasmer_common = { version = "=0.0.95", path = "../common", default-features = false }
+holochain_wasmer_common = { version = "=0.0.95", path = "../common" }
 holochain_serialized_bytes = "=0.0.55"
 serde = "1"
 tracing = "0.1"
@@ -28,5 +28,5 @@ path = "src/host.rs"
 default = ["error_as_host", "wasmer_sys"]
 debug_memory = []
 error_as_host = ["holochain_wasmer_common/error_as_host"]
-wasmer_sys = ["wasmer-middlewares", "wasmer/default", "holochain_wasmer_common/wasmer_sys"]
-wasmer_wamr = ["wasmer/wamr", "holochain_wasmer_common/wasmer_wamr"]
+wasmer_sys = ["wasmer-middlewares", "wasmer/default"]
+wasmer_wamr = ["wasmer/wamr"]

@@ -5,7 +5,7 @@ authors = ["thedavidmeister", "thedavidmeister@gmail.com"]
 edition = "2021"
 
 [dependencies]
-holochain_wasmer_common = { path = "../crates/common", default-features = false }
+holochain_wasmer_common = { path = "../crates/common" }
 holochain_wasmer_host = { path = "../crates/host", default-features = false }
 holochain_serialized_bytes = "=0.0.55"
 serde = "1"
@@ -40,5 +40,5 @@ debug = true
 [features]
 debug_memory = ["holochain_wasmer_host/debug_memory"]
 default = ["wasmer_sys"]
-wasmer_sys = ["wasmer-middlewares", "wasmer/default", "holochain_wasmer_host/wasmer_sys", "holochain_wasmer_common/wasmer_sys", "test_common/wasmer_sys"]
-wasmer_wamr = ["wasmer/wamr", "holochain_wasmer_host/wasmer_wamr", "holochain_wasmer_common/wasmer_wamr", "test_common/wasmer_wamr"]
+wasmer_sys = ["wasmer-middlewares", "wasmer/default", "holochain_wasmer_host/wasmer_sys"]
+wasmer_wamr = ["wasmer/wamr", "holochain_wasmer_host/wasmer_wamr"]
