@@ -1,3 +1,4 @@
+use holochain_wasmer_common::WasmError;
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
@@ -7,7 +8,7 @@ use thiserror::Error;
 /// the `format!` macro.
 #[derive(Clone, Debug, PartialEq, Eq, Hash, PartialOrd, Ord, Serialize, Deserialize, Error)]
 #[rustfmt::skip]
-pub struct WasmHostError(pub holochain_wasmer_common::WasmError);
+pub struct WasmHostError(pub WasmError);
 
 impl std::fmt::Display for WasmHostError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -15,8 +16,8 @@ impl std::fmt::Display for WasmHostError {
     }
 }
 
-impl From<holochain_wasmer_common::WasmError> for WasmHostError {
-    fn from(wasm_error: holochain_wasmer_common::WasmError) -> WasmHostError {
+impl From<WasmError> for WasmHostError {
+    fn from(wasm_error: WasmError) -> WasmHostError {
         WasmHostError(wasm_error)
     }
 }
@@ -30,7 +31,7 @@ impl From<WasmHostError> for wasmer::RuntimeError {
 #[macro_export]
 macro_rules! wasm_host_error {
     ($e:expr) => {
-      WasmHostError(holochain_wasmer_common::WasmError {
+      WasmHostError(WasmError {
           file: file!().to_string(),
           line: line!(),
           error: $e.into(),
