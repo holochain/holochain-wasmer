@@ -2,7 +2,6 @@ use std::num::TryFromIntError;
 
 use crate::guest::read_bytes;
 use crate::prelude::*;
-use crate::wasm_host_error as wasm_error;
 use wasmer::Global;
 use wasmer::Memory;
 use wasmer::StoreMut;

@@ -1,5 +1,4 @@
 use crate::prelude::*;
-use crate::wasm_host_error as wasm_error;
 use core::num::TryFromIntError;
 use holochain_serialized_bytes::prelude::*;
 use std::sync::Arc;

@@ -1,6 +1,5 @@
 use crate::plru::MicroCache;
 use crate::prelude::*;
-use crate::wasm_host_error as wasm_error;
 use bimap::BiMap;
 use bytes::BufMut;
 use bytes::Bytes;
