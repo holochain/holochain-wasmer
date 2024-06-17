@@ -13,8 +13,5 @@ thiserror = "1"
 serde_bytes = "0.11"
 test-fuzz = "=3.0.4"
 
-[target.'cfg(not(target_arch = "wasm32"))'.dependencies]
-wasmer = { git = "https://github.com/wasmerio/wasmer.git", branch = "wamr", package = "wasmer", default-features = false, features = [] }
-
 [features]
 error_as_host = []

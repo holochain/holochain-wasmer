@@ -1,4 +1,5 @@
 pub mod env;
+pub mod error;
 pub mod guest;
 pub mod module;
 /// Adapted from: https://raw.githubusercontent.com/ticki/plru/master/src/lib.rs

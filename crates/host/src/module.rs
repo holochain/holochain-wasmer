@@ -1,10 +1,10 @@
 use crate::plru::MicroCache;
 use crate::prelude::*;
+use crate::wasm_host_error as wasm_error;
 use bimap::BiMap;
 use bytes::BufMut;
 use bytes::Bytes;
 use bytes::BytesMut;
-use holochain_wasmer_common::WasmError;
 use parking_lot::Mutex;
 use parking_lot::RwLock;
 use std::collections::BTreeMap;
@@ -497,27 +497,21 @@ pub mod tests {
             0x70, 0x30,
         ];
         let module_cache = ModuleCache::new(None);
-        assert_eq!(
-            module_cache.serialized_module_cache.read().cache.is_empty(),
-            true
-        );
-        assert_eq!(
-            module_cache
-                .deserialized_module_cache
-                .read()
-                .cache
-                .is_empty(),
-            true
-        );
+        assert!(module_cache.serialized_module_cache.read().cache.is_empty());
+        assert!(module_cache
+            .deserialized_module_cache
+            .read()
+            .cache
+            .is_empty());
 
-        let key: CacheKey = [0u8; 32].into();
-        let module = module_cache.get(key.clone(), &wasm).unwrap();
+        let key: CacheKey = [0u8; 32];
+        let module = module_cache.get(key, &wasm).unwrap();
 
         // make sure module has been stored in serialized cache under key
         {
             let serialized_cached_module =
                 module_cache.serialized_module_cache.write().get_item(&key);
-            assert_eq!(matches!(serialized_cached_module, Some(_)), true);
+            assert!(serialized_cached_module.is_some());
         }
         // make sure module has been stored in deserialized cache under key
         {

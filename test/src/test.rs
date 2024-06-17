@@ -2,6 +2,7 @@ pub mod import;
 pub mod wasms;
 
 use holochain_wasmer_host::prelude::*;
+use holochain_wasmer_host::wasm_host_error as wasm_error;
 use test_common::SomeStruct;
 use wasmer::FunctionEnvMut;
 #[cfg(feature = "wasmer_sys")]

@@ -2,6 +2,7 @@ use std::num::TryFromIntError;
 
 use crate::guest::read_bytes;
 use crate::prelude::*;
+use crate::wasm_host_error as wasm_error;
 use wasmer::Global;
 use wasmer::Memory;
 use wasmer::StoreMut;
@@ -56,7 +57,7 @@ impl Env {
             guest_ptr,
             &data,
         )?;
-        Ok(merge_u32(guest_ptr, len)?)
+        Ok(merge_u32(guest_ptr, len).map_err(WasmHostError)?)
     }
 
     /// Given a pointer and length for a region of memory in the guest, copy the

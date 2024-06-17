@@ -163,13 +163,6 @@ impl From<core::convert::Infallible> for WasmError {
     }
 }
 
-#[cfg(not(target_arch = "wasm32"))]
-impl From<WasmError> for wasmer::RuntimeError {
-    fn from(wasm_error: WasmError) -> wasmer::RuntimeError {
-        wasmer::RuntimeError::user(Box::new(wasm_error))
-    }
-}
-
 #[cfg(not(feature = "error_as_host"))]
 impl From<String> for WasmErrorInner {
     fn from(s: String) -> Self {

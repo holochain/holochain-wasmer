@@ -990,7 +990,6 @@ dependencies = [
  "serde_bytes",
  "test-fuzz",
  "thiserror",
- "wasmer",
 ]
 
 [[package]]
@@ -1005,6 +1004,7 @@ dependencies = [
  "parking_lot",
  "rand",
  "serde",
+ "thiserror",
  "tracing",
  "wasmer",
  "wasmer-middlewares",

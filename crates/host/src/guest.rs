@@ -1,4 +1,5 @@
 use crate::prelude::*;
+use crate::wasm_host_error as wasm_error;
 use core::num::TryFromIntError;
 use holochain_serialized_bytes::prelude::*;
 use std::sync::Arc;
@@ -199,7 +200,7 @@ where
                 let u: GuestPtrLen = (*i)
                     .try_into()
                     .map_err(|e: TryFromIntError| wasm_error!(e))?;
-                split_u64(u)?
+                split_u64(u).map_err(WasmHostError)?
             }
             _ => return Err(wasm_error!(WasmErrorInner::PointerMap).into()),
         },
@@ -219,7 +220,7 @@ where
                         }
                     }
                 }
-                _ => return Err(WasmError { file, line, error }.into()),
+                _ => return Err(WasmHostError(WasmError { file, line, error }).into()),
             },
             Err(e) => return Err(wasm_error!(WasmErrorInner::CallError(e.to_string())).into()),
         },
@@ -259,7 +260,7 @@ where
         )
         .map_err(|e| wasm_error!(WasmErrorInner::CallError(format!("{:?}", e))))?;
 
-    return_value.map_err(|e| e.into())
+    return_value.map_err(|e| WasmHostError(e).into())
 }
 
 #[cfg(test)]
@@ -268,15 +269,18 @@ pub mod tests {
 
     #[test]
     fn wasm_error_macro_host() {
-        assert_eq!(wasm_error!("foo").error, WasmErrorInner::Host("foo".into()),);
+        assert_eq!(
+            wasm_error!("foo").0.error,
+            WasmErrorInner::Host("foo".into()),
+        );
 
         assert_eq!(
-            wasm_error!("{} {}", "foo", "bar").error,
+            wasm_error!("{} {}", "foo", "bar").0.error,
             WasmErrorInner::Host("foo bar".into())
         );
 
         assert_eq!(
-            wasm_error!(WasmErrorInner::Host("foo".into())).error,
+            wasm_error!(WasmErrorInner::Host("foo".into())).0.error,
             WasmErrorInner::Host("foo".into()),
         );
     }
