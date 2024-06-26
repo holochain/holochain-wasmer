@@ -4,7 +4,6 @@ use bimap::BiMap;
 use bytes::BufMut;
 use bytes::Bytes;
 use bytes::BytesMut;
-use holochain_wasmer_common::WasmError;
 use parking_lot::Mutex;
 use parking_lot::RwLock;
 use std::collections::BTreeMap;
