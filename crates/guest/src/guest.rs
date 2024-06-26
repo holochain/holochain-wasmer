@@ -107,7 +107,7 @@ where
                 bytes.capacity() == bytes.len(),
                 "Capacity should equal length, dealloc would fail"
             );
-            merge_usize(write_bytes(bytes), len).unwrap_or_else(|e| return_err_ptr(e))
+            merge_usize(write_bytes(bytes), len).unwrap_or_else(return_err_ptr)
         }
         Err(e) => return_err_ptr(wasm_error!(WasmErrorInner::Serialize(e))),
     }
