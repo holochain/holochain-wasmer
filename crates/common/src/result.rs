@@ -133,7 +133,7 @@ pub struct WasmError {
 #[macro_export]
 macro_rules! wasm_error {
     ($e:expr) => {
-        WasmError {
+        $crate::WasmError {
             file: file!().to_string(),
             line: line!(),
             error: $e.into(),
