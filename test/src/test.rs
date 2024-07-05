@@ -108,6 +108,26 @@ pub fn pages(
         .0)
 }
 
+pub fn call_ping(
+    mut function_env: FunctionEnvMut<Env>,
+    _guest_ptr: GuestPtr,
+    _len: Len,
+) -> Result<u64, wasmer::RuntimeError> {
+    use holochain_wasmer_host::module::InstanceWithStore;
+    use wasmer::AsStoreMut;
+    use wasms::TestWasm;
+
+    let (env, mut store_mut) = function_env.data_and_store_mut();
+
+    // Call ping in a new guest instance
+    let InstanceWithStore { store, instance } = TestWasm::Test.instance();
+    let result: Vec<u8> =
+        guest::call(&mut store.lock().as_store_mut(), instance, "ping", ()).unwrap();
+
+    // Pass result to original guest instance
+    env.move_data_to_guest(&mut store_mut, Ok::<Vec<u8>, WasmError>(result))
+}
+
 #[cfg(test)]
 pub mod tests {
     use super::*;
@@ -134,6 +154,7 @@ pub mod tests {
                 "__hc__test_process_string_2".to_string(),
                 "__hc__test_process_struct_2".to_string(),
                 "__hc__decrease_points_1".to_string(),
+                "__hc__call_ping_1".to_string(),
             ],
             module
                 .imports()
@@ -371,7 +392,7 @@ pub mod tests {
             Err(runtime_error) => assert_eq!(
                 WasmError {
                     file: "src/wasm.rs".into(),
-                    line: 101,
+                    line: 102,
                     error: WasmErrorInner::Guest("oh no!".into()),
                 },
                 runtime_error.downcast().unwrap(),
@@ -412,7 +433,7 @@ pub mod tests {
                 assert_eq!(
                     WasmError {
                         file: "src/wasm.rs".into(),
-                        line: 129,
+                        line: 130,
                         error: WasmErrorInner::Guest("it fails!: ()".into()),
                     },
                     runtime_error.downcast().unwrap(),
@@ -459,5 +480,22 @@ pub mod tests {
                 && before_decrease > after_decrease
                 && after_decrease > points_after
         );
+    }
+
+    #[test]
+    fn nested_call_test() {
+        // Call a guest fn
+        //  which calls a host fn
+        //  which calls a guest fn in a new instance
+        let InstanceWithStore { store, instance } = TestWasm::Test.instance();
+        let result: Vec<u8> = guest::call(
+            &mut store.lock().as_store_mut(),
+            instance,
+            "call_ping_via_host",
+            (),
+        )
+        .expect("call ping via host");
+
+        assert_eq!(result, Vec::<u8>::from([1]));
     }
 }
