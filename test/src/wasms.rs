@@ -195,8 +195,14 @@ impl TestWasm {
         }
     }
 
+    #[cfg(feature = "wasmer_sys")]
     pub fn instance(&self) -> InstanceWithStore {
         self._instance(true)
+    }
+
+    #[cfg(feature = "wasmer_wamr")]
+    pub fn instance(&self) -> InstanceWithStore {
+        self.unmetered_instance()
     }
 
     pub fn unmetered_instance(&self) -> InstanceWithStore {
