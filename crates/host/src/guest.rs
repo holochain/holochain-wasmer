@@ -141,13 +141,14 @@ where
     // The guest will use the same crate for decoding if it uses the wasm common crate.
     let payload: Vec<u8> =
         holochain_serialized_bytes::encode(&input).map_err(|e| wasm_error!(e))?;
-
+    println!("1 guest::call f={}", f);
     // Get a pre-allocated guest pointer to write the input into.
     let guest_input_length = payload
         .len()
         .try_into()
         .map_err(|e: TryFromIntError| wasm_error!(WasmErrorInner::CallError(e.to_string())))?;
     let guest_input_length_value: Value = Value::I32(guest_input_length);
+    println!("2 guest::call f={}", f);
 
     let (guest_input_ptr, guest_input_ptr_value) = match instance
         .exports
@@ -157,21 +158,29 @@ where
         .map_err(|e| wasm_error!(WasmErrorInner::CallError(e.to_string())))?
         .first()
     {
-        Some(Value::I32(guest_input_ptr)) => (
+        Some(Value::I32(guest_input_ptr)) => {
+            println!("4 guest::call f={}", f);
+
+            (
             (*guest_input_ptr)
                 .try_into()
                 .map_err(|e: TryFromIntError| {
                     wasm_error!(WasmErrorInner::CallError(e.to_string()))
                 })?,
             Value::I32(*guest_input_ptr),
-        ),
+        )
+    },
         _ => {
+            println!("5 guest::call f={}", f);
+
             return Err(wasm_error!(WasmErrorInner::CallError(
                 "Not I32 return from __hc__allocate_1".to_string()
             ))
             .into())
         }
     };
+
+    println!("6 guest::call, f={} guest_input_ptr: {:?} payload={:?}",f, guest_input_ptr, payload);
 
     // Write the input payload into the guest at the offset specified by the allocation.
     write_bytes(
@@ -183,6 +192,8 @@ where
         guest_input_ptr,
         &payload,
     )?;
+
+    println!("7 guest::call f={}", f);
 
     // Call the guest function with its own pointer to its input.
     // Collect the guest's pointer to its output.
@@ -224,6 +235,7 @@ where
             Err(e) => return Err(wasm_error!(WasmErrorInner::CallError(e.to_string())).into()),
         },
     };
+    println!("8 guest::call f={}", f);
 
     // We ? here to return early WITHOUT calling deallocate.
     // The host MUST discard any wasm instance that errors at this point to avoid memory leaks.
