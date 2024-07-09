@@ -502,4 +502,39 @@ pub mod tests {
 
         assert_eq!(result, Vec::<u8>::from([1]));
     }
+
+    #[test]
+    fn multiple_instances_test() {
+        let InstanceWithStore { store: store_1, instance: instance_1 } = TestWasm::Test.instance();
+        let result: Vec<u8> = guest::call(
+            &mut store_1.lock().as_store_mut(),
+            instance_1.clone(),
+            "ping",
+            (),
+        )
+            .expect("call ping via host");
+
+        assert_eq!(result, Vec::<u8>::from([1]));
+
+        let InstanceWithStore { store: store_2, instance: instance_2 } = TestWasm::Test.instance();
+        let result: Vec<u8> = guest::call(
+            &mut store_2.lock().as_store_mut(),
+            instance_2,
+            "ping",
+            (),
+        )
+            .expect("call ping via host");
+
+        assert_eq!(result, Vec::<u8>::from([1]));
+
+        let result: Vec<u8> = guest::call(
+            &mut store_1.lock().as_store_mut(),
+            instance_1.clone(),
+            "ping",
+            (),
+        )
+            .expect("call ping via host");
+
+        assert_eq!(result, Vec::<u8>::from([1]));
+    }
 }
