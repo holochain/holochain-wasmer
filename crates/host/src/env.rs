@@ -8,7 +8,6 @@ use wasmer::StoreMut;
 use wasmer::TypedFunction;
 #[cfg(feature = "wasmer_sys")]
 use wasmer_middlewares::metering::MeteringPoints;
-use tracing;
 
 #[derive(Clone, Default)]
 pub struct Env {
@@ -32,8 +31,6 @@ impl Env {
         I: serde::Serialize + std::fmt::Debug,
     {
         let data = holochain_serialized_bytes::encode(&input).map_err(|e| wasm_error!(e))?;
-        
-        tracing::debug!("1 move_data_to_guest");
         let guest_ptr: GuestPtr = self
             .allocate
             .as_ref()
@@ -47,13 +44,10 @@ impl Env {
             .map_err(|e| wasm_error!(e.to_string()))?
             .try_into()
             .map_err(|e: TryFromIntError| wasm_error!(e))?;
-        tracing::debug!("2 move_data_to_guest");
-
         let len: Len = match data.len().try_into() {
             Ok(len) => len,
             Err(e) => return Err(wasm_error!(e).into()),
         };
-        tracing::debug!("3 move_data_to_guest");
         crate::guest::write_bytes(
             store_mut,
             self.memory
@@ -62,8 +56,6 @@ impl Env {
             guest_ptr,
             &data,
         )?;
-        tracing::debug!("4 move_data_to_guest");
-
         Ok(merge_u32(guest_ptr, len).map_err(WasmHostError)?)
     }
 

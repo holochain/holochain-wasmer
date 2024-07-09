@@ -121,12 +121,8 @@ pub fn call_ping(
 
     // Call ping in a new guest instance
     let InstanceWithStore { store, instance } = TestWasm::Test.instance();
-    let mut new_store_lock = store.lock();
-    let mut new_store_mut = new_store_lock.as_store_mut();
-    println!("1 call_ping");
     let result: Vec<u8> =
-        guest::call(&mut new_store_mut, instance, "ping", ()).unwrap();
-    println!("2 call_ping");
+        guest::call(&mut store.lock().as_store_mut(), instance, "ping", ()).unwrap();
 
     // Pass result to original guest instance
     env.move_data_to_guest(&mut store_mut, Ok::<Vec<u8>, WasmError>(result))
