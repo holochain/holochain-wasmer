@@ -2399,7 +2399,7 @@ dependencies = [
 [[package]]
 name = "wasmer"
 version = "4.3.2"
-source = "git+https://github.com/wasmerio/wasmer.git?branch=wamr#6ef88497d2d100d8c792903041f2677ce819474c"
+source = "git+https://github.com/wasmerio/wasmer.git?branch=wamr#8046a87b9002a2f41b2aa94b407b60f9c30e29ef"
 dependencies = [
  "bindgen",
  "bytes",
@@ -2430,7 +2430,7 @@ dependencies = [
 [[package]]
 name = "wasmer-compiler"
 version = "4.3.2"
-source = "git+https://github.com/wasmerio/wasmer.git?branch=wamr#6ef88497d2d100d8c792903041f2677ce819474c"
+source = "git+https://github.com/wasmerio/wasmer.git?branch=wamr#8046a87b9002a2f41b2aa94b407b60f9c30e29ef"
 dependencies = [
  "backtrace",
  "bytes",
@@ -2458,7 +2458,7 @@ dependencies = [
 [[package]]
 name = "wasmer-compiler-cranelift"
 version = "4.3.2"
-source = "git+https://github.com/wasmerio/wasmer.git?branch=wamr#6ef88497d2d100d8c792903041f2677ce819474c"
+source = "git+https://github.com/wasmerio/wasmer.git?branch=wamr#8046a87b9002a2f41b2aa94b407b60f9c30e29ef"
 dependencies = [
  "cranelift-codegen",
  "cranelift-entity",
@@ -2498,7 +2498,7 @@ dependencies = [
 [[package]]
 name = "wasmer-derive"
 version = "4.3.2"
-source = "git+https://github.com/wasmerio/wasmer.git?branch=wamr#6ef88497d2d100d8c792903041f2677ce819474c"
+source = "git+https://github.com/wasmerio/wasmer.git?branch=wamr#8046a87b9002a2f41b2aa94b407b60f9c30e29ef"
 dependencies = [
  "proc-macro-error",
  "proc-macro2",
@@ -2509,7 +2509,7 @@ dependencies = [
 [[package]]
 name = "wasmer-middlewares"
 version = "4.3.2"
-source = "git+https://github.com/wasmerio/wasmer.git?branch=wamr#6ef88497d2d100d8c792903041f2677ce819474c"
+source = "git+https://github.com/wasmerio/wasmer.git?branch=wamr#8046a87b9002a2f41b2aa94b407b60f9c30e29ef"
 dependencies = [
  "wasmer",
  "wasmer-types",
@@ -2519,7 +2519,7 @@ dependencies = [
 [[package]]
 name = "wasmer-types"
 version = "4.3.2"
-source = "git+https://github.com/wasmerio/wasmer.git?branch=wamr#6ef88497d2d100d8c792903041f2677ce819474c"
+source = "git+https://github.com/wasmerio/wasmer.git?branch=wamr#8046a87b9002a2f41b2aa94b407b60f9c30e29ef"
 dependencies = [
  "bytecheck",
  "enum-iterator",
@@ -2539,7 +2539,7 @@ dependencies = [
 [[package]]
 name = "wasmer-vm"
 version = "4.3.2"
-source = "git+https://github.com/wasmerio/wasmer.git?branch=wamr#6ef88497d2d100d8c792903041f2677ce819474c"
+source = "git+https://github.com/wasmerio/wasmer.git?branch=wamr#8046a87b9002a2f41b2aa94b407b60f9c30e29ef"
 dependencies = [
  "backtrace",
  "cc",
