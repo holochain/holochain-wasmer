@@ -7,8 +7,8 @@ authors = ["thedavidmeister", "thedavidmeister@gmail.com"]
 edition = "2021"
 
 [dependencies]
-wasmer = { git = "https://github.com/wasmerio/wasmer.git", branch = "wamr", package = "wasmer", default-features = false}
-wasmer-middlewares = { git = "https://github.com/wasmerio/wasmer.git", branch = "wamr", package = "wasmer-middlewares", optional = true }
+wasmer = { git = "https://github.com/wasmerio/wasmer.git", rev = "1ee96a2", package = "wasmer", default-features = false}
+wasmer-middlewares = { git = "https://github.com/wasmerio/wasmer.git", rev = "1ee96a2", package = "wasmer-middlewares", optional = true }
 holochain_wasmer_common = { version = "=0.0.95", path = "../common" }
 holochain_serialized_bytes = "=0.0.55"
 serde = "1"
