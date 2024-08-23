@@ -13,31 +13,23 @@ use std::io::Write;
 use std::path::PathBuf;
 use std::str::FromStr;
 use std::sync::Arc;
-#[cfg(feature = "wasmer_sys")]
-use tracing::info;
-#[cfg(feature = "wasmer_sys")]
-use wasmer::sys::BaseTunables;
-#[cfg(feature = "wasmer_sys")]
-use wasmer::wasmparser;
-#[cfg(feature = "wasmer_sys")]
-use wasmer::CompileError;
-#[cfg(feature = "wasmer_sys")]
-use wasmer::CompilerConfig;
 use wasmer::CpuFeature;
-#[cfg(feature = "wasmer_sys")]
-use wasmer::Cranelift;
-#[cfg(feature = "wasmer_sys")]
-use wasmer::DeserializeError;
 use wasmer::Engine;
 use wasmer::Instance;
 use wasmer::Module;
-#[cfg(feature = "wasmer_sys")]
-use wasmer::NativeEngineExt;
 use wasmer::Store;
 use wasmer::Target;
 use wasmer::Triple;
+
 #[cfg(feature = "wasmer_sys")]
-use wasmer_middlewares::Metering;
+mod wasmer_sys;
+#[cfg(feature = "wasmer_sys")]
+pub use wasmer_sys::*;
+
+#[cfg(feature = "wasmer_wamr")]
+mod wasmer_wamr;
+#[cfg(feature = "wasmer_wamr")]
+pub use wasmer_wamr::*;
 
 /// We expect cache keys to be produced via hashing so 32 bytes is enough for all
 /// purposes.
@@ -138,75 +130,6 @@ pub trait PlruCache {
     }
 }
 
-#[cfg(not(test))]
-/// one hundred giga ops
-pub const WASM_METERING_LIMIT: u64 = 100_000_000_000;
-
-#[cfg(test)]
-/// ten mega ops.
-/// We don't want tests to run forever, and it can take several minutes for 100 giga ops to run.
-pub const WASM_METERING_LIMIT: u64 = 10_000_000;
-
-#[cfg(feature = "wasmer_sys")]
-/// Generate an engine with a wasm compiler
-/// and Metering (use limits) in place.
-pub fn make_engine() -> Engine {
-    let cost_function = |_operator: &wasmparser::Operator| -> u64 { 1 };
-    // @todo 100 giga-ops is totally arbitrary cutoff so we probably
-    // want to make the limit configurable somehow.
-    let metering = Arc::new(Metering::new(WASM_METERING_LIMIT, cost_function));
-    // the only place where the wasm compiler engine is set
-    let mut compiler = Cranelift::default();
-    compiler.canonicalize_nans(true).push_middleware(metering);
-
-    // Workaround for invalid memory access on iOS.
-    // https://github.com/holochain/holochain/issues/3096
-    let mut engine = Engine::from(compiler);
-    engine.set_tunables(BaseTunables {
-        static_memory_bound: 0x4000.into(),
-        static_memory_offset_guard_size: 0x1_0000,
-        dynamic_memory_offset_guard_size: 0x1_0000,
-    });
-
-    engine
-}
-
-#[cfg(feature = "wasmer_wamr")]
-/// Generate an engine with a wasm interpreter
-/// The interpreter used (wasm micro runtime) does not support gas metering
-/// See tracking issue: https://github.com/bytecodealliance/wasm-micro-runtime/issues/2163
-pub fn make_engine() -> Engine {
-    Engine::default()
-}
-
-#[cfg(feature = "wasmer_sys")]
-/// Take WASM binary and prepare a wasmer Module suitable for iOS
-pub fn build_ios_module(wasm: &[u8]) -> Result<Module, CompileError> {
-    info!(
-        "Found wasm and was instructed to serialize it for ios in wasmer format, doing so now..."
-    );
-    let compiler_engine = make_engine();
-    let store = Store::new(compiler_engine);
-    Module::from_binary(&store, wasm)
-}
-
-#[cfg(feature = "wasmer_sys")]
-/// Deserialize a previously compiled module for iOS from a file.
-pub fn get_ios_module_from_file(path: &PathBuf) -> Result<Module, DeserializeError> {
-    let engine = Engine::headless();
-    unsafe { Module::deserialize_from_file(&engine, path) }
-}
-
-/// Configuration of a Target for wasmer for iOS
-pub fn wasmer_ios_target() -> Target {
-    // use what I see in
-    // platform ios headless example
-    // https://github.com/wasmerio/wasmer/blob/447c2e3a152438db67be9ef649327fabcad6f5b8/examples/platform_ios_headless.rs#L38-L53
-    let triple = Triple::from_str("aarch64-apple-ios").unwrap();
-    let cpu_feature = CpuFeature::set();
-    Target::new(triple, cpu_feature)
-}
-
 /// Cache for serialized modules. These are fully compiled wasm modules that are
 /// then serialized by wasmer and can be cached. A serialized wasm module must still
 /// be deserialized before it can be used to build instances. The deserialization
@@ -250,7 +173,6 @@ impl PlruCache for SerializedModuleCache {
 }
 
 impl SerializedModuleCache {
-    #[cfg(feature = "wasmer_sys")]
     /// Build a default `SerializedModuleCache` with a fn to create an `Engine`
     /// that will be used to compile modules from wasms as needed.
     pub fn default_with_engine(make_engine: fn() -> Engine, maybe_fs_dir: Option<PathBuf>) -> Self {
@@ -258,23 +180,7 @@ impl SerializedModuleCache {
             make_engine,
             // the engine to execute function calls on instances does not
             // require a compiler
-            runtime_engine: Engine::headless(),
-            plru: MicroCache::default(),
-            key_map: PlruKeyMap::default(),
-            cache: BTreeMap::default(),
-            maybe_fs_dir,
-        }
-    }
-
-    #[cfg(feature = "wasmer_wamr")]
-    /// Build a default `SerializedModuleCache` with a fn to create an `Engine`
-    /// that will be used to compile modules from wasms as needed.
-    pub fn default_with_engine(make_engine: fn() -> Engine, maybe_fs_dir: Option<PathBuf>) -> Self {
-        Self {
-            make_engine,
-            // the engine to execute function calls on instances does not
-            // require a compiler
-            runtime_engine: Engine::default(),
+            runtime_engine: make_runtime_engine(),
             plru: MicroCache::default(),
             key_map: PlruKeyMap::default(),
             cache: BTreeMap::default(),
@@ -477,6 +383,16 @@ impl ModuleCache {
         }
         Ok(module)
     }
+}
+
+/// Configuration of a Target for wasmer for iOS
+pub fn wasmer_ios_target() -> Target {
+    // use what I see in
+    // platform ios headless example
+    // https://github.com/wasmerio/wasmer/blob/447c2e3a152438db67be9ef649327fabcad6f5b8/examples/platform_ios_headless.rs#L38-L53
+    let triple = Triple::from_str("aarch64-apple-ios").unwrap();
+    let cpu_feature = CpuFeature::set();
+    Target::new(triple, cpu_feature)
 }
 
 #[cfg(test)]
