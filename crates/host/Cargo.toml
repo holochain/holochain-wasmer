@@ -7,8 +7,12 @@ authors = ["thedavidmeister", "thedavidmeister@gmail.com"]
 edition = "2021"
 
 [dependencies]
-wasmer = { git = "https://github.com/wasmerio/wasmer.git", branch = "wamr", package = "wasmer", default-features = false}
-wasmer-middlewares = { git = "https://github.com/wasmerio/wasmer.git", branch = "wamr", package = "wasmer-middlewares", optional = true }
+wasmer = { version = "=4.3.1", optional = true }
+wasmer-middlewares = { version = "=4.3.1", optional = true }
+
+# Temporarily include a fork of wasmer from the git branch 'wamr', until it is officially released in wasmer v5
+hc-wasmer = { git = "https://github.com/wasmerio/wasmer.git", branch = "wamr", package = "wasmer", default-features = false, optional = true }
+
 holochain_wasmer_common = { version = "=0.0.95", path = "../common" }
 holochain_serialized_bytes = "=0.0.55"
 serde = "1"
@@ -29,5 +33,12 @@ path = "src/host.rs"
 default = ["error_as_host", "wasmer_sys"]
 debug_memory = []
 error_as_host = ["holochain_wasmer_common/error_as_host"]
-wasmer_sys = ["dep:wasmer-middlewares", "wasmer/default"]
-wasmer_wamr = ["wasmer/wamr"]
+wasmer_sys = [
+  "dep:wasmer",
+  "dep:wasmer-middlewares",
+  "wasmer/default",
+]
+wasmer_wamr = [
+  "dep:hc-wasmer",
+  "wasmer/wamr"
+]
