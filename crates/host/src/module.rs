@@ -173,7 +173,7 @@ pub fn make_engine() -> Engine {
 
 #[cfg(feature = "wasmer_wamr")]
 /// Generate an engine with a wasm interpreter
-/// The interpreter used (wasm micro runtime) does not support gas metering
+/// The interpreter used (wasm micro runtime) does not support metering
 /// See tracking issue: https://github.com/bytecodealliance/wasm-micro-runtime/issues/2163
 pub fn make_engine() -> Engine {
     Engine::default()
