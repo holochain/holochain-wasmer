@@ -29,5 +29,5 @@ path = "src/host.rs"
 default = ["error_as_host", "wasmer_sys"]
 debug_memory = []
 error_as_host = ["holochain_wasmer_common/error_as_host"]
-wasmer_sys = ["wasmer-middlewares", "wasmer/default"]
+wasmer_sys = ["dep:wasmer-middlewares", "wasmer/default"]
 wasmer_wamr = ["wasmer/wamr"]
