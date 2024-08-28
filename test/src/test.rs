@@ -1,6 +1,9 @@
 pub mod import;
 pub mod wasms;
 
+#[cfg(feature = "wasmer_wamr")]
+extern crate hc_wasmer as wasmer;
+
 use holochain_wasmer_host::prelude::*;
 use holochain_wasmer_host::wasm_host_error as wasm_error;
 use test_common::SomeStruct;

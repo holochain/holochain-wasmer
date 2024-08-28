@@ -14,12 +14,15 @@ criterion = { version = "0.5", features = ["html_reports"] }
 rand = "0.8"
 serde_bytes = "0.11"
 parking_lot = "0.12"
-wasmer = { git = "https://github.com/wasmerio/wasmer.git", branch = "wamr", package = "wasmer", default-features = false }
 test-fuzz = "=3.0.4"
 once_cell = "1"
 tempfile = "3"
 
-wasmer-middlewares = { git = "https://github.com/wasmerio/wasmer.git", branch = "wamr", package = "wasmer-middlewares", optional = true }
+wasmer = { version = "=4.3.6", optional = true }
+wasmer-middlewares = { version = "=4.3.6", optional = true }
+
+# Temporarily include a fork of wasmer from the git branch 'wamr', until it is officially released in wasmer v5
+hc-wasmer = { version="=4.3.6-hc", optional = true }
 
 [dev-dependencies]
 env_logger = "0.8"
@@ -40,5 +43,14 @@ debug = true
 [features]
 debug_memory = ["holochain_wasmer_host/debug_memory"]
 default = ["wasmer_sys"]
-wasmer_sys = ["wasmer-middlewares", "wasmer/default", "holochain_wasmer_host/wasmer_sys"]
-wasmer_wamr = ["wasmer/wamr", "holochain_wasmer_host/wasmer_wamr"]
+wasmer_sys = [
+  "dep:wasmer",
+  "dep:wasmer-middlewares", 
+  "wasmer/default", 
+  "holochain_wasmer_host/wasmer_sys"
+]
+wasmer_wamr = [
+  "dep:hc-wasmer",
+  "hc-wasmer/wamr", 
+  "holochain_wasmer_host/wasmer_wamr"
+]
