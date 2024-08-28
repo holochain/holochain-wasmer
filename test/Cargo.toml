@@ -14,7 +14,7 @@ criterion = { version = "0.5", features = ["html_reports"] }
 rand = "0.8"
 serde_bytes = "0.11"
 parking_lot = "0.12"
-test-fuzz = "=3.0.4"
+test-fuzz = "=6.0.0"
 once_cell = "1"
 tempfile = "3"
 
