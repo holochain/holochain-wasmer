@@ -7,11 +7,11 @@ authors = ["thedavidmeister", "thedavidmeister@gmail.com"]
 edition = "2021"
 
 [dependencies]
-wasmer = { version = "=4.3.6", optional = true }
-wasmer-middlewares = { version = "=4.3.6", optional = true }
+wasmer = { version = "=4.3.6", optional = true, default-feature = false }
+wasmer-middlewares = { version = "=4.3.6", optional = true, default-feature = false }
 
 # Temporarily include a fork of wasmer from the git branch 'wamr', until it is officially released in wasmer v5
-hc-wasmer = { version="=4.3.6-hc", optional = true }
+hc-wasmer = { version="=4.3.6-hc.1", optional = true, default-features = false }
 
 holochain_wasmer_common = { version = "=0.0.95", path = "../common" }
 holochain_serialized_bytes = "=0.0.55"
@@ -27,7 +27,7 @@ thiserror = "1"
 [lib]
 name = "holochain_wasmer_host"
 crate-type = ["cdylib", "rlib"]
-path = "src/host.rs"
+path = "src/lib.rs"
 
 [features]
 default = ["error_as_host", "wasmer_sys"]

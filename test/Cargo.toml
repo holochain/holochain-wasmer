@@ -18,11 +18,11 @@ test-fuzz = "=3.0.4"
 once_cell = "1"
 tempfile = "3"
 
-wasmer = { version = "=4.3.6", optional = true }
-wasmer-middlewares = { version = "=4.3.6", optional = true }
+wasmer = { version = "=4.3.6", optional = true, default-features = false }
+wasmer-middlewares = { version = "=4.3.6", optional = true, default-features = false }
 
 # Temporarily include a fork of wasmer from the git branch 'wamr', until it is officially released in wasmer v5
-hc-wasmer = { version="=4.3.6-hc", optional = true }
+hc-wasmer = { version="=4.3.6-hc.1", optional = true, default-features = false }
 
 [dev-dependencies]
 env_logger = "0.8"
@@ -51,6 +51,6 @@ wasmer_sys = [
 ]
 wasmer_wamr = [
   "dep:hc-wasmer",
-  "hc-wasmer/wamr", 
+  "hc-wasmer/wamr",
   "holochain_wasmer_host/wasmer_wamr"
 ]
