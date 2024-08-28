@@ -5,9 +5,12 @@ use holochain_wasmer_host::prelude::*;
 use once_cell::sync::OnceCell;
 use parking_lot::RwLock;
 use std::sync::Arc;
+#[cfg(feature = "wasmer_sys")]
 use wasmer::wasmparser::Operator;
 use wasmer::AsStoreMut;
+#[cfg(feature = "wasmer_sys")]
 use wasmer::CompilerConfig;
+#[cfg(feature = "wasmer_sys")]
 use wasmer::Cranelift;
 use wasmer::Engine;
 use wasmer::FunctionEnv;
@@ -15,6 +18,7 @@ use wasmer::Imports;
 use wasmer::Instance;
 use wasmer::Module;
 use wasmer::Store;
+#[cfg(feature = "wasmer_sys")]
 use wasmer_middlewares::Metering;
 
 pub enum TestWasm {
@@ -80,6 +84,7 @@ impl TestWasm {
         }
     }
 
+    #[cfg(feature = "wasmer_sys")]
     pub fn module(&self, metered: bool) -> Arc<Module> {
         match self.module_cache(metered).get() {
             Some(cache) => cache.write().get(self.key(metered), self.bytes()).unwrap(),
@@ -118,6 +123,24 @@ impl TestWasm {
         }
     }
 
+    #[cfg(feature = "wasmer_wamr")]
+    pub fn module(&self, metered: bool) -> Arc<Module> {
+        match self.module_cache(false).get() {
+            Some(cache) => cache.write().get(self.key(false), self.bytes()).unwrap(),
+            None => {
+                // This will error if the cache is already initialized
+                // which could happen if two tests are running in parallel.
+                // It doesn't matter which one wins, so we just ignore the error.
+                let _did_init_ok = self.module_cache(metered).set(parking_lot::RwLock::new(
+                    SerializedModuleCache::default_with_engine(Engine::default, None),
+                ));
+
+                // Just recurse now that the cache is initialized.
+                self.module(metered)
+            }
+        }
+    }
+
     pub fn _instance(&self, metered: bool) -> InstanceWithStore {
         let module = self.module(metered);
         let mut store = Store::default();
@@ -146,6 +169,8 @@ impl TestWasm {
                     .get_typed_function(&store_mut, "__hc__allocate_1")
                     .unwrap(),
             );
+
+            #[cfg(feature = "wasmer_sys")]
             if metered {
                 data_mut.wasmer_metering_points_exhausted = Some(
                     instance
@@ -170,8 +195,14 @@ impl TestWasm {
         }
     }
 
+    #[cfg(feature = "wasmer_sys")]
     pub fn instance(&self) -> InstanceWithStore {
         self._instance(true)
+    }
+
+    #[cfg(feature = "wasmer_wamr")]
+    pub fn instance(&self) -> InstanceWithStore {
+        self.unmetered_instance()
     }
 
     pub fn unmetered_instance(&self) -> InstanceWithStore {

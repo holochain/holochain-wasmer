@@ -5,20 +5,24 @@ authors = ["thedavidmeister", "thedavidmeister@gmail.com"]
 edition = "2021"
 
 [dependencies]
-holochain_wasmer_common = { path = "../crates/common", features = [] }
-holochain_wasmer_host = { path = "../crates/host" }
+holochain_wasmer_common = { path = "../crates/common" }
+holochain_wasmer_host = { path = "../crates/host", default-features = false }
 holochain_serialized_bytes = "=0.0.55"
 serde = "1"
-test_common = { path = "./common" }
+test_common = { path = "./common", default-features = false }
 criterion = { version = "0.5", features = ["html_reports"] }
 rand = "0.8"
 serde_bytes = "0.11"
 parking_lot = "0.12"
-wasmer = "=4.3.1"
-wasmer-middlewares = "=4.3.1"
-test-fuzz = "6.0.0"
+test-fuzz = "=6.0.0"
 once_cell = "1"
 tempfile = "3"
+
+wasmer = { version = "=4.3.6", optional = true, default-features = false }
+wasmer-middlewares = { version = "=4.3.6", optional = true, default-features = false }
+
+# Temporarily include a fork of wasmer from the git branch 'wamr', until it is officially released in wasmer v5
+hc-wasmer = { version="=4.3.6-hc.1", optional = true, default-features = false }
 
 [dev-dependencies]
 env_logger = "0.8"
@@ -38,3 +42,15 @@ debug = true
 
 [features]
 debug_memory = ["holochain_wasmer_host/debug_memory"]
+default = ["wasmer_sys"]
+wasmer_sys = [
+  "dep:wasmer",
+  "dep:wasmer-middlewares", 
+  "wasmer/default", 
+  "holochain_wasmer_host/wasmer_sys"
+]
+wasmer_wamr = [
+  "dep:hc-wasmer",
+  "hc-wasmer/wamr",
+  "holochain_wasmer_host/wasmer_wamr"
+]

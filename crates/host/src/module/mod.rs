@@ -13,22 +13,23 @@ use std::io::Write;
 use std::path::PathBuf;
 use std::str::FromStr;
 use std::sync::Arc;
-use tracing::info;
-use wasmer::sys::BaseTunables;
-use wasmer::wasmparser;
-use wasmer::CompileError;
-use wasmer::CompilerConfig;
 use wasmer::CpuFeature;
-use wasmer::Cranelift;
-use wasmer::DeserializeError;
 use wasmer::Engine;
 use wasmer::Instance;
 use wasmer::Module;
-use wasmer::NativeEngineExt;
 use wasmer::Store;
 use wasmer::Target;
 use wasmer::Triple;
-use wasmer_middlewares::Metering;
+
+#[cfg(feature = "wasmer_sys")]
+mod wasmer_sys;
+#[cfg(feature = "wasmer_sys")]
+pub use wasmer_sys::*;
+
+#[cfg(feature = "wasmer_wamr")]
+mod wasmer_wamr;
+#[cfg(feature = "wasmer_wamr")]
+pub use wasmer_wamr::*;
 
 /// We expect cache keys to be produced via hashing so 32 bytes is enough for all
 /// purposes.
@@ -129,60 +130,6 @@ pub trait PlruCache {
     }
 }
 
-#[cfg(not(test))]
-/// one hundred giga ops
-pub const WASM_METERING_LIMIT: u64 = 100_000_000_000;
-
-#[cfg(test)]
-/// ten mega ops.
-/// We don't want tests to run forever, and it can take several minutes for 100 giga ops to run.
-pub const WASM_METERING_LIMIT: u64 = 10_000_000;
-
-/// Generate an engine with a wasm compiler
-/// and Metering (use limits) in place.
-pub fn make_compiler_engine() -> Engine {
-    let cost_function = |_operator: &wasmparser::Operator| -> u64 { 1 };
-    // @todo 100 giga-ops is totally arbitrary cutoff so we probably
-    // want to make the limit configurable somehow.
-    let metering = Arc::new(Metering::new(WASM_METERING_LIMIT, cost_function));
-    // the only place where the wasm compiler engine is set
-    let mut compiler = Cranelift::default();
-    compiler.canonicalize_nans(true).push_middleware(metering);
-    Engine::from(compiler)
-}
-
-/// Generate a runtime `Engine` without compiler suitable for iOS.
-/// Useful for re-building an iOS Module from a preserialized WASM Module.
-pub fn make_ios_runtime_engine() -> Engine {
-    Engine::headless()
-}
-
-/// Take WASM binary and prepare a wasmer Module suitable for iOS
-pub fn build_ios_module(wasm: &[u8]) -> Result<Module, CompileError> {
-    info!(
-        "Found wasm and was instructed to serialize it for ios in wasmer format, doing so now..."
-    );
-    let compiler_engine = make_compiler_engine();
-    let store = Store::new(compiler_engine);
-    Module::from_binary(&store, wasm)
-}
-
-/// Deserialize a previously compiled module for iOS from a file.
-pub fn get_ios_module_from_file(path: &PathBuf) -> Result<Module, DeserializeError> {
-    let engine = make_ios_runtime_engine();
-    unsafe { Module::deserialize_from_file(&engine, path) }
-}
-
-/// Configuration of a Target for wasmer for iOS
-pub fn wasmer_ios_target() -> Target {
-    // use what I see in
-    // platform ios headless example
-    // https://github.com/wasmerio/wasmer/blob/447c2e3a152438db67be9ef649327fabcad6f5b8/examples/platform_ios_headless.rs#L38-L53
-    let triple = Triple::from_str("aarch64-apple-ios").unwrap();
-    let cpu_feature = CpuFeature::set();
-    Target::new(triple, cpu_feature)
-}
-
 /// Cache for serialized modules. These are fully compiled wasm modules that are
 /// then serialized by wasmer and can be cached. A serialized wasm module must still
 /// be deserialized before it can be used to build instances. The deserialization
@@ -193,7 +140,7 @@ pub struct SerializedModuleCache {
     pub key_map: PlruKeyMap,
     pub cache: BTreeMap<CacheKey, Arc<SerializedModule>>,
     // a function to create a new compiler engine for every module
-    pub make_compiler_engine: fn() -> Engine,
+    pub make_engine: fn() -> Engine,
     // the runtime engine has to live as long as the module;
     // keeping it in the cache and using it for all modules
     // make sure of that
@@ -228,15 +175,12 @@ impl PlruCache for SerializedModuleCache {
 impl SerializedModuleCache {
     /// Build a default `SerializedModuleCache` with a fn to create an `Engine`
     /// that will be used to compile modules from wasms as needed.
-    pub fn default_with_engine(
-        make_compiler_engine: fn() -> Engine,
-        maybe_fs_dir: Option<PathBuf>,
-    ) -> Self {
+    pub fn default_with_engine(make_engine: fn() -> Engine, maybe_fs_dir: Option<PathBuf>) -> Self {
         Self {
-            make_compiler_engine,
+            make_engine,
             // the engine to execute function calls on instances does not
             // require a compiler
-            runtime_engine: Engine::headless(),
+            runtime_engine: make_runtime_engine(),
             plru: MicroCache::default(),
             key_map: PlruKeyMap::default(),
             cache: BTreeMap::default(),
@@ -292,14 +236,7 @@ impl SerializedModuleCache {
                 // Each module needs to be compiled with a new engine because
                 // of middleware like metering. Middleware is compiled into the
                 // module once and available in all instances created from it.
-                let mut compiler_engine = (self.make_compiler_engine)();
-                // Workaround for invalid memory access on iOS.
-                // https://github.com/holochain/holochain/issues/3096
-                compiler_engine.set_tunables(BaseTunables {
-                    static_memory_bound: 0x4000.into(),
-                    static_memory_offset_guard_size: 0x1_0000,
-                    dynamic_memory_offset_guard_size: 0x1_0000,
-                });
+                let compiler_engine = (self.make_engine)();
                 let module = Module::from_binary(&compiler_engine, wasm)
                     .map_err(|e| wasm_error!(WasmErrorInner::Compile(e.to_string())))?;
                 let serialized_module = module
@@ -414,7 +351,7 @@ pub struct ModuleCache {
 impl ModuleCache {
     pub fn new(maybe_fs_dir: Option<PathBuf>) -> Self {
         let serialized_module_cache = Arc::new(RwLock::new(
-            SerializedModuleCache::default_with_engine(make_compiler_engine, maybe_fs_dir),
+            SerializedModuleCache::default_with_engine(make_engine, maybe_fs_dir),
         ));
         let deserialized_module_cache = Arc::new(RwLock::new(DeserializedModuleCache::default()));
         ModuleCache {
@@ -448,6 +385,16 @@ impl ModuleCache {
     }
 }
 
+/// Configuration of a Target for wasmer for iOS
+pub fn wasmer_ios_target() -> Target {
+    // use what I see in
+    // platform ios headless example
+    // https://github.com/wasmerio/wasmer/blob/447c2e3a152438db67be9ef649327fabcad6f5b8/examples/platform_ios_headless.rs#L38-L53
+    let triple = Triple::from_str("aarch64-apple-ios").unwrap();
+    let cpu_feature = CpuFeature::set();
+    Target::new(triple, cpu_feature)
+}
+
 #[cfg(test)]
 pub mod tests {
     use crate::module::{CacheKey, ModuleCache, PlruCache};
@@ -465,27 +412,21 @@ pub mod tests {
             0x70, 0x30,
         ];
         let module_cache = ModuleCache::new(None);
-        assert_eq!(
-            module_cache.serialized_module_cache.read().cache.is_empty(),
-            true
-        );
-        assert_eq!(
-            module_cache
-                .deserialized_module_cache
-                .read()
-                .cache
-                .is_empty(),
-            true
-        );
+        assert!(module_cache.serialized_module_cache.read().cache.is_empty());
+        assert!(module_cache
+            .deserialized_module_cache
+            .read()
+            .cache
+            .is_empty());
 
-        let key: CacheKey = [0u8; 32].into();
-        let module = module_cache.get(key.clone(), &wasm).unwrap();
+        let key: CacheKey = [0u8; 32];
+        let module = module_cache.get(key, &wasm).unwrap();
 
         // make sure module has been stored in serialized cache under key
         {
             let serialized_cached_module =
                 module_cache.serialized_module_cache.write().get_item(&key);
-            assert_eq!(matches!(serialized_cached_module, Some(_)), true);
+            assert!(serialized_cached_module.is_some());
         }
         // make sure module has been stored in deserialized cache under key
         {

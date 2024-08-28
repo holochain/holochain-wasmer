@@ -12,7 +12,8 @@ host_externs!(
     test_process_string:2,
     test_process_struct:2,
     short_circuit:5,
-    decrease_points:1
+    decrease_points:1,
+    call_ping:1
 );
 
 #[no_mangle]
@@ -147,4 +148,16 @@ pub extern "C" fn decrease_points(guest_ptr: usize, len: usize) -> DoubleUSize {
         "could not decrease points"
     );
     return_ptr(result)
+}
+
+#[no_mangle]
+pub extern "C" fn call_ping_via_host(_guest_ptr: usize, _len: usize) -> DoubleUSize {
+    let res = host_call::<(), Vec<u8>>(__hc__call_ping_1, ()).unwrap();
+    return_ptr(res)    
+}
+
+
+#[no_mangle]
+pub extern "C" fn ping(_guest_ptr: usize, _len: usize) -> DoubleUSize {
+    return_ptr(Vec::<u8>::from([1]))
 }

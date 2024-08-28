@@ -1,3 +1,4 @@
+use crate::call_ping;
 use crate::debug;
 use crate::decrease_points;
 use crate::err;
@@ -49,6 +50,11 @@ pub fn imports(store: &mut StoreMut, function_env: &FunctionEnv<Env>) -> Imports
                 store,
                 function_env,
                 pages
+            ),
+            "__hc__call_ping_1" => Function::new_typed_with_env(
+                store,
+                function_env,
+                call_ping
             ),
         },
     }
