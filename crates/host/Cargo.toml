@@ -2,7 +2,7 @@
 name = "holochain_wasmer_host"
 description = "wasm host code"
 license = "Apache-2.0"
-version = "0.0.95"
+version = "0.0.96"
 authors = ["thedavidmeister", "thedavidmeister@gmail.com"]
 edition = "2021"
 
@@ -13,7 +13,7 @@ wasmer-middlewares = { version = "=4.3.6", optional = true, default-feature = fa
 # Temporarily include a fork of wasmer from the git branch 'wamr', until it is officially released in wasmer v5
 hc-wasmer = { version="=4.3.6-hc.1", optional = true, default-features = false }
 
-holochain_wasmer_common = { version = "=0.0.95", path = "../common" }
+holochain_wasmer_common = { version = "=0.0.96", path = "../common" }
 holochain_serialized_bytes = "=0.0.55"
 serde = "1"
 tracing = "0.1"
