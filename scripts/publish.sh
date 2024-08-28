@@ -4,8 +4,6 @@
 
 set -xe
 
-cargo publish --manifest-path=crates/common/Cargo.toml
-sleep 60
-cargo publish --manifest-path=crates/host/Cargo.toml
-sleep 60
-cargo publish --manifest-path=crates/guest/Cargo.toml
+cargo publish --manifest-path=crates/common/Cargo.toml && \
+  cargo publish --manifest-path=crates/host/Cargo.toml && \
+  cargo publish --manifest-path=crates/guest/Cargo.toml
