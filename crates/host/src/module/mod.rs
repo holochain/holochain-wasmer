@@ -236,7 +236,7 @@ impl SerializedModuleCache {
                 // Each module needs to be compiled with a new engine because
                 // of middleware like metering. Middleware is compiled into the
                 // module once and available in all instances created from it.
-                let compiler_engine = self.make_engine();
+                let compiler_engine = (self.make_engine)();
                 let module = Module::from_binary(&compiler_engine, wasm)
                     .map_err(|e| wasm_error!(WasmErrorInner::Compile(e.to_string())))?;
                 let serialized_module = module
