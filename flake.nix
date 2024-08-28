@@ -20,6 +20,8 @@
                 inputsFrom = [
                     inputs.holochain-flake.devShells.${system}.rustDev
                 ];
+
+                # These packages and env vars are required to build wasmer on the 'wamr' branch (i.e. the hc-wasmer dependency)
                 packages = [
                   pkgs.cmake
                   pkgs.clang
