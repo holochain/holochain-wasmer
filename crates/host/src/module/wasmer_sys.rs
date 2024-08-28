@@ -1,4 +1,4 @@
-use std::path::PathBuf;
+use std::path::Path;
 use std::sync::Arc;
 use tracing::info;
 use wasmer::sys::BaseTunables;
@@ -60,7 +60,7 @@ pub fn build_ios_module(wasm: &[u8]) -> Result<Module, CompileError> {
 }
 
 /// Deserialize a previously compiled module for iOS from a file.
-pub fn get_ios_module_from_file(path: &PathBuf) -> Result<Module, DeserializeError> {
+pub fn get_ios_module_from_file(path: &Path) -> Result<Module, DeserializeError> {
     let engine = Engine::headless();
     unsafe { Module::deserialize_from_file(&engine, path) }
 }

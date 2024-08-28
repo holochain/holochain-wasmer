@@ -1,4 +1,4 @@
-use std::path::PathBuf;
+use std::path::Path;
 use wasmer::CompileError;
 use wasmer::DeserializeError;
 use wasmer::Engine;
@@ -21,6 +21,6 @@ pub fn build_ios_module(_wasm: &[u8]) -> Result<Module, CompileError> {
 }
 
 /// Deserialize a previously compiled module for iOS from a file.
-pub fn get_ios_module_from_file(_path: &PathBuf) -> Result<Module, DeserializeError> {
+pub fn get_ios_module_from_file(_path: &Path) -> Result<Module, DeserializeError> {
     unimplemented!("The feature flag 'wasmer_sys' must be enabled to support compiling wasm");
 }
