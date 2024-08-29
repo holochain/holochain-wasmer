@@ -225,6 +225,7 @@ impl SerializedModuleCache {
         });
         let (module, serialized_module) = match module_load {
             Some(Ok(serialized_module)) => {
+                tracing::info!("get_with_build_cache serialized_module={:?}", serialized_module);
                 let deserialized_module =
                     unsafe { Module::deserialize(&self.runtime_engine, serialized_module.clone()) }
                         .map_err(|e| wasm_error!(WasmErrorInner::Compile(e.to_string())))?;
