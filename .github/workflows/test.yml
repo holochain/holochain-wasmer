@@ -28,9 +28,11 @@ jobs:
       - run: nix develop --command ./${{ matrix.script }}-${{ matrix.wasmer-feature }}.sh
 
   test-windows:
+    strategy:
+      fail-fast: false
+      matrix:
+        wasmer-feature: ["wasmer_sys", "wasmer_wamr"]
     runs-on: windows-latest
-    matrix:
-      wasmer-feature: ["wasmer_sys", "wasmer_wamr"]
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
