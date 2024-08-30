@@ -971,7 +971,7 @@ checksum = "e5274423e17b7c9fc20b6e7e208532f9b19825d82dfd615708b70edd83df41f1"
 [[package]]
 name = "hc-wasmer"
 version = "4.3.6-hc.1"
-source = "git+https://github.com/holochain/wasmer?branch=fix/win32-build#40443322b7dd4b15043b851441be40afba98fdb1"
+source = "git+https://github.com/holochain/wasmer?branch=fix/win32-build#0a10e96adde15807c460ce1c7ce5e8f1ff45e5a4"
 dependencies = [
  "bindgen",
  "bytes",
@@ -1003,7 +1003,7 @@ dependencies = [
 [[package]]
 name = "hc-wasmer-compiler"
 version = "4.3.6-hc.1"
-source = "git+https://github.com/holochain/wasmer?branch=fix/win32-build#40443322b7dd4b15043b851441be40afba98fdb1"
+source = "git+https://github.com/holochain/wasmer?branch=fix/win32-build#0a10e96adde15807c460ce1c7ce5e8f1ff45e5a4"
 dependencies = [
  "backtrace",
  "bytes",
@@ -1030,7 +1030,7 @@ dependencies = [
 [[package]]
 name = "hc-wasmer-derive"
 version = "4.3.6-hc.1"
-source = "git+https://github.com/holochain/wasmer?branch=fix/win32-build#40443322b7dd4b15043b851441be40afba98fdb1"
+source = "git+https://github.com/holochain/wasmer?branch=fix/win32-build#0a10e96adde15807c460ce1c7ce5e8f1ff45e5a4"
 dependencies = [
  "proc-macro-error",
  "proc-macro2",
@@ -1041,7 +1041,7 @@ dependencies = [
 [[package]]
 name = "hc-wasmer-types"
 version = "4.3.6-hc.1"
-source = "git+https://github.com/holochain/wasmer?branch=fix/win32-build#40443322b7dd4b15043b851441be40afba98fdb1"
+source = "git+https://github.com/holochain/wasmer?branch=fix/win32-build#0a10e96adde15807c460ce1c7ce5e8f1ff45e5a4"
 dependencies = [
  "bytecheck",
  "enum-iterator",
@@ -1060,7 +1060,7 @@ dependencies = [
 [[package]]
 name = "hc-wasmer-vm"
 version = "4.3.6-hc.1"
-source = "git+https://github.com/holochain/wasmer?branch=fix/win32-build#40443322b7dd4b15043b851441be40afba98fdb1"
+source = "git+https://github.com/holochain/wasmer?branch=fix/win32-build#0a10e96adde15807c460ce1c7ce5e8f1ff45e5a4"
 dependencies = [
  "backtrace",
  "cc",
