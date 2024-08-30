@@ -103,7 +103,7 @@ very reasonable overhead for the host to build a completely fresh instance.
 Calling a function with `holochain_wasmer_host::guest::call()` takes several `us`
 for small input/output values and some `ms` for ~1mb of input/output data.
 
-To see benchmarks on your system run `nix-shell --run ./bench.sh`.
+To see benchmarks on your system run `nix-shell --run ./scripts/bench.sh`.
 
 With low overhead like this, core is relatively free to decide when it wants to
 re-instantiate an already-in-memory module.
