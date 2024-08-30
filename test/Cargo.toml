@@ -6,7 +6,7 @@ edition = "2021"
 
 [dependencies]
 holochain_wasmer_common = { path = "../crates/common" }
-holochain_wasmer_host = { path = "../crates/host", default-features = false }
+holochain_wasmer_host = { path = "../crates/host", default-features = false, features = ["error_as_host"] }
 holochain_serialized_bytes = "=0.0.55"
 serde = "1"
 test_common = { path = "./common", default-features = false }
@@ -22,7 +22,8 @@ wasmer = { version = "=4.3.6", optional = true, default-features = false }
 wasmer-middlewares = { version = "=4.3.6", optional = true, default-features = false }
 
 # Temporarily include a fork of wasmer from the git branch 'wamr', until it is officially released in wasmer v5
-hc-wasmer = { version="=4.3.6-hc.1", optional = true, default-features = false }
+#hc-wasmer = { version="=4.3.6-hc.1", optional = true, default-features = false }
+hc-wasmer = { git = "https://github.com/holochain/wasmer", branch = "fix/win32-build", optional = true, default-features = false }
 
 [dev-dependencies]
 env_logger = "0.8"
