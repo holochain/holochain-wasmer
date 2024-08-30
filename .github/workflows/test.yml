@@ -46,7 +46,6 @@ jobs:
         with:
           targets: wasm32-unknown-unknown
       - name: install gcc
-        if: matrix.os == 'windows-latest' && matrix.wasmer-feature == 'wasmer_wamr'
         uses: MinoruSekine/setup-scoop@v4
         with:
           bucket: versions
