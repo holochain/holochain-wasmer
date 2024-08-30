@@ -25,3 +25,21 @@ jobs:
           name: holochain-ci
           authToken: "${{ secrets.CACHIX_AUTH_TOKEN }}"
       - run: nix develop --command ${{ matrix.script }}
+
+  test-windows:
+    runs-on: windows-latest
+    matrix:
+      wasmer-feature:
+        - wasmer_sys
+        - wasmer_wamr
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: wasm32-unknown-unknown
+      - name: test root
+        run: cargo test --release --no-default-features --features ${{ matrix.wasmer-feature }} -- --nocapture
+      - name: test
+        run: cargo test --release --manifest-path test/Cargo.toml --no-default-features --features ${{ matrix.wasmer-feature }} -- --nocapture
+      - name: bench
+        run: cd test && cargo bench --no-default-features --features ${{ matrix.wasmer-feature }}
