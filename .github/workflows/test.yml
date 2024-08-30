@@ -43,7 +43,7 @@ jobs:
         with:
           targets: wasm32-unknown-unknown
       - name: test root
-        run: cargo test --release --no-default-features --features ${{ matrix.wasmer-feature }} -- --nocapture
+        run: cargo test --release --no-default-features --features error_as_host,${{ matrix.wasmer-feature }} -- --nocapture
       - name: test
         run: cargo test --release --manifest-path test/Cargo.toml --no-default-features --features ${{ matrix.wasmer-feature }} -- --nocapture
 
@@ -59,4 +59,4 @@ jobs:
         with:
           targets: wasm32-unknown-unknown
       - name: bench
-        run: cd test && cargo bench --no-default-features --features ${{ matrix.wasmer-feature }}
+        run: cd test && cargo bench --no-default-features --features error_as_host,${{ matrix.wasmer-feature }}
