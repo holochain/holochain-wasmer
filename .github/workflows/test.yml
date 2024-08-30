@@ -11,8 +11,9 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        script: ["./test.sh", "./bench.sh"]
+        script: ["test", "bench"]
         os: ["ubuntu-latest", "macos-latest"]
+        wasmer-feature: ["wasmer_sys", "wasmer_wamr"]
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
@@ -24,14 +25,12 @@ jobs:
         with:
           name: holochain-ci
           authToken: "${{ secrets.CACHIX_AUTH_TOKEN }}"
-      - run: nix develop --command ${{ matrix.script }}
+      - run: nix develop --command ./${{ matrix.script }}-${{ matrix.wasmer-feature }}.sh
 
   test-windows:
     runs-on: windows-latest
     matrix:
-      wasmer-feature:
-        - wasmer_sys
-        - wasmer_wamr
+      wasmer-feature: ["wasmer_sys", "wasmer_wamr"]
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
