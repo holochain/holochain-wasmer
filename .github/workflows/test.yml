@@ -45,6 +45,11 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
         with:
           targets: wasm32-unknown-unknown
+      - name: install cmake & gcc
+        if: matrix.os == 'windows-latest' && matrix.wasmer-feature == 'wasmer_wamr'
+        uses: MinoruSekine/setup-scoop@v4
+        with:
+          apps: main/cmake main/gcc main/make
       - name: test root
         run: cargo test --release --no-default-features --features error_as_host,${{ matrix.wasmer-feature }} -- --nocapture
       - name: test
