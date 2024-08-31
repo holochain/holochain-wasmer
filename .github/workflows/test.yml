@@ -50,6 +50,10 @@ jobs:
         with:
           buckets: versions
           apps: "versions/mingw-winlibs-llvm"
+      - name: delete registry entries
+        run: |
+          reg delete "HKEY_CURRENT_USER\Software\Microsoft\Command Processor\AutoRun" /f
+          reg delete "HKEY_LOCAL_MACHINE\Software\Microsoft\Command Processor\AutoRun" /
       - name: test root
         run: cargo test --release --no-default-features --features error_as_host,${{ matrix.wasmer-feature }} -- --nocapture
       - name: test
