@@ -284,8 +284,7 @@ dependencies = [
 [[package]]
 name = "cmake"
 version = "0.1.51"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "fb1e43aa7fd152b1f968787f7dbcdeb306d1867ff373c69955211876c053f91a"
+source = "git+https://github.com/mattyg/cmake-rs?branch=fix/invalid-arg-mingw-generator#af4d756c898c986829499de748d9201a3739a0b7"
 dependencies = [
  "cc",
 ]
@@ -818,7 +817,7 @@ checksum = "e5274423e17b7c9fc20b6e7e208532f9b19825d82dfd615708b70edd83df41f1"
 [[package]]
 name = "hc-wasmer"
 version = "4.3.6-hc.1"
-source = "git+https://github.com/holochain/wasmer?branch=fix/win32-build#af37d2c378ff154d6aa708a78e1cd1d2613ca93b"
+source = "git+https://github.com/holochain/wasmer?branch=fix/win32-build#ac306eab11ece3d791eea1df93936ea8649a445f"
 dependencies = [
  "bindgen",
  "bytes",
@@ -850,7 +849,7 @@ dependencies = [
 [[package]]
 name = "hc-wasmer-compiler"
 version = "4.3.6-hc.1"
-source = "git+https://github.com/holochain/wasmer?branch=fix/win32-build#af37d2c378ff154d6aa708a78e1cd1d2613ca93b"
+source = "git+https://github.com/holochain/wasmer?branch=fix/win32-build#ac306eab11ece3d791eea1df93936ea8649a445f"
 dependencies = [
  "backtrace",
  "bytes",
@@ -877,7 +876,7 @@ dependencies = [
 [[package]]
 name = "hc-wasmer-derive"
 version = "4.3.6-hc.1"
-source = "git+https://github.com/holochain/wasmer?branch=fix/win32-build#af37d2c378ff154d6aa708a78e1cd1d2613ca93b"
+source = "git+https://github.com/holochain/wasmer?branch=fix/win32-build#ac306eab11ece3d791eea1df93936ea8649a445f"
 dependencies = [
  "proc-macro-error",
  "proc-macro2",
@@ -888,7 +887,7 @@ dependencies = [
 [[package]]
 name = "hc-wasmer-types"
 version = "4.3.6-hc.1"
-source = "git+https://github.com/holochain/wasmer?branch=fix/win32-build#af37d2c378ff154d6aa708a78e1cd1d2613ca93b"
+source = "git+https://github.com/holochain/wasmer?branch=fix/win32-build#ac306eab11ece3d791eea1df93936ea8649a445f"
 dependencies = [
  "bytecheck",
  "enum-iterator",
@@ -907,7 +906,7 @@ dependencies = [
 [[package]]
 name = "hc-wasmer-vm"
 version = "4.3.6-hc.1"
-source = "git+https://github.com/holochain/wasmer?branch=fix/win32-build#af37d2c378ff154d6aa708a78e1cd1d2613ca93b"
+source = "git+https://github.com/holochain/wasmer?branch=fix/win32-build#ac306eab11ece3d791eea1df93936ea8649a445f"
 dependencies = [
  "backtrace",
  "cc",
