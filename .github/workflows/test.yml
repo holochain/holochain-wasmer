@@ -48,8 +48,7 @@ jobs:
       - name: install mingw
         uses: mattyg/setup-scoop@7b8f657bc28ef6faa8a8ecfca6fa4095ca583aa3
         with:
-          buckets: versions
-          apps: "versions/mingw-winlibs-llvm"
+          apps: main/mingw
       - name: delete registry entries
         run: |
           reg delete "HKEY_CURRENT_USER\Software\Microsoft\Command Processor\AutoRun" /f
