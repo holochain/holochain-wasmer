@@ -48,8 +48,7 @@ jobs:
       - name: install mingw
         uses: MinoruSekine/setup-scoop@v4
         with:
-          bucket: versions
-          apps: main/mingw
+          apps: main/mingw main/gcc
       - name: test root
         run: cargo test --release --no-default-features --features error_as_host,${{ matrix.wasmer-feature }} -- --nocapture
       - name: test
