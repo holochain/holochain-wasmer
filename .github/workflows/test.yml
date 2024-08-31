@@ -49,7 +49,7 @@ jobs:
         uses: MinoruSekine/setup-scoop@v4
         with:
           buckets: versions
-          apps: versions/mingw-winlibs-llvm
+          apps: "versions/mingw-winlibs-llvm"
       - name: test root
         run: cargo test --release --no-default-features --features error_as_host,${{ matrix.wasmer-feature }} -- --nocapture
       - name: test
