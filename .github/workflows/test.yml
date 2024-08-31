@@ -49,7 +49,7 @@ jobs:
         uses: mattyg/setup-scoop@7b8f657bc28ef6faa8a8ecfca6fa4095ca583aa3
         with:
           buckets: versions
-          apps: versions/mingw-winlibs-llvm-ucrt
+          apps: versions/msys2
       - name: test root
         run: cargo test --release --no-default-features --features error_as_host,${{ matrix.wasmer-feature }} -- --nocapture
       - name: test
