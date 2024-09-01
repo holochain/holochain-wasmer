@@ -362,7 +362,8 @@ checksum = "98cc8fbded0c607b7ba9dd60cd98df59af97e84d24e49c8557331cfc26d301ce"
 [[package]]
 name = "cmake"
 version = "0.1.51"
-source = "git+https://github.com/mattyg/cmake-rs?branch=fix/invalid-arg-mingw-generator#af4d756c898c986829499de748d9201a3739a0b7"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "fb1e43aa7fd152b1f968787f7dbcdeb306d1867ff373c69955211876c053f91a"
 dependencies = [
  "cc",
 ]
@@ -970,7 +971,8 @@ checksum = "e5274423e17b7c9fc20b6e7e208532f9b19825d82dfd615708b70edd83df41f1"
 [[package]]
 name = "hc-wasmer"
 version = "4.3.6-hc.1"
-source = "git+https://github.com/holochain/wasmer?branch=fix/win32-build#9e8979478931b51cf1f1e3534568b5b0909291ab"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "8da36c1b427d5ab3b2bca996741a29538f6fba4b0a5dfe20e14fa0d32ec936e3"
 dependencies = [
  "bindgen",
  "bytes",
@@ -1002,7 +1004,8 @@ dependencies = [
 [[package]]
 name = "hc-wasmer-compiler"
 version = "4.3.6-hc.1"
-source = "git+https://github.com/holochain/wasmer?branch=fix/win32-build#9e8979478931b51cf1f1e3534568b5b0909291ab"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "0f63537e3d2aa18c9e7e0068d54be75b1a068f53eb7f1b7f7f3b528acd1e75e7"
 dependencies = [
  "backtrace",
  "bytes",
@@ -1029,7 +1032,8 @@ dependencies = [
 [[package]]
 name = "hc-wasmer-derive"
 version = "4.3.6-hc.1"
-source = "git+https://github.com/holochain/wasmer?branch=fix/win32-build#9e8979478931b51cf1f1e3534568b5b0909291ab"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "050c01c0e3193bc69b8cbdc47ec432a42aa4dc64964fc500e6740a12801694dc"
 dependencies = [
  "proc-macro-error",
  "proc-macro2",
@@ -1040,7 +1044,8 @@ dependencies = [
 [[package]]
 name = "hc-wasmer-types"
 version = "4.3.6-hc.1"
-source = "git+https://github.com/holochain/wasmer?branch=fix/win32-build#9e8979478931b51cf1f1e3534568b5b0909291ab"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "7832ae1364df93ef680b31523c348204f25810e513b66dfd99d406d985d3e0e5"
 dependencies = [
  "bytecheck",
  "enum-iterator",
@@ -1059,7 +1064,8 @@ dependencies = [
 [[package]]
 name = "hc-wasmer-vm"
 version = "4.3.6-hc.1"
-source = "git+https://github.com/holochain/wasmer?branch=fix/win32-build#9e8979478931b51cf1f1e3534568b5b0909291ab"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "6166b3a7b61b64cc71851a33cf01cc5dc8b159f5d05c2d2f650969016032c22f"
 dependencies = [
  "backtrace",
  "cc",
