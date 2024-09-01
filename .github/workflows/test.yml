@@ -11,60 +11,60 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  # test-and-bench:
-  #   strategy:
-  #     fail-fast: false
-  #     matrix:
-  #       script: ["test", "bench"]
-  #       os: ["ubuntu-latest", "macos-latest"]
-  #       wasmer-feature: ["wasmer_sys", "wasmer_wamr"]
-  #   runs-on: ${{ matrix.os }}
-  #   steps:
-  #     - uses: actions/checkout@v4
-  #     - name: Install nix
-  #       uses: cachix/install-nix-action@v26
-  #     - name: Setup cachix
-  #       uses: cachix/cachix-action@v14
-  #       if: ${{ ! contains(matrix.platform.runs-on, 'self-hosted') }}
-  #       with:
-  #         name: holochain-ci
-  #         authToken: "${{ secrets.CACHIX_AUTH_TOKEN }}"
-  #     - run: nix develop --command ./scripts/${{ matrix.script }}-${{ matrix.wasmer-feature }}.sh
+  test-and-bench:
+    strategy:
+      fail-fast: false
+      matrix:
+        script: ["test", "bench"]
+        os: ["ubuntu-latest", "macos-latest"]
+        wasmer-feature: ["wasmer_sys", "wasmer_wamr"]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install nix
+        uses: cachix/install-nix-action@v26
+      - name: Setup cachix
+        uses: cachix/cachix-action@v14
+        if: ${{ ! contains(matrix.platform.runs-on, 'self-hosted') }}
+        with:
+          name: holochain-ci
+          authToken: "${{ secrets.CACHIX_AUTH_TOKEN }}"
+      - run: nix develop --command ./scripts/${{ matrix.script }}-${{ matrix.wasmer-feature }}.sh
 
   test-windows:
     strategy:
       fail-fast: false
       matrix:
-        wasmer-feature: [
-          # "wasmer_sys", 
-          "wasmer_wamr"
-        ]
+        wasmer-feature:
+          - "wasmer_sys", 
+          # TODO Building with wasmer_wamr feature flag on windows is not currently working.
+          # See https://github.com/holochain/holochain-wasmer/issues/117
+          # - "wasmer_wamr"
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
         with:
           targets: wasm32-unknown-unknown
-      - name: install mingw
-        uses: mattyg/setup-scoop@7b8f657bc28ef6faa8a8ecfca6fa4095ca583aa3
-        with:
-          buckets: versions
-          apps: versions/msys2
       - name: test root
         run: cargo test --release --no-default-features --features error_as_host,${{ matrix.wasmer-feature }} -- --nocapture
       - name: test
         run: cargo test --release --manifest-path test/Cargo.toml --no-default-features --features ${{ matrix.wasmer-feature }} -- --nocapture
 
-  # bench-windows:
-  #   strategy:
-  #     fail-fast: false
-  #     matrix:
-  #       wasmer-feature: ["wasmer_sys", "wasmer_wamr"]
-  #   runs-on: windows-latest
-  #   steps:
-  #     - uses: actions/checkout@v4
-  #     - uses: dtolnay/rust-toolchain@stable
-  #       with:
-  #         targets: wasm32-unknown-unknown
-  #     - name: bench
-  #       run: cd test && cargo bench --no-default-features --features error_as_host,${{ matrix.wasmer-feature }}
+  bench-windows:
+    strategy:
+      fail-fast: false
+      matrix:
+        wasmer-feature: 
+          - "wasmer_sys"
+          # TODO Building with wasmer_wamr feature flag on windows is not currently working.
+          # See https://github.com/holochain/holochain-wasmer/issues/117
+          # - "wasmer_wamr"
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: wasm32-unknown-unknown
+      - name: bench
+        run: cd test && cargo bench --no-default-features --features error_as_host,${{ matrix.wasmer-feature }}
