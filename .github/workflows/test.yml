@@ -18,13 +18,19 @@ jobs:
         script: ["test", "bench"]
         os: ["ubuntu-latest", "macos-latest"]
         wasmer-feature: ["wasmer_sys", "wasmer_wamr"]
+        exclude:
+          # TODO bench suite on macos-latest is killed by system due to running out of swap space
+          # All benches run fine individually
+          - script: bench
+            os: macos-latest
+            wasmer-feature: wasmer_wamr
     runs-on: ${{ matrix.os }}
     steps:
       - name: increase swap space
         if: matrix.os == 'ubuntu-latest'
         uses: actionhippie/swap-space@v1
         with:
-          size: 10G
+          size: 15G
       - uses: actions/checkout@v4
       - name: Install nix
         uses: cachix/install-nix-action@v26
