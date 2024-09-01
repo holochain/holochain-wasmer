@@ -20,6 +20,11 @@ jobs:
         wasmer-feature: ["wasmer_sys", "wasmer_wamr"]
     runs-on: ${{ matrix.os }}
     steps:
+      - name: increase swap space
+        if: matrix.os == "ubuntu-latest"
+        uses: actionhippie/swap-space@v1
+        with:
+          size: 10G
       - uses: actions/checkout@v4
       - name: Install nix
         uses: cachix/install-nix-action@v26
