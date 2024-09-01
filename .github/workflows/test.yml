@@ -67,4 +67,4 @@ jobs:
         with:
           targets: wasm32-unknown-unknown
       - name: bench
-        run: cd test && cargo bench --no-default-features --features error_as_host,${{ matrix.wasmer-feature }}
+        run: cd test && cargo bench --no-default-features --features ${{ matrix.wasmer-feature }}
