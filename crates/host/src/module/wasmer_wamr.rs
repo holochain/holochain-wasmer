@@ -14,13 +14,19 @@ pub fn make_engine() -> Engine {
 pub fn make_runtime_engine() -> Engine {
     Engine::default()
 }
+pub struct PreCompiledSerializedModule {}
 
-/// Take WASM binary and prepare a wasmer Module suitable for iOS
-pub fn build_ios_module(_wasm: &[u8]) -> Result<Module, CompileError> {
-    unimplemented!("The feature flag 'wasmer_sys' must be enabled to support compiling wasm");
-}
+impl PreCompiledSerializedModule {
+    /// Compile a wasm binary, serialize it with wasmer's serializtion format, and write to a file.
+    /// This file can later be used for contexts where JIT compilation is not possible (iOS for example).
+    pub fn write(wasm: &[u8], path: PathBuf) -> Result<(), CompileError> {
+        unimplemented!("The feature flag 'wasmer_sys' must be enabled to support compiling wasm");
+    }
 
-/// Deserialize a previously compiled module for iOS from a file.
-pub fn get_ios_module_from_file(_path: &Path) -> Result<Module, DeserializeError> {
-    unimplemented!("The feature flag 'wasmer_sys' must be enabled to support compiling wasm");
+    /// Deserialize a previously precompiled and serialized module. While technically the `wasmer_wamr` feature flag
+    /// can support deserializing a pre-compiled and serialized module, it doesn't make sense to use it, since it would be
+    /// executed by an engine which will use an interpreter to anyway.
+    pub fn read(path: &Path) -> Result<Module, DeserializeError> {
+        unimplemented!("The feature flag 'wasmer_sys' must be enabled to support compiling wasm");
+    }
 }
