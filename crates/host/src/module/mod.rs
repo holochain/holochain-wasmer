@@ -383,7 +383,7 @@ impl ModuleCache {
 
 #[cfg(test)]
 pub mod tests {
-    use crate::module::{CacheKey, ModuleCache, PlruCache};
+    use crate::module::{CacheKey, ModuleCache, PlruCache, write_precompiled_serialized_module_to_file, read_precompiled_serialized_module_from_file};
 
     #[test]
     fn cache_test() {
@@ -423,5 +423,26 @@ pub mod tests {
                 .unwrap();
             assert_eq!(*deserialized_cached_module, *module);
         }
+    }
+
+    #[test]
+    #[cfg(feature = "wasmer_sys")]
+    fn precompiled_serialized_module_roundtrip_test() {
+        // simple example wasm taken from wasmer docs
+        // https://docs.rs/wasmer/latest/wasmer/struct.Module.html#example
+        let wasm: Vec<u8> = vec![
+            0x00, 0x61, 0x73, 0x6d, 0x01, 0x00, 0x00, 0x00, 0x01, 0x06, 0x01, 0x60, 0x01, 0x7f,
+            0x01, 0x7f, 0x03, 0x02, 0x01, 0x00, 0x07, 0x0b, 0x01, 0x07, 0x61, 0x64, 0x64, 0x5f,
+            0x6f, 0x6e, 0x65, 0x00, 0x00, 0x0a, 0x09, 0x01, 0x07, 0x00, 0x20, 0x00, 0x41, 0x01,
+            0x6a, 0x0b, 0x00, 0x1a, 0x04, 0x6e, 0x61, 0x6d, 0x65, 0x01, 0x0a, 0x01, 0x00, 0x07,
+            0x61, 0x64, 0x64, 0x5f, 0x6f, 0x6e, 0x65, 0x02, 0x07, 0x01, 0x00, 0x01, 0x00, 0x02,
+            0x70, 0x30,
+        ];
+
+
+        let tmp = tempfile::tempdir().unwrap();
+        let path = tmp.path().join("module.dylib");
+        write_precompiled_serialized_module_to_file(wasm.as_slice(), path.clone()).unwrap();
+        let _module = read_precompiled_serialized_module_from_file(path.as_path()).unwrap();
     }
 }
