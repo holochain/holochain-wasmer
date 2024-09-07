@@ -1,10 +1,8 @@
 use std::path::Path;
 use std::sync::Arc;
-use tracing::info;
 use wasmer::sys::BaseTunables;
 use wasmer::sys::CompilerConfig;
 use wasmer::wasmparser;
-use wasmer::CompileError;
 use wasmer::Cranelift;
 use wasmer::DeserializeError;
 use wasmer::Engine;
@@ -12,6 +10,8 @@ use wasmer::Module;
 use wasmer::NativeEngineExt;
 use wasmer::Store;
 use wasmer_middlewares::Metering;
+use std::path::PathBuf;
+use crate::error::PreCompiledSerilializedModuleError;
 
 #[cfg(not(test))]
 /// one hundred giga ops
@@ -51,7 +51,7 @@ pub fn make_runtime_engine() -> Engine {
 
 /// Compile a wasm binary, serialize it with wasmer's serializtion format, and write to a file.
 /// This file can later be used for contexts where JIT compilation is not possible (iOS for example).
-pub fn write_precompiled_serialized_module_to_file(wasm: &[u8], path: PathBuf) -> Result<(), CompileError> {
+pub fn write_precompiled_serialized_module_to_file(wasm: &[u8], path: PathBuf) -> Result<(), PreCompiledSerilializedModuleError> {
     let compiler_engine = make_engine();
     let store = Store::new(compiler_engine);
     Module::from_binary(&store, wasm)?.serialize_to_file(path.clone())?;

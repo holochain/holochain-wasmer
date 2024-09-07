@@ -1,8 +1,8 @@
-use std::path::Path;
 use wasmer::CompileError;
 use wasmer::DeserializeError;
 use wasmer::Engine;
 use wasmer::Module;
+use std::path::PathBuf;
 
 /// Generate an engine with a wasm interpreter
 /// The interpreter used (wasm micro runtime) does not support metering
@@ -17,7 +17,7 @@ pub fn make_runtime_engine() -> Engine {
 
 /// Compile a wasm binary, serialize it with wasmer's serializtion format, and write to a file.
 /// This file can later be used for contexts where JIT compilation is not possible (iOS for example).
-pub fn write_precompiled_serialized_module_to_file(wasm: &[u8], path: PathBuf) -> Result<(), CompileError> {
+pub fn write_precompiled_serialized_module_to_file(wasm: &[u8], path: PathBuf) -> Result<(), PreCompiledSerilializedModuleError> {
     unimplemented!("The feature flag 'wasmer_sys' must be enabled to support compiling wasm");
 }
 

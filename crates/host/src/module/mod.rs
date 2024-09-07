@@ -11,15 +11,11 @@ use std::fs::File;
 use std::fs::OpenOptions;
 use std::io::Write;
 use std::path::PathBuf;
-use std::str::FromStr;
 use std::sync::Arc;
-use wasmer::CpuFeature;
 use wasmer::Engine;
 use wasmer::Instance;
 use wasmer::Module;
 use wasmer::Store;
-use wasmer::Target;
-use wasmer::Triple;
 
 #[cfg(feature = "wasmer_sys")]
 mod wasmer_sys;

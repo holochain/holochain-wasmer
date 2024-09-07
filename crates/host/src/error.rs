@@ -1,6 +1,7 @@
 use holochain_wasmer_common::WasmError;
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
+use wasmer::{CompileError, SerializeError};
 
 /// Wraps a WasmErrorInner with a file and line number.
 /// The easiest way to generate this is with the `wasm_error!` macro that will
@@ -40,4 +41,14 @@ macro_rules! wasm_host_error {
     ($($arg:tt)*) => {{
         $crate::wasm_host_error!(std::format!($($arg)*))
     }};
+}
+
+
+#[derive(Debug, Error)]
+pub enum PreCompiledSerilializedModuleError {
+    #[error(transparent)]
+    CompileError(#[from] CompileError),
+
+    #[error(transparent)]
+    SerializeError(#[from] SerializeError)
 }
