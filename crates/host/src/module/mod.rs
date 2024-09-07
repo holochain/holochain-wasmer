@@ -385,16 +385,6 @@ impl ModuleCache {
     }
 }
 
-/// Configuration of a Target for wasmer for iOS
-pub fn wasmer_ios_target() -> Target {
-    // use what I see in
-    // platform ios headless example
-    // https://github.com/wasmerio/wasmer/blob/447c2e3a152438db67be9ef649327fabcad6f5b8/examples/platform_ios_headless.rs#L38-L53
-    let triple = Triple::from_str("aarch64-apple-ios").unwrap();
-    let cpu_feature = CpuFeature::set();
-    Target::new(triple, cpu_feature)
-}
-
 #[cfg(test)]
 pub mod tests {
     use crate::module::{CacheKey, ModuleCache, PlruCache};
