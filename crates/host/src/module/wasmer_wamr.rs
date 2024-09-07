@@ -23,9 +23,9 @@ impl PreCompiledSerializedModule {
         unimplemented!("The feature flag 'wasmer_sys' must be enabled to support compiling wasm");
     }
 
-    /// Deserialize a previously precompiled and serialized module. While technically the `wasmer_wamr` feature flag
-    /// can support deserializing a pre-compiled and serialized module, it doesn't make sense to use it, since it would be
-    /// executed by an engine which will use an interpreter to anyway.
+    /// Deserialize a previously precompiled and serialized module. 
+    /// Even though the `wasmer_wamr` feature flag supports deserializing a pre-compiled and serialized module,
+    /// it doesn't make sense to use a pre-compiled module as it would be executed by the interpreter engine anyway.
     pub fn read(path: &Path) -> Result<Module, DeserializeError> {
         unimplemented!("The feature flag 'wasmer_sys' must be enabled to support compiling wasm");
     }
