@@ -43,12 +43,11 @@ macro_rules! wasm_host_error {
     }};
 }
 
-
 #[derive(Debug, Error)]
 pub enum PreCompiledSerilializedModuleError {
     #[error(transparent)]
     CompileError(#[from] CompileError),
 
     #[error(transparent)]
-    SerializeError(#[from] SerializeError)
+    SerializeError(#[from] SerializeError),
 }
