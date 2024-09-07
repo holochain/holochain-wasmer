@@ -49,21 +49,18 @@ pub fn make_runtime_engine() -> Engine {
     Engine::headless()
 }
 
-pub struct PreCompiledSerializedModule {}
 
-impl PreCompiledSerializedModule {
-    /// Compile a wasm binary, serialize it with wasmer's serializtion format, and write to a file.
-    /// This file can later be used for contexts where JIT compilation is not possible (iOS for example).
-    pub fn write(wasm: &[u8], path: PathBuf) -> Result<(), CompileError> {
-        let compiler_engine = make_engine();
-        let store = Store::new(compiler_engine);
-        Module::from_binary(&store, wasm)?.serialize_to_file(path.clone())?;
-        Ok(())
-    }
+/// Compile a wasm binary, serialize it with wasmer's serializtion format, and write to a file.
+/// This file can later be used for contexts where JIT compilation is not possible (iOS for example).
+pub fn write_precompiled_serialized_module_to_file() -> Result<(), CompileError> {
+    let compiler_engine = make_engine();
+    let store = Store::new(compiler_engine);
+    Module::from_binary(&store, wasm)?.serialize_to_file(path.clone())?;
+    Ok(())
+}
 
-    /// Deserialize a previously precompiled and serialized module
-    pub fn read(path: &Path) -> Result<Module, DeserializeError> {
-        let engine = Engine::headless();
-        unsafe { Module::deserialize_from_file(&engine, path) }
-    }
+/// Deserialize a previously precompiled and serialized module
+pub fn read_precompiled_serialized_module_from_file() -> Result<Module, DeserializeError> {
+    let engine = Engine::headless();
+    unsafe { Module::deserialize_from_file(&engine, path) }
 }
