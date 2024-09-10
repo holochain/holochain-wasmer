@@ -16,7 +16,7 @@ pub fn make_runtime_engine() -> Engine {
     Engine::default()
 }
 
-/// Compile a wasm binary, serialize it with wasmer's serializtion format, and write to a file.
+/// Compile a wasm binary, serialize it with wasmer's serialization format, and write it to a file.
 /// This file can later be used for contexts where JIT compilation is not possible (iOS for example).
 pub fn write_precompiled_serialized_module_to_file(
     _wasm: &[u8],
