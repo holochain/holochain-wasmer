@@ -5,7 +5,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 ## [Unreleased]
 
 - **BREAKING CHANGE:** Remove unused function `wasmer_ios_target`
-- **BREAKING CHANGE:** Rename functions `build_ios_module` to `write_precompiled_serialized_module_to_file` and `get_ios_module_from_file` to `read_precompiled_serialized_module_from_file` to clarify that they are not an ios-specific.
+- **BREAKING CHANGE:** Rename functions `build_ios_module` to `write_precompiled_serialized_module_to_file` and `get_ios_module_from_file` to `read_precompiled_serialized_module_from_file` to clarify that they are not ios-specific.
 
 ## [0.0.93] - 2024-04-24
 
