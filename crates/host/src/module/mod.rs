@@ -439,10 +439,13 @@ pub mod tests {
             0x70, 0x30,
         ];
 
-
         let tmp = tempfile::tempdir().unwrap();
         let path = tmp.path().join("module.dylib");
+        
         write_precompiled_serialized_module_to_file(wasm.as_slice(), path.clone()).unwrap();
-        let _module = read_precompiled_serialized_module_from_file(path.as_path()).unwrap();
+        let module = read_precompiled_serialized_module_from_file(path.as_path()).unwrap();
+        
+        let module_fn = module.exports().into_iter().functions().next().unwrap();
+        assert_eq!(module_fn.name(), "add_one")
     }
 }
