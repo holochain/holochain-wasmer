@@ -61,21 +61,3 @@ jobs:
         run: cargo test --release --no-default-features --features error_as_host,${{ matrix.wasmer-feature }} -- --nocapture
       - name: test
         run: cargo test --release --manifest-path test/Cargo.toml --no-default-features --features ${{ matrix.wasmer-feature }} -- --nocapture
-
-  bench-windows:
-    strategy:
-      fail-fast: false
-      matrix:
-        wasmer-feature: 
-          - "wasmer_sys"
-          # TODO Building with wasmer_wamr feature flag on windows is not currently working.
-          # See https://github.com/holochain/holochain-wasmer/issues/117
-          # - "wasmer_wamr"
-    runs-on: windows-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@stable
-        with:
-          targets: wasm32-unknown-unknown
-      - name: bench
-        run: cd test && cargo bench --no-default-features --features ${{ matrix.wasmer-feature }}
