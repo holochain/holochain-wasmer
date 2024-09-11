@@ -433,6 +433,8 @@ pub mod tests {
     fn precompiled_serialized_module_roundtrip_test() {
         // simple example wasm taken from wasmer docs
         // https://docs.rs/wasmer/latest/wasmer/struct.Module.html#example
+        use crate::module::make_engine;
+
         let wasm: Vec<u8> = vec![
             0x00, 0x61, 0x73, 0x6d, 0x01, 0x00, 0x00, 0x00, 0x01, 0x06, 0x01, 0x60, 0x01, 0x7f,
             0x01, 0x7f, 0x03, 0x02, 0x01, 0x00, 0x07, 0x0b, 0x01, 0x07, 0x61, 0x64, 0x64, 0x5f,
@@ -445,10 +447,16 @@ pub mod tests {
         let tmp = tempfile::tempdir().unwrap();
         let path = tmp.path().join("module.dylib");
 
+        let compiler_engine = make_engine();
+        let store = wasmer::Store::new(compiler_engine);
+        let original_module = wasmer::Module::new(&store, wasm.clone()).unwrap();
+
         write_precompiled_serialized_module_to_file(wasm.as_slice(), path.clone()).unwrap();
         let module = read_precompiled_serialized_module_from_file(path.as_path()).unwrap();
 
-        let module_fn = module.exports().into_iter().functions().next().unwrap();
-        assert_eq!(module_fn.name(), "add_one")
+        assert_eq!(
+            module.serialize().unwrap(),
+            original_module.serialize().unwrap()
+        );
     }
 }
