@@ -6,15 +6,31 @@ on:
       - develop
   pull_request: {}
 
+concurrency: 
+  group: test-${{ github.workflow }}-${{ github.ref || github.run_id }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 jobs:
-  test:
+  test-and-bench:
     strategy:
       fail-fast: false
       matrix:
-        script: ["./test.sh", "./bench.sh"]
+        script: ["test", "bench"]
         os: ["ubuntu-latest", "macos-latest"]
+        wasmer-feature: ["wasmer_sys", "wasmer_wamr"]
+        exclude:
+          # TODO bench suite on macos-latest is killed by system due to running out of swap space
+          # All benches run fine individually
+          - script: bench
+            os: macos-latest
+            wasmer-feature: wasmer_wamr
     runs-on: ${{ matrix.os }}
     steps:
+      - name: increase swap space
+        if: matrix.os == 'ubuntu-latest'
+        uses: actionhippie/swap-space@v1
+        with:
+          size: 15G
       - uses: actions/checkout@v4
       - name: Install nix
         uses: cachix/install-nix-action@v26
@@ -24,4 +40,24 @@ jobs:
         with:
           name: holochain-ci
           authToken: "${{ secrets.CACHIX_AUTH_TOKEN }}"
-      - run: nix develop --command ${{ matrix.script }}
+      - run: nix develop --command ./scripts/${{ matrix.script }}-${{ matrix.wasmer-feature }}.sh
+
+  test-windows:
+    strategy:
+      fail-fast: false
+      matrix:
+        wasmer-feature: 
+          - "wasmer_sys" 
+          # TODO Building with wasmer_wamr feature flag on windows is not currently working.
+          # See https://github.com/holochain/holochain-wasmer/issues/117
+          # - "wasmer_wamr"
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: wasm32-unknown-unknown
+      - name: test root
+        run: cargo test --release --no-default-features --features error_as_host,${{ matrix.wasmer-feature }} -- --nocapture
+      - name: test
+        run: cargo test --release --manifest-path test/Cargo.toml --no-default-features --features ${{ matrix.wasmer-feature }} -- --nocapture

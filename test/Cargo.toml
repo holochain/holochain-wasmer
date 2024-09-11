@@ -6,7 +6,7 @@ edition = "2021"
 
 [dependencies]
 holochain_wasmer_common = { path = "../crates/common" }
-holochain_wasmer_host = { path = "../crates/host", default-features = false }
+holochain_wasmer_host = { path = "../crates/host", default-features = false, features = ["error_as_host"] }
 holochain_serialized_bytes = "=0.0.55"
 serde = "1"
 test_common = { path = "./common", default-features = false }
