@@ -383,10 +383,7 @@ impl ModuleCache {
 
 #[cfg(test)]
 pub mod tests {
-    use crate::module::{
-        read_precompiled_serialized_module_from_file, write_precompiled_serialized_module_to_file,
-        CacheKey, ModuleCache, PlruCache,
-    };
+    use crate::module::{CacheKey, ModuleCache, PlruCache};
 
     #[test]
     fn cache_test() {
@@ -433,7 +430,10 @@ pub mod tests {
     fn precompiled_serialized_module_roundtrip_test() {
         // simple example wasm taken from wasmer docs
         // https://docs.rs/wasmer/latest/wasmer/struct.Module.html#example
-        use crate::module::make_engine;
+        use crate::module::{
+            make_engine, read_precompiled_serialized_module_from_file,
+            write_precompiled_serialized_module_to_file,
+        };
 
         let wasm: Vec<u8> = vec![
             0x00, 0x61, 0x73, 0x6d, 0x01, 0x00, 0x00, 0x00, 0x01, 0x06, 0x01, 0x60, 0x01, 0x7f,
