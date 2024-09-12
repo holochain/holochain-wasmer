@@ -196,6 +196,7 @@ impl SerializedModuleCache {
 
     /// Given a wasm, compiles with compiler engine, serializes the result, adds it to
     /// the cache and returns that.
+    #[cfg(feature = "wasmer_sys")]
     fn get_with_build_cache(
         &mut self,
         key: CacheKey,
@@ -293,6 +294,7 @@ impl SerializedModuleCache {
 
     /// Given a wasm, attempts to get the serialized module for it from the cache.
     /// If the cache misses, a new serialized module will be built from the wasm.
+    #[cfg(feature = "wasmer_sys")]
     pub fn get(&mut self, key: CacheKey, wasm: &[u8]) -> Result<Arc<Module>, wasmer::RuntimeError> {
         match self.cache.get(&key) {
             Some(serialized_module) => {
@@ -305,6 +307,18 @@ impl SerializedModuleCache {
             }
             None => self.get_with_build_cache(key, wasm),
         }
+    }
+
+    /// Bypass the cache entirely, returning a wasm module.
+    /// Wasm are intepretered (not compiled) when using the feature `wasmer_wamr`,
+    /// so there is no utility in caching them in a pre-serialized format.
+    #[cfg(feature = "wasmer_wamr")]
+    pub fn get(&mut self, key: CacheKey, wasm: &[u8]) -> Result<Arc<Module>, wasmer::RuntimeError> {
+        let engine = (self.make_engine)();
+        let module = Module::from_binary(&engine, wasm)
+            .map_err(|e| wasm_error!(WasmErrorInner::Compile(e.to_string())))?;
+
+        Ok(Arc::new(module))
     }
 }
 
