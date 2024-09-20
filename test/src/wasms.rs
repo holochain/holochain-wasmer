@@ -5,12 +5,12 @@ use holochain_wasmer_host::prelude::*;
 use once_cell::sync::OnceCell;
 use parking_lot::RwLock;
 use std::sync::Arc;
-#[cfg(feature = "wasmer_sys")]
+#[cfg(wasmer_sys)]
 use wasmer::wasmparser::Operator;
 use wasmer::AsStoreMut;
-#[cfg(feature = "wasmer_sys")]
+#[cfg(wasmer_sys)]
 use wasmer::CompilerConfig;
-#[cfg(feature = "wasmer_sys")]
+#[cfg(wasmer_sys)]
 use wasmer::Cranelift;
 use wasmer::Engine;
 use wasmer::FunctionEnv;
@@ -18,7 +18,7 @@ use wasmer::Imports;
 use wasmer::Instance;
 use wasmer::Module;
 use wasmer::Store;
-#[cfg(feature = "wasmer_sys")]
+#[cfg(wasmer_sys)]
 use wasmer_middlewares::Metering;
 
 pub enum TestWasm {
@@ -84,7 +84,7 @@ impl TestWasm {
         }
     }
 
-    #[cfg(feature = "wasmer_sys")]
+    #[cfg(wasmer_sys)]
     pub fn module(&self, metered: bool) -> Arc<Module> {
         match self.module_cache(metered).get() {
             Some(cache) => cache.write().get(self.key(metered), self.bytes()).unwrap(),
@@ -123,7 +123,7 @@ impl TestWasm {
         }
     }
 
-    #[cfg(feature = "wasmer_wamr")]
+    #[cfg(wasmer_wamr)]
     pub fn module(&self, metered: bool) -> Arc<Module> {
         match self.module_cache(false).get() {
             Some(cache) => cache.write().get(self.key(false), self.bytes()).unwrap(),
@@ -170,7 +170,7 @@ impl TestWasm {
                     .unwrap(),
             );
 
-            #[cfg(feature = "wasmer_sys")]
+            #[cfg(wasmer_sys)]
             if metered {
                 data_mut.wasmer_metering_points_exhausted = Some(
                     instance
@@ -195,12 +195,12 @@ impl TestWasm {
         }
     }
 
-    #[cfg(feature = "wasmer_sys")]
+    #[cfg(wasmer_sys)]
     pub fn instance(&self) -> InstanceWithStore {
         self._instance(true)
     }
 
-    #[cfg(feature = "wasmer_wamr")]
+    #[cfg(wasmer_wamr)]
     pub fn instance(&self) -> InstanceWithStore {
         self.unmetered_instance()
     }

@@ -827,6 +827,7 @@ dependencies = [
  "cmake",
  "derivative",
  "hc-wasmer-compiler",
+ "hc-wasmer-compiler-cranelift",
  "hc-wasmer-derive",
  "hc-wasmer-types",
  "hc-wasmer-vm",
@@ -872,8 +873,28 @@ dependencies = [
  "shared-buffer",
  "smallvec",
  "thiserror",
+ "wasmparser",
  "windows-sys 0.59.0",
  "xxhash-rust",
+]
+
+[[package]]
+name = "hc-wasmer-compiler-cranelift"
+version = "4.3.6-hc.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "8b55d8a16d7942b7e920c29078b45b9213fe7f5d1cef5f6df4c9293dad9e3021"
+dependencies = [
+ "cranelift-codegen",
+ "cranelift-entity",
+ "cranelift-frontend",
+ "gimli 0.26.2",
+ "hc-wasmer-compiler",
+ "hc-wasmer-types",
+ "more-asserts",
+ "rayon",
+ "smallvec",
+ "target-lexicon",
+ "tracing",
 ]
 
 [[package]]

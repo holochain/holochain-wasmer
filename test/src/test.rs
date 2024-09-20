@@ -2,14 +2,14 @@ pub mod import;
 pub mod wasms;
 
 // Temporarily include a fork of wasmer from the git branch 'wamr', until it is officially released in wasmer v5
-#[cfg(feature = "wasmer_wamr")]
+#[cfg(wasmer_wamr)]
 extern crate hc_wasmer as wasmer;
 
 use holochain_wasmer_host::prelude::*;
 use holochain_wasmer_host::wasm_host_error as wasm_error;
 use test_common::SomeStruct;
 use wasmer::FunctionEnvMut;
-#[cfg(feature = "wasmer_sys")]
+#[cfg(wasmer_sys)]
 use wasmer_middlewares::metering::MeteringPoints;
 
 pub fn short_circuit(
@@ -56,7 +56,7 @@ pub fn debug(
     Ok(())
 }
 
-#[cfg(feature = "wasmer_sys")]
+#[cfg(wasmer_sys)]
 pub fn decrease_points(
     mut function_env: FunctionEnvMut<Env>,
     guest_ptr: GuestPtr,
@@ -82,7 +82,7 @@ pub fn decrease_points(
     )
 }
 
-#[cfg(feature = "wasmer_wamr")]
+#[cfg(wasmer_wamr)]
 pub fn decrease_points(
     _function_env: FunctionEnvMut<Env>,
     _guest_ptr: GuestPtr,
@@ -448,7 +448,7 @@ pub mod tests {
     }
 
     #[test]
-    #[cfg_attr(not(feature = "wasmer_sys"), ignore)]
+    #[cfg_attr(not(wasmer_sys), ignore)]
     fn decrease_points_test() {
         let InstanceWithStore { store, instance } = TestWasm::Test.instance();
         let dec_by = 1_000_000_u64;

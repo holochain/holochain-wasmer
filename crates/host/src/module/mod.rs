@@ -21,14 +21,14 @@ use wasmer::Store;
 use wasmer::Target;
 use wasmer::Triple;
 
-#[cfg(feature = "wasmer_sys")]
+#[cfg(wasmer_sys)]
 mod wasmer_sys;
-#[cfg(feature = "wasmer_sys")]
+#[cfg(wasmer_sys)]
 pub use wasmer_sys::*;
 
-#[cfg(feature = "wasmer_wamr")]
+#[cfg(wasmer_wamr)]
 mod wasmer_wamr;
-#[cfg(feature = "wasmer_wamr")]
+#[cfg(wasmer_wamr)]
 pub use wasmer_wamr::*;
 
 /// We expect cache keys to be produced via hashing so 32 bytes is enough for all
