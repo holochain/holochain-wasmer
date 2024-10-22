@@ -7,8 +7,8 @@ authors = ["thedavidmeister", "thedavidmeister@gmail.com"]
 edition = "2021"
 
 [dependencies]
-wasmer = { version = "=4.3.6", optional = true, default-feature = false }
-wasmer-middlewares = { version = "=4.3.6", optional = true, default-feature = false }
+wasmer = { version = "=4.3.6", optional = true, default-features = false }
+wasmer-middlewares = { version = "=4.3.6", optional = true, default-features = false }
 
 # Temporarily include a fork of wasmer from the git branch 'wamr', until it is officially released in wasmer v5
 hc-wasmer = { version="=4.3.6-hc.1", optional = true, default-features = false }
@@ -30,13 +30,21 @@ crate-type = ["cdylib", "rlib"]
 path = "src/lib.rs"
 
 [features]
-default = ["error_as_host", "wasmer_sys"]
+default = ["error_as_host", "wasmer_sys_dev"]
 debug_memory = []
 error_as_host = ["holochain_wasmer_common/error_as_host"]
 wasmer_sys = [
   "dep:wasmer",
   "dep:wasmer-middlewares",
+  "wasmer/sys",
+]
+wasmer_sys_dev = [
+  "wasmer_sys",
   "wasmer/default",
+]
+wasmer_sys_prod = [
+  "wasmer_sys",
+  "wasmer/llvm",
 ]
 wasmer_wamr = [
   "dep:hc-wasmer",

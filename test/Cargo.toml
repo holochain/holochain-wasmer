@@ -42,12 +42,20 @@ debug = true
 
 [features]
 debug_memory = ["holochain_wasmer_host/debug_memory"]
-default = ["wasmer_sys"]
+default = ["wasmer_sys_dev"]
 wasmer_sys = [
   "dep:wasmer",
-  "dep:wasmer-middlewares", 
+  "dep:wasmer-middlewares",
+  "wasmer/sys",
+]
+wasmer_sys_dev = [
+  "wasmer_sys",
   "wasmer/default", 
-  "holochain_wasmer_host/wasmer_sys"
+  "holochain_wasmer_host/wasmer_sys_dev"
+]
+wasmer_sys_prod = [
+  "wasmer_sys",
+  "holochain_wasmer_host/wasmer_sys_prod"
 ]
 wasmer_wamr = [
   "dep:hc-wasmer",

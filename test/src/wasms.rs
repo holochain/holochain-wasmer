@@ -10,8 +10,6 @@ use wasmer::wasmparser::Operator;
 use wasmer::AsStoreMut;
 #[cfg(feature = "wasmer_sys")]
 use wasmer::CompilerConfig;
-#[cfg(feature = "wasmer_sys")]
-use wasmer::Cranelift;
 use wasmer::Engine;
 use wasmer::FunctionEnv;
 use wasmer::Imports;
@@ -92,15 +90,24 @@ impl TestWasm {
                 let cranelift_fn = || {
                     let cost_function = |_operator: &Operator| -> u64 { 1 };
                     let metering = Arc::new(Metering::new(10_000_000_000, cost_function));
-                    let mut cranelift = Cranelift::default();
-                    cranelift.canonicalize_nans(true).push_middleware(metering);
-                    Engine::from(cranelift)
+                    #[cfg(feature = "wasmer_sys_dev")]
+                    let mut compiler = wasmer::Cranelift::default();
+                    #[cfg(feature = "wasmer_sys_prod")]
+                    let mut compiler = wasmer::LLVM::default();
+
+                    compiler.canonicalize_nans(true);
+                    compiler.push_middleware(metering);
+                    Engine::from(compiler)
                 };
 
-                let cranelift_fn_unmetered = || {
-                    let mut cranelift = Cranelift::default();
-                    cranelift.canonicalize_nans(true);
-                    Engine::from(cranelift)
+                let compiler_fn_unmetered = || {
+                    #[cfg(feature = "wasmer_sys_dev")]
+                    let mut compiler = wasmer::Cranelift::default();
+                    #[cfg(feature = "wasmer_sys_prod")]
+                    let mut compiler = wasmer::LLVM::default();
+
+                    compiler.canonicalize_nans(true);
+                    Engine::from(compiler)
                 };
 
                 // This will error if the cache is already initialized
@@ -111,7 +118,7 @@ impl TestWasm {
                         if metered {
                             cranelift_fn
                         } else {
-                            cranelift_fn_unmetered
+                            compiler_fn_unmetered
                         },
                         None,
                     ),
