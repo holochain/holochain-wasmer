@@ -69,7 +69,7 @@ jobs:
         shell: pwsh
         run: |
           Invoke-WebRequest -Uri https://github.com/llvm/llvm-project/releases/download/llvmorg-15.0.7/LLVM-15.0.7-win64.exe -OutFile llvm.exe
-          llvm.exe /S
+          ./llvm.exe /S
       - name: test root
         run: cargo test --release --no-default-features --features error_as_host,${{ matrix.wasmer-feature }} -- --nocapture
       - name: test
