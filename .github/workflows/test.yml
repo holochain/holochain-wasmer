@@ -58,6 +58,9 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
         with:
           targets: wasm32-unknown-unknown
+      - name: Install dependencies
+        run: |-
+          vcpkg install llvm@15.0.7#6
       - name: test root
         run: cargo test --release --no-default-features --features error_as_host,${{ matrix.wasmer-feature }} -- --nocapture
       - name: test
