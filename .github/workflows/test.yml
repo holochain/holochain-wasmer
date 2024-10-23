@@ -63,7 +63,6 @@ jobs:
         with:
           triplet: x64-windows-release
           token: ${{ github.token }}
-          revision: 'c82f74667287d3dc386bce81e44964370c91a289'
           manifest-dir: ${{ github.workspace }}/.github/manifest
           github-binarycache: true
       - name: test root
