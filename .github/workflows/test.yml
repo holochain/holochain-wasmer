@@ -68,12 +68,14 @@ jobs:
       - name: Install LLVM
         shell: pwsh
         run: |
-          echo "hello pwsh"
           Invoke-WebRequest -Uri https://github.com/llvm/llvm-project/releases/download/llvmorg-15.0.7/LLVM-15.0.7-win64.exe -OutFile llvm.exe
-          ./llvm.exe
-          ./llvm.exe --help
-          ./llvm.exe --version
+          ./llvm.exe /S
+          ls 'C:\Program Files\LLVM'
       - name: test root
+        env:
+          LLVM_SYS_150_PREFIX: "C:\Program Files\LLVM"
         run: cargo test --release --no-default-features --features error_as_host,${{ matrix.wasmer-feature }} -- --nocapture
       - name: test
+        env:
+          LLVM_SYS_150_PREFIX: "C:\Program Files\LLVM"
         run: cargo test --release --manifest-path test/Cargo.toml --no-default-features --features ${{ matrix.wasmer-feature }} -- --nocapture
