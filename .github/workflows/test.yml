@@ -61,6 +61,13 @@ jobs:
       - name: Install dependencies
         run: |-
           vcpkg install llvm@15.0.7#6
+      - name: install vcpkg packages
+        uses: johnwason/vcpkg-action@v6
+        with:
+          triplet: x64-windows-release
+          token: ${{ github.token }}
+          manifest-dir: ${{ github.workspace }}/.github/manifest
+          github-binarycache: true
       - name: test root
         run: cargo test --release --no-default-features --features error_as_host,${{ matrix.wasmer-feature }} -- --nocapture
       - name: test
