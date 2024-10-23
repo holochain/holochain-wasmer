@@ -67,7 +67,7 @@ jobs:
 #          github-binarycache: true
       - name: Install LLVM
         shell: pwsh
-        run:
+        run: |
           Invoke-WebRequest -Uri https://github.com/llvm/llvm-project/releases/download/llvmorg-15.0.7/LLVM-15.0.7-win64.exe -OutFile llvm.exe
           llvm.exe /S
       - name: test root
