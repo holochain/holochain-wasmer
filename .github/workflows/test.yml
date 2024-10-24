@@ -65,6 +65,7 @@ jobs:
           mkdir -p ${LLVM_DIR}
           curl --proto '=https' --tlsv1.2 -sSf "https://github.com/wasmerio/llvm-custom-builds/releases/download/15.x/llvm-windows-amd64.tar.xz" -L -o - | tar xJv -C ${LLVM_DIR}
           echo "${LLVM_DIR}/bin" >> $GITHUB_PATH
+          echo LLVM_SYS_150_PREFIX="${LLVM_DIR}" >> $GITHUB_ENV
         env:
           LLVM_DIR: .llvm
       - name: test root
