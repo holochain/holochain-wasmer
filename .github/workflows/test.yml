@@ -58,22 +58,6 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
         with:
           targets: wasm32-unknown-unknown
-#      - name: install vcpkg packages
-#        uses: johnwason/vcpkg-action@v6
-#        with:
-#          triplet: x64-windows-release
-#          token: ${{ github.token }}
-#          manifest-dir: ${{ github.workspace }}/.github/manifest
-#          github-binarycache: true
-#      - name: Install LLVM
-#        shell: pwsh
-#        run: |
-#          Set-PSDebug -Trace 1
-#          New-Item -Name ".llvm" -Type Directory
-#          Invoke-WebRequest -Uri https://github.com/wasmerio/llvm-custom-builds/releases/download/15.x/llvm-windows-amd64.tar.xz -OutFile llvm.xz
-#          ls
-#          tar -xvf llvm.xz -C .llvm
-#          echo LLVM_SYS_150_PREFIX="$(pwd)/.llvm" >> $GITHUB_ENV
       - name: Install LLVM
         shell: bash
         run: |
@@ -84,8 +68,6 @@ jobs:
         env:
           LLVM_DIR: .llvm
       - name: test root
-        env:
-          LLVM_SYS_150_PREFIX: "C:\Program Files\LLVM"
         run: cargo test --release --no-default-features --features error_as_host,${{ matrix.wasmer-feature }} -- --nocapture
       - name: test
         env:
