@@ -71,6 +71,7 @@ jobs:
           Set-PSDebug -Trace 1
           New-Item -Name ".llvm" -Type Directory
           Invoke-WebRequest -Uri https://github.com/wasmerio/llvm-custom-builds/releases/download/15.x/llvm-windows-amd64.tar.xz -OutFile llvm.xz
+          ls
           tar xvf llvm.xz -C .llvm
           echo LLVM_SYS_150_PREFIX="$(pwd)/.llvm" >> $GITHUB_ENV
       - name: test root
