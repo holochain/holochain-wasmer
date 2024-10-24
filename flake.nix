@@ -21,13 +21,26 @@
                     inputs.holochain-flake.devShells.${system}.rustDev
                 ];
 
-                # These packages and env vars are required to build wasmer on the 'wamr' branch (i.e. the hc-wasmer dependency)
-                packages = [
-                  pkgs.cmake
-                  pkgs.clang
-                  pkgs.llvmPackages.libclang.lib
+                packages = with pkgs; [
+                  # These packages and env vars are required to build Wasmer with the 'wamr' feature (i.e. the hc-wasmer dependency)
+                  cmake
+                  clang
+                  llvmPackages.libclang.lib
+                  # These packages are required to build Wasmer with the production config
+                  llvm_15
+                  libffi
+                  libxml2
+                  zlib
+                  ncurses
                 ];
+                # Used by `wamr`
                 LIBCLANG_PATH="${pkgs.llvmPackages.libclang.lib}/lib";
+                # Used by wasmer production config
+                shellHook = ''
+                    # This binary lives in a different derivation to `llvm_15` and isn't re-exported through that derivation
+                    export LLVM_SYS_150_PREFIX=$(which llvm-config | xargs dirname | xargs dirname)
+                    export LD_LIBRARY_PATH="${pkgs.stdenv.cc.cc.lib}/lib:${pkgs.libffi}/lib:${pkgs.zlib}/lib:${pkgs.ncurses}/lib"
+                '';
             };
         };
     };
