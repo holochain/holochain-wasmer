@@ -65,15 +65,24 @@ jobs:
 #          token: ${{ github.token }}
 #          manifest-dir: ${{ github.workspace }}/.github/manifest
 #          github-binarycache: true
+#      - name: Install LLVM
+#        shell: pwsh
+#        run: |
+#          Set-PSDebug -Trace 1
+#          New-Item -Name ".llvm" -Type Directory
+#          Invoke-WebRequest -Uri https://github.com/wasmerio/llvm-custom-builds/releases/download/15.x/llvm-windows-amd64.tar.xz -OutFile llvm.xz
+#          ls
+#          tar -xvf llvm.xz -C .llvm
+#          echo LLVM_SYS_150_PREFIX="$(pwd)/.llvm" >> $GITHUB_ENV
       - name: Install LLVM
-        shell: pwsh
+        shell: bash
         run: |
-          Set-PSDebug -Trace 1
-          New-Item -Name ".llvm" -Type Directory
-          Invoke-WebRequest -Uri https://github.com/wasmerio/llvm-custom-builds/releases/download/15.x/llvm-windows-amd64.tar.xz -OutFile llvm.xz
-          ls
-          tar -xvf llvm.xz -C .llvm
-          echo LLVM_SYS_150_PREFIX="$(pwd)/.llvm" >> $GITHUB_ENV
+          LLVM_DIR=$(pwd)/${{ env.LLVM_DIR }}
+          mkdir -p ${LLVM_DIR}
+          curl --proto '=https' --tlsv1.2 -sSf "https://github.com/wasmerio/llvm-custom-builds/releases/download/15.x/llvm-windows-amd64.tar.xz" -L -o - | tar xJv -C ${LLVM_DIR}
+          echo "${LLVM_DIR}/bin" >> $GITHUB_PATH
+        env:
+          LLVM_DIR: .llvm
       - name: test root
         env:
           LLVM_SYS_150_PREFIX: "C:\Program Files\LLVM"
