@@ -5,7 +5,6 @@ use wasmer::sys::BaseTunables;
 use wasmer::sys::CompilerConfig;
 use wasmer::wasmparser;
 use wasmer::CompileError;
-use wasmer::Cranelift;
 use wasmer::DeserializeError;
 use wasmer::Engine;
 use wasmer::Module;
@@ -29,9 +28,15 @@ pub fn make_engine() -> Engine {
     // @todo 100 giga-ops is totally arbitrary cutoff so we probably
     // want to make the limit configurable somehow.
     let metering = Arc::new(Metering::new(WASM_METERING_LIMIT, cost_function));
+
     // the only place where the wasm compiler engine is set
-    let mut compiler = Cranelift::default();
-    compiler.canonicalize_nans(true).push_middleware(metering);
+    #[cfg(feature = "wasmer_sys_dev")]
+    let mut compiler = wasmer::Cranelift::default();
+    #[cfg(feature = "wasmer_sys_prod")]
+    let mut compiler = wasmer::LLVM::default();
+
+    compiler.canonicalize_nans(true);
+    compiler.push_middleware(metering);
 
     // Workaround for invalid memory access on iOS.
     // https://github.com/holochain/holochain/issues/3096
