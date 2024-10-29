@@ -15,7 +15,10 @@ macro_rules! host_externs {
         $crate::paste! {
             #[no_mangle]
             extern "C" {
-                $( $( #[cfg(feature = $feat)] )?pub fn [<__hc__ $func_name _ $version>](guest_allocation_ptr: usize, len: usize) -> $crate::DoubleUSize; )*
+                $(
+                    $( #[cfg(feature = $feat)] )?
+                    pub fn [<__hc__ $func_name _ $version>](guest_allocation_ptr: usize, len: usize) -> $crate::DoubleUSize;
+                )*
             }
         }
     };
