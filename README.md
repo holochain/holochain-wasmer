@@ -423,6 +423,18 @@ extern "C" fn foo(_: usize, _: usize) -> DoubleUSize {
 }
 ```
 
+You can also use conditional compilation in `host_externs!` to only include certain externs based on the feature flags.
+Adding `#![cfg(feature = "foo")]` to the `host_externs!` macro will apply that feature to all the externs listed.
+
+```rust
+host_externs!(
+    #![cfg(feature = "foo")]
+
+    __some_experimental_host_function,
+    __another_experimental_host_function,
+);
+```
+
 #### Return any Err(GuestPtr) values immediately
 
 Inside an extern we must return a `GuestPtrLen`.

@@ -11,12 +11,12 @@ pub use paste::paste;
 #[macro_export]
 macro_rules! host_externs {
 
-    ( $( $( #[cfg(feature = $feat:literal)] )? $func_name:ident:$version:literal ),* ) => {
+    ( $( #![cfg(feature = $feature:literal)] )? $( $func_name:ident:$version:literal ),* $(,)? ) => {
         $crate::paste! {
             #[no_mangle]
+            $( #[cfg(feature = $feature)] )?
             extern "C" {
                 $(
-                    $( #[cfg(feature = $feat)] )?
                     pub fn [<__hc__ $func_name _ $version>](guest_allocation_ptr: usize, len: usize) -> $crate::DoubleUSize;
                 )*
             }
