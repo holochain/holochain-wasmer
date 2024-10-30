@@ -77,8 +77,6 @@
 //! ✔ Idiomatic Rust
 //!
 //! ✔ Production-quality
-
-#![cfg_attr(feature = "no_std", no_std)]
 #![warn(missing_docs)]
 
 extern crate core;
@@ -105,7 +103,6 @@ pub type DynamicCache = Cache<Box<[AtomicU64]>>;
 /// Create a heap allocated cache of a fixed (but dynamic) number of cache lines.
 ///
 /// Ideally, 64 should divide `len` to optimize space efficiency.
-#[cfg(not(feature = "no_std"))]
 pub fn create(lines: usize) -> DynamicCache {
     // Unfortunately, `AtomicU64` doesn't implement `Clone`, so we cannot use the `vec![]` macro.
     // We need to manually construct our vector.
@@ -312,7 +309,6 @@ impl<B: AsRef<[AtomicU64]>> fmt::Debug for Cache<B> {
 #[cfg(test)]
 mod tests {
     #[test]
-    #[cfg(not(feature = "no_std"))]
     fn create() {
         assert_eq!(super::create(10).len(), 64);
         assert_eq!(super::create(64).len(), 64);
