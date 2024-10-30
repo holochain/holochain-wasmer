@@ -4,6 +4,15 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+### Changed
+- **BREAKING CHANGE** The `wasmer_sys` has been renamed to `wasmer_sys_dev`
+
+### Added
+- A new feature flag, `wasmer_sys_prod` which enables the Wasmer LLVM compiler. The default, with the `wasmer_sys_dev` feature
+  is the Cranelift compiler. The Cranelift compiler is fast, and recommended for development, but the LLVM compiler is supposed
+  to be faster and more optimized for production. In testing so far, the compile step is slower with LLVM but the runtime is
+  faster. More testing is needed yet to confirm the difference.
+
 ## [0.0.93] - 2024-04-24
 
 ### Changed
