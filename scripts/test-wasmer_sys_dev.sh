@@ -5,7 +5,7 @@ export RUST_BACKTRACE=full
 export WASMER_BACKTRACE=1
 
 # static tests
-cargo fmt
+cargo fmt --check
 ( cd test && cargo fmt --check )
 ( cd crates/guest && cargo fmt --check )
 
