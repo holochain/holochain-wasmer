@@ -67,7 +67,7 @@ pub extern "C" fn process_native(guest_ptr: usize, len: usize) -> DoubleUSize {
         Err(err_ptr) => return err_ptr,
     };
     let processed: SomeStruct = try_ptr!(
-        host_call(__hc__test_process_struct_2, &input),
+        host_call(__hc__test_process_struct_2, input),
         "could not deserialize SomeStruct in process_native"
     );
     return_ptr(processed)
