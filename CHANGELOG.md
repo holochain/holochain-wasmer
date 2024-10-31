@@ -5,7 +5,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 ## [Unreleased]
 
 ### Changed
-- **BREAKING CHANGE** The `wasmer_sys` has been renamed to `wasmer_sys_dev`
+- **BREAKING CHANGE** The `wasmer_sys` feature has been renamed to `wasmer_sys_dev`
 
 ### Added
 - A new feature flag, `wasmer_sys_prod` which enables the Wasmer LLVM compiler. The default, with the `wasmer_sys_dev` feature
