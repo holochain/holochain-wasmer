@@ -22,7 +22,7 @@
                 ];
 
                 packages = with pkgs; [
-                  # These packages and env vars are required to build Wasmer with the 'wamr' feature (i.e. the hc-wasmer dependency)
+                  # These packages and env vars are required to build Wasmer with the 'wamr' feature
                   cmake
                   clang
                   llvmPackages.libclang.lib
