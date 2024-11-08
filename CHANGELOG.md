@@ -5,6 +5,8 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 ## [Unreleased]
 
 ### Changed
+
+- Upgrade wasmer to 5.x
 - **BREAKING CHANGE** The `wasmer_sys` feature has been renamed to `wasmer_sys_dev`
 
 ### Added
