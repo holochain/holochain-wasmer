@@ -236,9 +236,7 @@ impl SerializedModuleCache {
                 // Each module needs to be compiled with a new engine because
                 // of middleware like metering. Middleware is compiled into the
                 // module once and available in all instances created from it.
-                let compiler_engine = (self.make_engine)();
-                let module = Module::from_binary(&compiler_engine, wasm)
-                    .map_err(|e| wasm_error!(WasmErrorInner::Compile(e.to_string())))?;
+                let module = build_module(wasm)?;
                 let serialized_module = module
                     .serialize()
                     .map_err(|e| wasm_error!(WasmErrorInner::Compile(e.to_string())))?;
@@ -393,6 +391,13 @@ pub fn wasmer_ios_target() -> Target {
     let triple = Triple::from_str("aarch64-apple-ios").unwrap();
     let cpu_feature = CpuFeature::set();
     Target::new(triple, cpu_feature)
+}
+
+pub fn build_module(wasm: &[u8]) -> Result<Arc<Module>, wasmer::RuntimeError> {
+    let compiler_engine = make_engine();
+    let res = Module::from_binary(&compiler_engine, wasm);
+    let module = res.map_err(|e| wasm_error!(WasmErrorInner::Compile(e.to_string())))?;
+    Ok(Arc::new(module))
 }
 
 #[cfg(test)]
