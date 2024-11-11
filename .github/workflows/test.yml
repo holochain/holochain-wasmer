@@ -65,14 +65,14 @@ jobs:
         run: |
           LLVM_DIR=$(pwd)/${{ env.LLVM_DIR }}
           mkdir -p ${LLVM_DIR}
-          curl --proto '=https' --tlsv1.2 -sSf "https://github.com/wasmerio/llvm-custom-builds/releases/download/15.x/llvm-windows-amd64.tar.xz" -L -o - | tar xJv -C ${LLVM_DIR}
+          curl --proto '=https' --tlsv1.2 -sSf "https://github.com/wasmerio/llvm-custom-builds/releases/download/18.x/llvm-windows-amd64.tar.xz" -L -o - | tar xJv -C ${LLVM_DIR}
       - name: test root
         shell: pwsh
         run: |
-          $env:LLVM_SYS_150_PREFIX="$(pwd)/.llvm"
+          $env:LLVM_SYS_180_PREFIX="$(pwd)/.llvm"
           cargo test --release --no-default-features --features error_as_host,${{ matrix.wasmer-feature }} -- --nocapture
       - name: test
         shell: pwsh
         run: |
-          $env:LLVM_SYS_150_PREFIX="$(pwd)/.llvm"
+          $env:LLVM_SYS_180_PREFIX="$(pwd)/.llvm"
           cargo test --release --manifest-path test/Cargo.toml --no-default-features --features ${{ matrix.wasmer-feature }} -- --nocapture
