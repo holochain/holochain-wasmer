@@ -34,6 +34,7 @@ pub enum WasmErrorInner {
     /// With the feature `wasmer_sys` enabled, this is when the wasm byte code
     /// is compiled to machine code.
     Compile(String),
+    /// The host failed to call a function in the guest.
     CallError(String),
     /// Host attempted to interact with the module cache before it was initialized.
     UninitializedSerializedModuleCache,
