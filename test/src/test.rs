@@ -1,10 +1,6 @@
 pub mod import;
 pub mod wasms;
 
-// Temporarily include a fork of wasmer from the git branch 'wamr', until it is officially released in wasmer v5
-#[cfg(feature = "wasmer_wamr")]
-extern crate hc_wasmer as wasmer;
-
 use holochain_wasmer_host::prelude::*;
 use holochain_wasmer_host::wasm_host_error as wasm_error;
 use test_common::SomeStruct;
