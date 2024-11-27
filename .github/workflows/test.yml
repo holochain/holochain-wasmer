@@ -17,7 +17,7 @@ jobs:
       matrix:
         script: ["test", "bench"]
         os: ["ubuntu-latest", "macos-latest"]
-        wasmer-feature: ["wasmer_sys", "wasmer_wamr"]
+        wasmer-feature: ["wasmer_sys_dev", "wasmer_sys_prod", "wasmer_wamr"]
         exclude:
           # TODO bench suite on macos-latest is killed by system due to running out of swap space
           # All benches run fine individually
@@ -33,9 +33,9 @@ jobs:
           size: 15G
       - uses: actions/checkout@v4
       - name: Install nix
-        uses: cachix/install-nix-action@v26
+        uses: cachix/install-nix-action@v30
       - name: Setup cachix
-        uses: cachix/cachix-action@v14
+        uses: cachix/cachix-action@v15
         if: ${{ ! contains(matrix.platform.runs-on, 'self-hosted') }}
         with:
           name: holochain-ci
@@ -47,7 +47,8 @@ jobs:
       fail-fast: false
       matrix:
         wasmer-feature: 
-          - "wasmer_sys" 
+          - "wasmer_sys_dev"
+          - "wasmer_sys_prod"
           # TODO Building with wasmer_wamr feature flag on windows is not currently working.
           # See https://github.com/holochain/holochain-wasmer/issues/117
           # - "wasmer_wamr"
@@ -57,7 +58,21 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
         with:
           targets: wasm32-unknown-unknown
+      - name: Install LLVM
+        env:
+          LLVM_DIR: .llvm
+        shell: bash
+        run: |
+          LLVM_DIR=$(pwd)/${{ env.LLVM_DIR }}
+          mkdir -p ${LLVM_DIR}
+          curl --proto '=https' --tlsv1.2 -sSf "https://github.com/wasmerio/llvm-custom-builds/releases/download/18.x/llvm-windows-amd64.tar.xz" -L -o - | tar xJv -C ${LLVM_DIR}
       - name: test root
-        run: cargo test --release --no-default-features --features error_as_host,${{ matrix.wasmer-feature }} -- --nocapture
+        shell: pwsh
+        run: |
+          $env:LLVM_SYS_180_PREFIX="$(pwd)/.llvm"
+          cargo test --release --no-default-features --features error_as_host,${{ matrix.wasmer-feature }} -- --nocapture
       - name: test
-        run: cargo test --release --manifest-path test/Cargo.toml --no-default-features --features ${{ matrix.wasmer-feature }} -- --nocapture
+        shell: pwsh
+        run: |
+          $env:LLVM_SYS_180_PREFIX="$(pwd)/.llvm"
+          cargo test --release --manifest-path test/Cargo.toml --no-default-features --features ${{ matrix.wasmer-feature }} -- --nocapture
