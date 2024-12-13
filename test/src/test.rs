@@ -634,48 +634,52 @@ pub mod tests {
     #[test]
     fn bytes_serialize_n() {
         let InstanceWithStore { store, instance } = TestWasm::Io.instance();
-        let _: test_common::BytesType = guest::call(
+        let res: Result<test_common::BytesType, wasmer::RuntimeError> = guest::call(
             &mut store.lock().as_store_mut(),
             instance.clone(),
             "bytes_serialize_n",
             test_common::IntegerType::from(1_000_000),
-        )
-        .expect("failed deserialize");
+        );
+
+        assert!(res.is_ok());
     }
 
     #[test]
     fn bytes_ret_n() {
         let InstanceWithStore { store, instance } = TestWasm::Io.instance();
-        let _: test_common::BytesType = guest::call(
+        let res: Result<test_common::BytesType, wasmer::RuntimeError> = guest::call(
             &mut store.lock().as_store_mut(),
             instance.clone(),
             "bytes_ret_n",
             test_common::IntegerType::from(1_000_000),
-        )
-        .expect("failed deserialize");
+        );
+
+        assert!(res.is_ok());
     }
 
     #[test]
     fn string_serialize_n() {
         let InstanceWithStore { store, instance } = TestWasm::Io.instance();
-        let _: test_common::StringType = guest::call(
+        let res: Result<test_common::StringType, wasmer::RuntimeError> = guest::call(
             &mut store.lock().as_store_mut(),
             instance.clone(),
             "string_serialize_n",
             test_common::IntegerType::from(1_000_000),
-        )
-        .expect("failed deserialize");
+        );
+
+        assert!(res.is_ok());
     }
 
     #[test]
     fn string_ret_n() {
         let InstanceWithStore { store, instance } = TestWasm::Io.instance();
-        let _: test_common::StringType = guest::call(
+        let res: Result<test_common::StringType, wasmer::RuntimeError> = guest::call(
             &mut store.lock().as_store_mut(),
             instance.clone(),
             "string_ret_n",
             test_common::IntegerType::from(1_000_000),
-        )
-        .expect("failed deserialize");
+        );
+
+        assert!(res.is_ok());
     }
 }
