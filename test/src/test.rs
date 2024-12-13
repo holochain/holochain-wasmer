@@ -535,4 +535,118 @@ pub mod tests {
 
         assert_eq!(result, Vec::<u8>::from([1]));
     }
+
+    #[test]
+    fn string_input_ignored_empty_ret() {
+        let InstanceWithStore {
+            store,
+            instance,
+        } = TestWasm::Io.instance();
+        let input = test_common::StringType::from(".".repeat(1_000_000.try_into().unwrap()));
+        let result: test_common::StringType = guest::call(
+            &mut store.lock().as_store_mut(),
+            instance.clone(),
+            "string_input_ignored_empty_ret",
+            &input,
+        )
+        .unwrap();
+        let result_string: String = result.into();
+
+        assert_eq!(result_string, "".to_string());
+    }
+
+    #[test]
+    fn string_input_args_empty_ret() {
+        let InstanceWithStore {
+            store,
+            instance,
+        } = TestWasm::Io.instance();
+        let input = test_common::StringType::from(".".repeat(1_000_000.try_into().unwrap()));
+        let result: test_common::StringType = guest::call(
+            &mut store.lock().as_store_mut(),
+            instance.clone(),
+            "string_input_args_empty_ret",
+            &input,
+        )
+        .unwrap();
+        let result_string: String = result.into();
+
+        assert_eq!(result_string, "".to_string());
+    }
+
+    #[test]
+    fn string_input_args_echo_ret() {
+        let InstanceWithStore {
+            store,
+            instance,
+        } = TestWasm::Io.instance();
+        let input_string: String = ".".repeat(1_000_000.try_into().unwrap());
+        let input = test_common::StringType::from(input_string.clone());
+        let result: test_common::StringType = guest::call(
+            &mut store.lock().as_store_mut(),
+            instance.clone(),
+            "string_input_args_echo_ret",
+            &input,
+        )
+        .unwrap();
+        let result_string: String = result.into();
+
+        assert_eq!(result_string, input_string);
+    }
+
+
+    #[test]
+    fn bytes_input_ignored_empty_ret() {
+        let InstanceWithStore {
+            store,
+            instance,
+        } = TestWasm::Io.instance();
+        let input = test_common::BytesType::from(vec![0; 1_000_000.try_into().unwrap()]);
+        let result: test_common::BytesType = guest::call(
+            &mut store.lock().as_store_mut(),
+            instance.clone(),
+            "bytes_input_ignored_empty_ret",
+            &input,
+        )
+        .unwrap();
+
+        assert_eq!(result.inner(), Vec::<u8>::from([]));
+    }
+
+    #[test]
+    fn bytes_input_args_empty_ret() {
+        let InstanceWithStore {
+            store,
+            instance,
+        } = TestWasm::Io.instance();
+        let input = test_common::BytesType::from(vec![0; 1_000_000.try_into().unwrap()]);
+        let result: test_common::BytesType = guest::call(
+            &mut store.lock().as_store_mut(),
+            instance.clone(),
+            "bytes_input_args_empty_ret",
+            &input,
+        )
+        .unwrap();
+
+        assert_eq!(result.inner(), Vec::<u8>::from([]));
+    }
+
+    #[test]
+    fn bytes_input_args_echo_ret() {
+        let InstanceWithStore {
+            store,
+            instance,
+        } = TestWasm::Io.instance();
+        let input_bytes = vec![0; 1_000_000.try_into().unwrap()];
+        let input = test_common::BytesType::from(input_bytes.clone());
+        let result: test_common::BytesType = guest::call(
+            &mut store.lock().as_store_mut(),
+            instance.clone(),
+            "bytes_input_args_echo_ret",
+            &input,
+        )
+        .unwrap();
+
+        assert_eq!(result.inner(), input_bytes);
+    }
 }
