@@ -7,8 +7,8 @@ authors = ["thedavidmeister", "thedavidmeister@gmail.com"]
 edition = "2021"
 
 [dependencies]
-wasmer = { version = "5.0.3", default-features = false }
-wasmer-middlewares = { version = "5.0.3", optional = true }
+wasmer = { version = "5.0.2", default-features = false }
+wasmer-middlewares = { version = "5.0.2", optional = true }
 
 holochain_wasmer_common = { version = "=0.0.96", path = "../common" }
 holochain_serialized_bytes = "=0.0.55"
