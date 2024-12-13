@@ -649,4 +649,81 @@ pub mod tests {
 
         assert_eq!(result.inner(), input_bytes);
     }
+
+
+    #[test]
+    fn bytes_serialize_n() {
+        let InstanceWithStore {
+            store,
+            instance,
+        } = TestWasm::Io.instance();
+        let result: test_common::BytesType = guest::call(
+            &mut store.lock().as_store_mut(),
+            instance.clone(),
+            "bytes_serialize_n",
+            test_common::IntegerType::from(1_000_000),
+        )
+        .expect("failed deserialize");
+    }
+
+    #[test]
+    fn bytes_ret_n() {
+        let InstanceWithStore {
+            store,
+            instance,
+        } = TestWasm::Io.instance();
+        let result: test_common::BytesType = guest::call(
+            &mut store.lock().as_store_mut(),
+            instance.clone(),
+            "bytes_ret_n",
+            test_common::IntegerType::from(1_000_000),
+        )
+        .expect("failed deserialize");
+    }
+
+    #[test]
+    fn string_serialize_n() {
+        let InstanceWithStore {
+            store,
+            instance,
+        } = TestWasm::Io.instance();
+        let result: test_common::StringType = guest::call(
+            &mut store.lock().as_store_mut(),
+            instance.clone(),
+            "string_serialize_n",
+            test_common::IntegerType::from(1_000_000),
+        )
+        .expect("failed deserialize");
+    }
+    
+    #[test]
+    fn string_ret_n() {
+        let InstanceWithStore {
+            store,
+            instance,
+        } = TestWasm::Io.instance();
+        let result: test_common::StringType = guest::call(
+            &mut store.lock().as_store_mut(),
+            instance.clone(),
+            "string_ret_n",
+            test_common::IntegerType::from(1_000_000),
+        )
+        .expect("failed deserialize");
+    }
+
+    #[test]
+    fn process_string() {
+        let InstanceWithStore {
+            store,
+            instance,
+        } = TestWasm::Io.instance();
+        let input = test_common::StringType::from(".".repeat(1_000_000.try_into().unwrap()));
+        let result: test_common::StringType = guest::call(
+            &mut store.lock().as_store_mut(),
+            instance.clone(),
+            "process_string",
+            &input
+        )
+        .expect("failed deserialize");
+    }
 }
