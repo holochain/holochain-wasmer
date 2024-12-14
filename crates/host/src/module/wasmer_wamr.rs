@@ -6,6 +6,9 @@ use wasmer::DeserializeError;
 use wasmer::Engine;
 use wasmer::Module;
 
+/// Generate an engine with a wasm interpreter
+/// The interpreter used (wasm micro runtime) does not support metering
+/// See tracking issue: https://github.com/bytecodealliance/wasm-micro-runtime/issues/2163
 pub(crate) fn make_engine() -> Engine {
     Engine::default()
 }
@@ -14,8 +17,6 @@ pub(crate) fn make_runtime_engine() -> Engine {
 }
 
 /// Build an interpreter module from wasm bytes.
-/// The interpreter used (wasm micro runtime) does not support metering
-/// See tracking issue: https://github.com/bytecodealliance/wasm-micro-runtime/issues/2163
 pub fn build_module(wasm: &[u8]) -> Result<Arc<Module>, wasmer::RuntimeError> {
     let compiler_engine = make_engine();
     let res = Module::from_binary(&compiler_engine, wasm);
