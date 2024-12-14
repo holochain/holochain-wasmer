@@ -76,6 +76,7 @@ impl TestWasm {
             (TestWasm::Memory, true) => [7; 32],
         }
     }
+    
     pub fn module_cache(&self, metered: bool) -> &OnceCell<RwLock<SerializedModuleCache>> {
         if metered {
             &SERIALIZED_MODULE_CACHE
