@@ -11,15 +11,11 @@ use std::fs::File;
 use std::fs::OpenOptions;
 use std::io::Write;
 use std::path::PathBuf;
-use std::str::FromStr;
 use std::sync::Arc;
-use wasmer::CpuFeature;
 use wasmer::Engine;
 use wasmer::Instance;
 use wasmer::Module;
 use wasmer::Store;
-use wasmer::Target;
-use wasmer::Triple;
 
 #[cfg(feature = "wasmer_sys")]
 mod wasmer_sys;
@@ -36,9 +32,9 @@ pub use wasmer_wamr::*;
 pub type CacheKey = [u8; 32];
 /// Plru uses a usize to track "recently used" so we need a map between 32 byte cache
 /// keys and the bits used to evict things from the cache.
-pub type PlruKeyMap = BiMap<usize, CacheKey>;
+type PlruKeyMap = BiMap<usize, CacheKey>;
 /// Modules serialize to a vec of bytes as per wasmer.
-pub type SerializedModule = Bytes;
+type SerializedModule = Bytes;
 
 #[derive(Clone, Debug)]
 pub struct ModuleWithStore {
@@ -56,7 +52,7 @@ pub struct InstanceWithStore {
 /// with consistently. Default implementations for key functions are provided.
 /// Notably handles keeping the mapping between cache keys and items, and the
 /// plru tracking including touching and evicting.
-pub trait PlruCache {
+trait PlruCache {
     /// The type of items in the cache.
     type Item;
     /// Accessor for mutable reference to internal plru cache.
@@ -104,12 +100,14 @@ pub trait PlruCache {
 
     /// Delete the plru for a given cache key. Care must be taken to ensure this
     /// is not called before a subsequent call to `plru_key` or it will panic.
+    #[allow(dead_code)]
     fn trash(&mut self, key: &CacheKey) {
         let plru_key = self.plru_key(key);
         self.plru_mut().trash(plru_key);
     }
 
     /// Remove an item from the cache and the associated plru entry.
+    #[allow(dead_code)]
     fn remove_item(&mut self, key: &CacheKey) -> Option<Arc<Self::Item>> {
         let maybe_item = self.cache_mut().remove(key);
         if maybe_item.is_some() {
@@ -312,7 +310,7 @@ impl SerializedModuleCache {
 /// the cache to create callable instances is slow. Therefore modules are
 /// cached in memory after deserialization.
 #[derive(Default, Debug)]
-pub struct DeserializedModuleCache {
+struct DeserializedModuleCache {
     plru: MicroCache,
     key_map: PlruKeyMap,
     cache: BTreeMap<CacheKey, Arc<Module>>,
@@ -383,16 +381,6 @@ impl ModuleCache {
         }
         Ok(module)
     }
-}
-
-/// Configuration of a Target for wasmer for iOS
-pub fn wasmer_ios_target() -> Target {
-    // use what I see in
-    // platform ios headless example
-    // https://github.com/wasmerio/wasmer/blob/447c2e3a152438db67be9ef649327fabcad6f5b8/examples/platform_ios_headless.rs#L38-L53
-    let triple = Triple::from_str("aarch64-apple-ios").unwrap();
-    let cpu_feature = CpuFeature::set();
-    Target::new(triple, cpu_feature)
 }
 
 #[cfg(test)]
