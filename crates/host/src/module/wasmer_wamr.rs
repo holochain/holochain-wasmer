@@ -12,6 +12,7 @@ use wasmer::Module;
 pub(crate) fn make_engine() -> Engine {
     Engine::default()
 }
+
 pub(crate) fn make_runtime_engine() -> Engine {
     Engine::default()
 }
