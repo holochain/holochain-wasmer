@@ -13,10 +13,12 @@ use wasmer::Store;
 pub fn wasm_module_compile(c: &mut Criterion) {
     let mut group = c.benchmark_group("wasm_module_compile");
 
-    for wasm in [TestWasm::Empty,
+    for wasm in [
+        TestWasm::Empty,
         TestWasm::Io,
         TestWasm::Test,
-        TestWasm::Memory] {
+        TestWasm::Memory,
+    ] {
         group.bench_function(BenchmarkId::new("wasm_module_compile", wasm.name()), |b| {
             b.iter(|| {
                 Module::from_binary(&Store::default(), wasm.bytes()).unwrap();
@@ -29,10 +31,12 @@ pub fn wasm_module_compile(c: &mut Criterion) {
 pub fn wasm_module_deserialize_from_file(c: &mut Criterion) {
     let mut group = c.benchmark_group("wasm_module_deserialize_from_file");
 
-    for wasm in [TestWasm::Empty,
+    for wasm in [
+        TestWasm::Empty,
         TestWasm::Io,
         TestWasm::Test,
-        TestWasm::Memory] {
+        TestWasm::Memory,
+    ] {
         let tmpdir = TempDir::new().unwrap();
         let path = tmpdir.path().join(wasm.name());
         let module = Module::from_binary(&Store::default(), wasm.bytes()).unwrap();
@@ -52,10 +56,12 @@ pub fn wasm_module_deserialize_from_file(c: &mut Criterion) {
 pub fn wasm_module(c: &mut Criterion) {
     let mut group = c.benchmark_group("wasm_module");
 
-    for wasm in [TestWasm::Empty,
+    for wasm in [
+        TestWasm::Empty,
         TestWasm::Io,
         TestWasm::Test,
-        TestWasm::Memory] {
+        TestWasm::Memory,
+    ] {
         group.bench_function(BenchmarkId::new("wasm_module", wasm.name()), |b| {
             b.iter(|| {
                 wasm.module(false);
@@ -70,10 +76,12 @@ pub fn wasm_module(c: &mut Criterion) {
 pub fn wasm_instance(c: &mut Criterion) {
     let mut group = c.benchmark_group("wasm_instance");
 
-    for wasm in [TestWasm::Empty,
+    for wasm in [
+        TestWasm::Empty,
         TestWasm::Io,
         TestWasm::Test,
-        TestWasm::Memory] {
+        TestWasm::Memory,
+    ] {
         group.bench_function(BenchmarkId::new("wasm_instance", wasm.name()), |b| {
             b.iter(|| {
                 let _drop = wasm.unmetered_instance();

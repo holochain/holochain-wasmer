@@ -267,8 +267,8 @@ pub mod tests {
     fn process_string_test() {
         // use a "crazy" string that is much longer than a single wasm page to show that pagination
         // and utf-8 are both working OK
-        let starter_string = "╰▐ ✖ 〜 ✖ ▐╯"
-            .repeat(usize::try_from(10_u32 * u32::from(u16::MAX)).unwrap());
+        let starter_string =
+            "╰▐ ✖ 〜 ✖ ▐╯".repeat(usize::try_from(10_u32 * u32::from(u16::MAX)).unwrap());
         let InstanceWithStore { store, instance } = TestWasm::Test.instance();
         let result: StringType = guest::call(
             &mut store.lock().as_store_mut(),
