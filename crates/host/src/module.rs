@@ -8,24 +8,24 @@
 //! 2. When using the feature flag `wasmer_wamr`, modules should be built via the exported build_module function.
 //!    There is no need for caching, as the wasm module is interpreted.
 
-use parking_lot::Mutex;
-use std::sync::Arc;
-use wasmer::Instance;
-use wasmer::Module;
-use wasmer::Store;
 use crate::plru::MicroCache;
 use crate::prelude::*;
 use bimap::BiMap;
 use bytes::BufMut;
 use bytes::Bytes;
 use bytes::BytesMut;
+use parking_lot::Mutex;
 use parking_lot::RwLock;
 use std::collections::BTreeMap;
 use std::fs::File;
 use std::fs::OpenOptions;
 use std::io::Write;
 use std::path::PathBuf;
+use std::sync::Arc;
 use wasmer::Engine;
+use wasmer::Instance;
+use wasmer::Module;
+use wasmer::Store;
 
 #[cfg(feature = "wasmer_sys")]
 mod wasmer_sys;
@@ -36,6 +36,15 @@ pub use wasmer_sys::*;
 mod wasmer_wamr;
 #[cfg(feature = "wasmer_wamr")]
 pub use wasmer_wamr::*;
+
+/// We expect cache keys to be produced via hashing so 32 bytes is enough for all
+/// purposes.
+pub type CacheKey = [u8; 32];
+/// Plru uses a usize to track "recently used" so we need a map between 32 byte cache
+/// keys and the bits used to evict things from the cache.
+type PlruKeyMap = BiMap<usize, CacheKey>;
+/// Modules serialize to a vec of bytes as per wasmer.
+type SerializedModule = Bytes;
 
 #[derive(Clone, Debug)]
 pub struct ModuleWithStore {
@@ -48,15 +57,6 @@ pub struct InstanceWithStore {
     pub store: Arc<Mutex<Store>>,
     pub instance: Arc<Instance>,
 }
-
-/// We expect cache keys to be produced via hashing so 32 bytes is enough for all
-/// purposes.
-pub type CacheKey = [u8; 32];
-/// Plru uses a usize to track "recently used" so we need a map between 32 byte cache
-/// keys and the bits used to evict things from the cache.
-type PlruKeyMap = BiMap<usize, CacheKey>;
-/// Modules serialize to a vec of bytes as per wasmer.
-type SerializedModule = Bytes;
 
 /// Higher level trait over the plru cache to make it a bit easier to interact
 /// with consistently. Default implementations for key functions are provided.

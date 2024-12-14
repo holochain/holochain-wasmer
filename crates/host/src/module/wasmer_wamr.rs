@@ -6,16 +6,6 @@ use wasmer::DeserializeError;
 use wasmer::Engine;
 use wasmer::Module;
 
-/// Take WASM binary and prepare a wasmer Module suitable for iOS
-pub fn build_ios_module(_wasm: &[u8]) -> Result<Module, CompileError> {
-    unimplemented!("The feature flag 'wasmer_sys' must be enabled to support compiling wasm");
-}
-
-/// Deserialize a previously compiled module for iOS from a file.
-pub fn get_ios_module_from_file(_path: &Path) -> Result<Module, DeserializeError> {
-    unimplemented!("The feature flag 'wasmer_sys' must be enabled to support compiling wasm");
-}
-
 pub(crate) fn make_engine() -> Engine {
     Engine::default()
 }
@@ -31,6 +21,16 @@ pub fn build_module(wasm: &[u8]) -> Result<Arc<Module>, wasmer::RuntimeError> {
     let res = Module::from_binary(&compiler_engine, wasm);
     let module = res.map_err(|e| wasm_error!(WasmErrorInner::ModuleBuild(e.to_string())))?;
     Ok(Arc::new(module))
+}
+
+/// Take WASM binary and prepare a wasmer Module suitable for iOS
+pub fn build_ios_module(_wasm: &[u8]) -> Result<Module, CompileError> {
+    unimplemented!("The feature flag 'wasmer_sys' must be enabled to support compiling wasm");
+}
+
+/// Deserialize a previously compiled module for iOS from a file.
+pub fn get_ios_module_from_file(_path: &Path) -> Result<Module, DeserializeError> {
+    unimplemented!("The feature flag 'wasmer_sys' must be enabled to support compiling wasm");
 }
 
 #[cfg(test)]

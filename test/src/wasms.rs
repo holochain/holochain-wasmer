@@ -2,7 +2,6 @@ use crate::import::imports;
 #[cfg(feature = "wasmer_wamr")]
 use holochain_wasmer_host::module::build_module;
 use holochain_wasmer_host::module::InstanceWithStore;
-#[cfg(feature = "wasmer_sys")]
 use holochain_wasmer_host::module::SerializedModuleCache;
 use holochain_wasmer_host::prelude::*;
 use once_cell::sync::OnceCell;
@@ -13,6 +12,7 @@ use wasmer::wasmparser::Operator;
 use wasmer::AsStoreMut;
 #[cfg(feature = "wasmer_sys")]
 use wasmer::CompilerConfig;
+#[cfg(feature = "wasmer_sys")]
 use wasmer::Engine;
 use wasmer::FunctionEnv;
 use wasmer::Imports;
@@ -29,9 +29,7 @@ pub enum TestWasm {
     Memory,
 }
 
-#[cfg(feature = "wasmer_sys")]
 pub static SERIALIZED_MODULE_CACHE: OnceCell<RwLock<SerializedModuleCache>> = OnceCell::new();
-#[cfg(feature = "wasmer_sys")]
 pub static SERIALIZED_MODULE_CACHE_UNMETERED: OnceCell<RwLock<SerializedModuleCache>> =
     OnceCell::new();
 
@@ -78,8 +76,6 @@ impl TestWasm {
             (TestWasm::Memory, true) => [7; 32],
         }
     }
-
-    #[cfg(feature = "wasmer_sys")]
     pub fn module_cache(&self, metered: bool) -> &OnceCell<RwLock<SerializedModuleCache>> {
         if metered {
             &SERIALIZED_MODULE_CACHE
