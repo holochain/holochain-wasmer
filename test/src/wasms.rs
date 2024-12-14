@@ -1,5 +1,8 @@
 use crate::import::imports;
+#[cfg(feature = "wasmer_wamr")]
+use holochain_wasmer_host::module::build_module;
 use holochain_wasmer_host::module::InstanceWithStore;
+#[cfg(feature = "wasmer_sys")]
 use holochain_wasmer_host::module::SerializedModuleCache;
 use holochain_wasmer_host::prelude::*;
 use once_cell::sync::OnceCell;
@@ -26,7 +29,9 @@ pub enum TestWasm {
     Memory,
 }
 
+#[cfg(feature = "wasmer_sys")]
 pub static SERIALIZED_MODULE_CACHE: OnceCell<RwLock<SerializedModuleCache>> = OnceCell::new();
+#[cfg(feature = "wasmer_sys")]
 pub static SERIALIZED_MODULE_CACHE_UNMETERED: OnceCell<RwLock<SerializedModuleCache>> =
     OnceCell::new();
 
@@ -74,6 +79,7 @@ impl TestWasm {
         }
     }
 
+    #[cfg(feature = "wasmer_sys")]
     pub fn module_cache(&self, metered: bool) -> &OnceCell<RwLock<SerializedModuleCache>> {
         if metered {
             &SERIALIZED_MODULE_CACHE
@@ -131,21 +137,8 @@ impl TestWasm {
     }
 
     #[cfg(feature = "wasmer_wamr")]
-    pub fn module(&self, metered: bool) -> Arc<Module> {
-        match self.module_cache(false).get() {
-            Some(cache) => cache.write().get(self.key(false), self.bytes()).unwrap(),
-            None => {
-                // This will error if the cache is already initialized
-                // which could happen if two tests are running in parallel.
-                // It doesn't matter which one wins, so we just ignore the error.
-                let _did_init_ok = self.module_cache(metered).set(parking_lot::RwLock::new(
-                    SerializedModuleCache::default_with_engine(Engine::default, None),
-                ));
-
-                // Just recurse now that the cache is initialized.
-                self.module(metered)
-            }
-        }
+    pub fn module(&self, _metered: bool) -> Arc<Module> {
+        build_module(self.bytes()).unwrap()
     }
 
     pub fn _instance(&self, metered: bool) -> InstanceWithStore {

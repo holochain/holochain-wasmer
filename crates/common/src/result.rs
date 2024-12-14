@@ -31,9 +31,8 @@ pub enum WasmErrorInner {
     /// The `Vec<u8>` holds the encoded data as though the guest had returned.
     HostShortCircuit(Vec<u8>),
     /// Wasmer failed to build a Module from wasm byte code.
-    /// With the feature `wasmer_sys` enabled, this is when the wasm byte code
-    /// is compiled to machine code.
-    Compile(String),
+    /// With the feature `wasmer_sys` enabled, building a Module includes compiling the wasm.
+    ModuleBuild(String),
     /// The host failed to call a function in the guest.
     CallError(String),
     /// Host attempted to interact with the module cache before it was initialized.
@@ -53,7 +52,7 @@ impl WasmErrorInner {
             // Bad memory is bad memory.
             | Self::Memory
             // Failing to compile means we cannot reuse.
-            | Self::Compile(_)
+            | Self::ModuleBuild(_)
             // This is ambiguous so best to treat as potentially corrupt.
             | Self::CallError(_)
             // We have no cache so cannot cache.
