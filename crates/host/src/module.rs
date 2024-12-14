@@ -5,7 +5,7 @@
 //! 1. When using the feature flag `wasmer_sys`, modules can be accessed via the exported [`ModuleCache`].
 //!    This ensures that wasm modules are compiled once, then cached and stored efficiently.
 //!
-//! 2. When using the feature flag `wasmer_wamr`, modules can be built via the exported [`build_module`] function.
+//! 2. When using the feature flag `wasmer_wamr`, modules can be built via the exported build_module function.
 //!    There is no need for caching in this case, as the wasm module is interpreted.
 
 use parking_lot::Mutex;
