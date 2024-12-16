@@ -98,26 +98,6 @@ trait PlruCache {
         self.plru_mut().touch(plru_key);
     }
 
-    /// Delete the plru for a given cache key. Care must be taken to ensure this
-    /// is not called before a subsequent call to `plru_key` or it will panic.
-    #[allow(dead_code)]
-    fn trash(&mut self, key: &CacheKey) {
-        let plru_key = self.plru_key(key);
-        self.plru_mut().trash(plru_key);
-    }
-
-    /// Remove an item from the cache and the associated plru entry.
-    #[allow(dead_code)]
-    fn remove_item(&mut self, key: &CacheKey) -> Option<Arc<Self::Item>> {
-        let maybe_item = self.cache_mut().remove(key);
-        if maybe_item.is_some() {
-            let plru_key = self.plru_key(key);
-            self.plru_mut().trash(plru_key);
-            self.key_map_mut().remove_by_left(&plru_key);
-        }
-        maybe_item
-    }
-
     /// Attempt to retrieve an item from the cache by its cache key.
     fn get_item(&mut self, key: &CacheKey) -> Option<Arc<Self::Item>> {
         let maybe_item = self.cache().get(key).cloned();
