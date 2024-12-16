@@ -239,7 +239,7 @@ pub mod tests {
             &mut store.lock().as_store_mut(),
             instance,
             "ignore_args_process_string",
-            &StringType::from(String::new()),
+            StringType::from(String::new()),
         )
         .expect("ignore_args_process_string call");
         assert_eq!(String::new(), String::from(result));
@@ -254,7 +254,7 @@ pub mod tests {
             &mut store.lock().as_store_mut(),
             instance,
             "process_string",
-            &StringType::from(s.clone()),
+            StringType::from(s.clone()),
         )
         .expect("process string call");
 
@@ -267,15 +267,15 @@ pub mod tests {
     fn process_string_test() {
         // use a "crazy" string that is much longer than a single wasm page to show that pagination
         // and utf-8 are both working OK
-        let starter_string = "╰▐ ✖ 〜 ✖ ▐╯"
-            .repeat(usize::try_from(10_u32 * u32::try_from(std::u16::MAX).unwrap()).unwrap());
+        let starter_string =
+            "╰▐ ✖ 〜 ✖ ▐╯".repeat(usize::try_from(10_u32 * u32::from(u16::MAX)).unwrap());
         let InstanceWithStore { store, instance } = TestWasm::Test.instance();
         let result: StringType = guest::call(
             &mut store.lock().as_store_mut(),
             instance,
             "process_string",
             // This is by reference just to show that it can be done as borrowed or owned.
-            &StringType::from(starter_string.clone()),
+            StringType::from(starter_string.clone()),
         )
         .expect("process string call");
 
@@ -320,8 +320,8 @@ pub mod tests {
                 )
             }
         });
-        assert!(matches!(call_1.join(), Ok(_)));
-        assert!(matches!(call_2.join(), Ok(_)));
+        assert!(call_1.join().is_ok());
+        assert!(call_2.join().is_ok());
     }
 
     #[test]

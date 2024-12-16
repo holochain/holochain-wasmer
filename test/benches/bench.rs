@@ -13,7 +13,7 @@ use wasmer::Store;
 pub fn wasm_module_compile(c: &mut Criterion) {
     let mut group = c.benchmark_group("wasm_module_compile");
 
-    for wasm in vec![
+    for wasm in [
         TestWasm::Empty,
         TestWasm::Io,
         TestWasm::Test,
@@ -31,7 +31,7 @@ pub fn wasm_module_compile(c: &mut Criterion) {
 pub fn wasm_module_deserialize_from_file(c: &mut Criterion) {
     let mut group = c.benchmark_group("wasm_module_deserialize_from_file");
 
-    for wasm in vec![
+    for wasm in [
         TestWasm::Empty,
         TestWasm::Io,
         TestWasm::Test,
@@ -56,7 +56,7 @@ pub fn wasm_module_deserialize_from_file(c: &mut Criterion) {
 pub fn wasm_module(c: &mut Criterion) {
     let mut group = c.benchmark_group("wasm_module");
 
-    for wasm in vec![
+    for wasm in [
         TestWasm::Empty,
         TestWasm::Io,
         TestWasm::Test,
@@ -76,7 +76,7 @@ pub fn wasm_module(c: &mut Criterion) {
 pub fn wasm_instance(c: &mut Criterion) {
     let mut group = c.benchmark_group("wasm_instance");
 
-    for wasm in vec![
+    for wasm in [
         TestWasm::Empty,
         TestWasm::Io,
         TestWasm::Test,
@@ -213,7 +213,7 @@ pub fn test_process_string(c: &mut Criterion) {
 
     let instance_with_store = TestWasm::Test.unmetered_instance();
 
-    for n in vec![0, 1, 1_000, 1_000_000] {
+    for n in [0, 1, 1_000, 1_000_000] {
         group.throughput(Throughput::Bytes(n));
         group.sample_size(10);
         let input = test_common::StringType::from(".".repeat(n.try_into().unwrap()));

@@ -23,7 +23,7 @@ pub const WASM_METERING_LIMIT: u64 = 10_000_000;
 
 /// Generate an engine with a wasm compiler
 /// and Metering (use limits) in place.
-pub fn make_engine() -> Engine {
+pub(crate) fn make_engine() -> Engine {
     let cost_function = |_operator: &wasmparser::Operator| -> u64 { 1 };
     // @todo 100 giga-ops is totally arbitrary cutoff so we probably
     // want to make the limit configurable somehow.
@@ -50,7 +50,7 @@ pub fn make_engine() -> Engine {
     engine
 }
 
-pub fn make_runtime_engine() -> Engine {
+pub(crate) fn make_runtime_engine() -> Engine {
     Engine::headless()
 }
 
