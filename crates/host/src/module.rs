@@ -375,7 +375,7 @@ impl ModuleCache {
 }
 
 #[cfg(test)]
-pub mod tests {
+mod tests {
     use super::{CacheKey, ModuleCache, PlruCache};
 
     #[test]
