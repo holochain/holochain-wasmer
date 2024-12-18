@@ -9,6 +9,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 ### Changed
 - Bumped wasmer version to 5.x
 - **BREAKING CHANGE** The `wasmer_sys` feature has been renamed to `wasmer_sys_dev`
+- The error variant `WasmErrorInner::Compile` has been renamed to `WasmErrorInner::ModuleBuild` to clarify that the error is related to constructing a wasmer `Module`. Only with the feature flags `wasmer_sys_dev` or `wasmer_sys_prod`, is this when wasm compilation occurs. On the feature flag `wasmer_wamr`, wasms are interpreted and thus no compilation occurs.
 
 ### Added
 - A new feature flag, `wasmer_sys_prod` which enables the Wasmer LLVM compiler. The default, with the `wasmer_sys_dev` feature
