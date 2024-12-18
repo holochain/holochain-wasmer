@@ -15,11 +15,10 @@ holochain_serialized_bytes = "=0.0.55"
 serde = "1"
 tracing = "0.1"
 parking_lot = "0.12"
-rand = "0.8"
 bimap = "0.6"
 bytes = "1"
 hex = "0.4"
-thiserror = "1"
+thiserror = "2"
 
 [lib]
 name = "holochain_wasmer_host"
