@@ -51,7 +51,7 @@ impl WasmErrorInner {
             | Self::ErrorWhileError
             // Bad memory is bad memory.
             | Self::Memory
-            // Failing to compile means we cannot reuse.
+            // Failing to build the wasmer Module means we cannot use it.
             | Self::ModuleBuild(_)
             // This is ambiguous so best to treat as potentially corrupt.
             | Self::CallError(_)
