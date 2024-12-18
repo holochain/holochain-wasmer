@@ -263,7 +263,7 @@ impl SerializedModuleCache {
                 // prevent memory access out of bounds errors.
                 //
                 // This procedure facilitates caching of modules that can be
-                // instatiated with fresh stores free from state. Instance
+                // instantiated with fresh stores free from state. Instance
                 // creation is highly performant which makes caching of instances
                 // and stores unnecessary.
                 let module = unsafe {
