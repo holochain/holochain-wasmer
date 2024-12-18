@@ -59,7 +59,7 @@ dependencies = [
 
 [[package]]
 name = "holochain_wasmer_common"
-version = "0.0.96"
+version = "0.0.97"
 dependencies = [
  "holochain_serialized_bytes",
  "serde",
@@ -69,7 +69,7 @@ dependencies = [
 
 [[package]]
 name = "holochain_wasmer_guest"
-version = "0.0.96"
+version = "0.0.97"
 dependencies = [
  "holochain_serialized_bytes",
  "holochain_wasmer_common",
