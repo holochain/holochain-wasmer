@@ -225,9 +225,8 @@ impl SerializedModuleCache {
                 // of middleware like metering. Middleware is compiled into the
                 // module once and available in all instances created from it.
                 let compiler_engine = (self.make_engine)();
-                let res = Module::from_binary(&compiler_engine, wasm);
-                let module =
-                    res.map_err(|e| wasm_error!(WasmErrorInner::ModuleBuild(e.to_string())))?;
+                let module = Module::from_binary(&compiler_engine, wasm)
+                    .map_err(|e| wasm_error!(WasmErrorInner::ModuleBuild(e.to_string())))?;
                 let serialized_module = module
                     .serialize()
                     .map_err(|e| wasm_error!(WasmErrorInner::ModuleBuild(e.to_string())))?;
