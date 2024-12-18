@@ -1,3 +1,13 @@
+//! Wasmer Host Module Manager
+//!
+//! This provides two ways to build & access wasm modules:
+//!
+//! 1. When using the feature flag `wasmer_sys`, modules should be accessed only via the [`ModuleCache`].
+//!    This ensures that wasm modules are compiled once, then cached and stored efficiently.
+//!
+//! 2. When using the feature flag `wasmer_wamr`, modules should be built via the exported build_module function.
+//!    There is no need for caching, as the wasm module is interpreted.
+
 use crate::plru::MicroCache;
 use crate::prelude::*;
 use bimap::BiMap;
@@ -184,7 +194,7 @@ impl SerializedModuleCache {
             // We do this the long way to get `Bytes` instead of `Vec<u8>` so
             // that the clone when we both deserialize and cache is cheap.
             let mut file = File::open(module_path).map_err(|e| {
-                wasm_error!(WasmErrorInner::Compile(format!(
+                wasm_error!(WasmErrorInner::ModuleBuild(format!(
                     "{} Path: {}",
                     e,
                     module_path.display()
@@ -193,7 +203,7 @@ impl SerializedModuleCache {
             let mut bytes_mut = BytesMut::new().writer();
 
             std::io::copy(&mut file, &mut bytes_mut).map_err(|e| {
-                wasm_error!(WasmErrorInner::Compile(format!(
+                wasm_error!(WasmErrorInner::ModuleBuild(format!(
                     "{} Path: {}",
                     e,
                     module_path.display()
@@ -205,7 +215,7 @@ impl SerializedModuleCache {
             Some(Ok(serialized_module)) => {
                 let deserialized_module =
                     unsafe { Module::deserialize(&self.runtime_engine, serialized_module.clone()) }
-                        .map_err(|e| wasm_error!(WasmErrorInner::Compile(e.to_string())))?;
+                        .map_err(|e| wasm_error!(WasmErrorInner::ModuleBuild(e.to_string())))?;
                 (deserialized_module, serialized_module)
             }
             // no serialized module found on the file system, so serialize the
@@ -216,10 +226,10 @@ impl SerializedModuleCache {
                 // module once and available in all instances created from it.
                 let compiler_engine = (self.make_engine)();
                 let module = Module::from_binary(&compiler_engine, wasm)
-                    .map_err(|e| wasm_error!(WasmErrorInner::Compile(e.to_string())))?;
+                    .map_err(|e| wasm_error!(WasmErrorInner::ModuleBuild(e.to_string())))?;
                 let serialized_module = module
                     .serialize()
-                    .map_err(|e| wasm_error!(WasmErrorInner::Compile(e.to_string())))?;
+                    .map_err(|e| wasm_error!(WasmErrorInner::ModuleBuild(e.to_string())))?;
 
                 if let Some(module_path) = maybe_module_path {
                     match OpenOptions::new()
@@ -253,12 +263,12 @@ impl SerializedModuleCache {
                 // prevent memory access out of bounds errors.
                 //
                 // This procedure facilitates caching of modules that can be
-                // instatiated with fresh stores free from state. Instance
+                // instantiated with fresh stores free from state. Instance
                 // creation is highly performant which makes caching of instances
                 // and stores unnecessary.
                 let module = unsafe {
                     Module::deserialize(&self.runtime_engine, serialized_module.clone())
-                        .map_err(|e| wasm_error!(WasmErrorInner::Compile(e.to_string())))?
+                        .map_err(|e| wasm_error!(WasmErrorInner::ModuleBuild(e.to_string())))?
                 };
 
                 (module, serialized_module)
@@ -277,7 +287,7 @@ impl SerializedModuleCache {
                 let module = unsafe {
                     Module::deserialize(&self.runtime_engine, (**serialized_module).clone())
                 }
-                .map_err(|e| wasm_error!(WasmErrorInner::Compile(e.to_string())))?;
+                .map_err(|e| wasm_error!(WasmErrorInner::ModuleBuild(e.to_string())))?;
                 self.touch(&key);
                 Ok(Arc::new(module))
             }
@@ -364,8 +374,8 @@ impl ModuleCache {
 }
 
 #[cfg(test)]
-pub mod tests {
-    use crate::module::{CacheKey, ModuleCache, PlruCache};
+mod tests {
+    use super::{CacheKey, ModuleCache, PlruCache};
 
     #[test]
     fn cache_test() {

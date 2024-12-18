@@ -54,6 +54,11 @@ pub(crate) fn make_runtime_engine() -> Engine {
     Engine::headless()
 }
 
+/// Build an interpreter module from wasm bytes.
+pub fn build_module(_wasm: &[u8]) -> Result<Arc<Module>, wasmer::RuntimeError> {
+    unimplemented!("The feature flag 'wasmer_wamr' must be enabled to support building a Module directly. Please use the ModuleCache instead.");
+}
+
 /// Take WASM binary and prepare a wasmer Module suitable for iOS
 pub fn build_ios_module(wasm: &[u8]) -> Result<Module, CompileError> {
     info!(
