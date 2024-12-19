@@ -1,5 +1,5 @@
 [workspace]
-members = ["crates/*", "test", "test/common", "test/test_wasm", "test/wasm_empty", "test/wasm_io", "test/wasm_memory"]
+members = ["crates/*", "test-crates/*"]
 default-members = ["crates/*"]
 resolver = "2"
 
