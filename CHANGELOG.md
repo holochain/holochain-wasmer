@@ -4,16 +4,31 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
-### Changed
+## [0.0.96]
 
-- Upgrade wasmer to 5.x
+### Changed
+- Bumped wasmer version to 5.x
 - **BREAKING CHANGE** The `wasmer_sys` feature has been renamed to `wasmer_sys_dev`
+- The error variant `WasmErrorInner::Compile` has been renamed to `WasmErrorInner::ModuleBuild` to clarify that the error is related to constructing a wasmer `Module`. Only with the feature flags `wasmer_sys_dev` or `wasmer_sys_prod`, is this when wasm compilation occurs. On the feature flag `wasmer_wamr`, wasms are interpreted and thus no compilation occurs.
 
 ### Added
 - A new feature flag, `wasmer_sys_prod` which enables the Wasmer LLVM compiler. The default, with the `wasmer_sys_dev` feature
   is the Cranelift compiler. The Cranelift compiler is fast, and recommended for development, but the LLVM compiler is supposed
   to be faster and more optimized for production. In testing so far, the compile step is slower with LLVM but the runtime is
   faster. More testing is needed yet to confirm the difference.
+- A new public function `build_module`, which builds a wasmer Module directly, bypassing the `ModuleCache`. It is only implemented for the feature flag `wasmer_wamr`. On the feature flags `wasmer_sys_dev` and `wasmer_sys_prod` it will panic as unimplemented. This enforces the use of the `ModuleCache` when wasmer is used in a compiled mode, and allows bypassing the cache when wasmer is used in interpreter mode as caching is not relevant.
+
+## [0.0.95] - 2024-08-28
+
+### Changed
+- Bumped holochain_serialized_bytes version
+- Bumped wasmer version
+
+## [0.0.94] - 2024-05-21
+
+### Changed
+- Fixed memory deallocation for rust 1.78
+- Bump Criterion version
 
 ## [0.0.93] - 2024-04-24
 
