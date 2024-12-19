@@ -1,8 +1,6 @@
 #! /usr/bin/env bash
-(
- cd test-crates/test && \
- cargo bench --no-default-features --features wasmer_wamr
-)
+
+cargo bench -p tests --no-default-features --features wasmer_wamr
 
 # it's possible to flamegraph the benchmarks like this:
 #

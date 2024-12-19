@@ -16,4 +16,4 @@ cargo build --release -p test_wasm_core --target wasm32-unknown-unknown
 cargo test --no-default-features --features error_as_host,wasmer_sys_dev ${1-} -- --nocapture
 
 # build wasm and run the "full" tests for wasmer_sys_dev
-cargo test --release -p test --no-default-features --features wasmer_sys_dev ${1-} -- --nocapture
+cargo test --release -p tests --no-default-features --features wasmer_sys_dev ${1-} -- --nocapture

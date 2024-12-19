@@ -2336,28 +2336,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "test"
-version = "0.0.90"
-dependencies = [
- "criterion",
- "ctor",
- "env_logger",
- "holochain_serialized_bytes",
- "holochain_wasmer_common",
- "holochain_wasmer_host",
- "once_cell",
- "parking_lot",
- "rand",
- "serde",
- "serde_bytes",
- "tempfile",
- "test-fuzz",
- "test_common",
- "wasmer",
- "wasmer-middlewares",
-]
-
-[[package]]
 name = "test-fuzz"
 version = "6.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2455,6 +2433,28 @@ dependencies = [
  "paste 0.1.18",
  "serde",
  "test_common",
+]
+
+[[package]]
+name = "tests"
+version = "0.0.90"
+dependencies = [
+ "criterion",
+ "ctor",
+ "env_logger",
+ "holochain_serialized_bytes",
+ "holochain_wasmer_common",
+ "holochain_wasmer_host",
+ "once_cell",
+ "parking_lot",
+ "rand",
+ "serde",
+ "serde_bytes",
+ "tempfile",
+ "test-fuzz",
+ "test_common",
+ "wasmer",
+ "wasmer-middlewares",
 ]
 
 [[package]]
