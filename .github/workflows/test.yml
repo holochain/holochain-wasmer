@@ -75,4 +75,4 @@ jobs:
         shell: pwsh
         run: |
           $env:LLVM_SYS_180_PREFIX="$(pwd)/.llvm"
-          cargo test --release --manifest-path test/Cargo.toml --no-default-features --features ${{ matrix.wasmer-feature }} -- --nocapture
+          cargo test --release -p tests --no-default-features --features ${{ matrix.wasmer-feature }} -- --nocapture

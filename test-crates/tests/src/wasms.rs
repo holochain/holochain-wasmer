@@ -25,7 +25,7 @@ use wasmer_middlewares::Metering;
 pub enum TestWasm {
     Empty,
     Io,
-    Test,
+    Core,
     Memory,
 }
 
@@ -44,9 +44,9 @@ impl TestWasm {
                 env!("OUT_DIR"),
                 "/wasm32-unknown-unknown/release/test_wasm_io.wasm"
             )),
-            TestWasm::Test => include_bytes!(concat!(
+            TestWasm::Core => include_bytes!(concat!(
                 env!("OUT_DIR"),
-                "/wasm32-unknown-unknown/release/test_wasm.wasm"
+                "/wasm32-unknown-unknown/release/test_wasm_core.wasm"
             )),
             TestWasm::Memory => include_bytes!(concat!(
                 env!("OUT_DIR"),
@@ -59,7 +59,7 @@ impl TestWasm {
         match self {
             TestWasm::Empty => "empty",
             TestWasm::Io => "io",
-            TestWasm::Test => "test",
+            TestWasm::Core => "core",
             TestWasm::Memory => "memory",
         }
     }
@@ -70,8 +70,8 @@ impl TestWasm {
             (TestWasm::Empty, true) => [1; 32],
             (TestWasm::Io, false) => [2; 32],
             (TestWasm::Io, true) => [3; 32],
-            (TestWasm::Test, false) => [4; 32],
-            (TestWasm::Test, true) => [5; 32],
+            (TestWasm::Core, false) => [4; 32],
+            (TestWasm::Core, true) => [5; 32],
             (TestWasm::Memory, false) => [6; 32],
             (TestWasm::Memory, true) => [7; 32],
         }

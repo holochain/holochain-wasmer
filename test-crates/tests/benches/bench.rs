@@ -16,7 +16,7 @@ pub fn wasm_module_compile(c: &mut Criterion) {
     for wasm in [
         TestWasm::Empty,
         TestWasm::Io,
-        TestWasm::Test,
+        TestWasm::Core,
         TestWasm::Memory,
     ] {
         group.bench_function(BenchmarkId::new("wasm_module_compile", wasm.name()), |b| {
@@ -34,7 +34,7 @@ pub fn wasm_module_deserialize_from_file(c: &mut Criterion) {
     for wasm in [
         TestWasm::Empty,
         TestWasm::Io,
-        TestWasm::Test,
+        TestWasm::Core,
         TestWasm::Memory,
     ] {
         let tmpdir = TempDir::new().unwrap();
@@ -59,7 +59,7 @@ pub fn wasm_module(c: &mut Criterion) {
     for wasm in [
         TestWasm::Empty,
         TestWasm::Io,
-        TestWasm::Test,
+        TestWasm::Core,
         TestWasm::Memory,
     ] {
         group.bench_function(BenchmarkId::new("wasm_module", wasm.name()), |b| {
@@ -79,7 +79,7 @@ pub fn wasm_instance(c: &mut Criterion) {
     for wasm in [
         TestWasm::Empty,
         TestWasm::Io,
-        TestWasm::Test,
+        TestWasm::Core,
         TestWasm::Memory,
     ] {
         group.bench_function(BenchmarkId::new("wasm_instance", wasm.name()), |b| {
@@ -211,7 +211,7 @@ pub fn wasm_call_n(c: &mut Criterion) {
 pub fn test_process_string(c: &mut Criterion) {
     let mut group = c.benchmark_group("test_process_string");
 
-    let instance_with_store = TestWasm::Test.unmetered_instance();
+    let instance_with_store = TestWasm::Core.unmetered_instance();
 
     for n in [0, 1, 1_000, 1_000_000] {
         group.throughput(Throughput::Bytes(n));
@@ -249,7 +249,7 @@ pub fn test_instances(c: &mut Criterion) {
             let mut jhs = Vec::new();
             for _ in 0..25 {
                 let input = input.clone();
-                let instance_with_store = TestWasm::Test.unmetered_instance();
+                let instance_with_store = TestWasm::Core.unmetered_instance();
                 let instance = instance_with_store.instance.clone();
                 let store = instance_with_store.store.clone();
                 let jh = std::thread::spawn(move || {
