@@ -1,6 +1,6 @@
 #! /usr/bin/env bash
 (
- cd test && \
+ cd test-crates/test && \
  cargo bench --no-default-features --features wasmer_wamr
 )
 
