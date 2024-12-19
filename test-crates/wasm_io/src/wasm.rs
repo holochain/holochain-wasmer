@@ -84,7 +84,7 @@ macro_rules! _n {
                 return_ptr(s)
             }
         }
-    }
+    };
 }
 
 _n!(Bytes; n; vec![0; u32::from(n).try_into().unwrap()]; vec![];);

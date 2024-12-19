@@ -36,7 +36,7 @@ pub fn get_ios_module_from_file(_path: &Path) -> Result<Module, DeserializeError
 }
 
 #[cfg(test)]
-pub mod tests {
+mod tests {
     use super::build_module;
 
     #[test]
