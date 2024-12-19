@@ -1,5 +1,7 @@
 [workspace]
-members = ["crates/host", "crates/common"]
-exclude = ["test"]
-
+members = ["crates/*", "test", "test/common", "test/test_wasm", "test/wasm_empty", "test/wasm_io", "test/wasm_memory"]
+default-members = ["crates/*"]
 resolver = "2"
+
+[profile.release.package.test]
+debug = true

@@ -391,7 +391,7 @@ pub mod tests {
         match err {
             Err(runtime_error) => assert_eq!(
                 WasmError {
-                    file: "src/wasm.rs".into(),
+                    file: "test/test_wasm/src/wasm.rs".into(),
                     line: 102,
                     error: WasmErrorInner::Guest("oh no!".into()),
                 },
@@ -432,7 +432,7 @@ pub mod tests {
             Err(runtime_error) => {
                 assert_eq!(
                     WasmError {
-                        file: "src/wasm.rs".into(),
+                        file: "test/test_wasm/src/wasm.rs".into(),
                         line: 130,
                         error: WasmErrorInner::Guest("it fails!: ()".into()),
                     },

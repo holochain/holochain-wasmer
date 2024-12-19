@@ -6,8 +6,6 @@ version = "0.0.96"
 authors = ["thedavidmeister", "thedavidmeister@gmail.com"]
 edition = "2021"
 
-[workspace]
-
 [lib]
 name = "holochain_wasmer_guest"
 crate-type = ["cdylib", "rlib"]

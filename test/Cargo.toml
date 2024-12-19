@@ -34,9 +34,6 @@ name = "test"
 crate-type = ["cdylib", "rlib"]
 path = "src/test.rs"
 
-[profile.release]
-debug = true
-
 [features]
 debug_memory = ["holochain_wasmer_host/debug_memory"]
 default = ["wasmer_sys_dev"]
