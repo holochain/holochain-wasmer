@@ -8,6 +8,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 - Upgrade wasmer to 5.x
 - **BREAKING CHANGE** The `wasmer_sys` feature has been renamed to `wasmer_sys_dev`
+- Removed separate cargo workspaces for `guest` and `test` and separate cargo projects for test wasm dirs. Now all are members of a signel cargo workspace.
 
 ### Added
 - A new feature flag, `wasmer_sys_prod` which enables the Wasmer LLVM compiler. The default, with the `wasmer_sys_dev` feature
