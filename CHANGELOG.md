@@ -4,7 +4,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
-- Removed separate cargo workspaces for `guest` and `test` and separate cargo projects for test wasm dirs. Now all are members of a signel cargo workspace.
+- Removed separate cargo workspaces for `crates/guest` and `test` and separate cargo projects for test wasms. Now all crates are members of a single cargo workspace.
 
 ## [0.0.96]
 
