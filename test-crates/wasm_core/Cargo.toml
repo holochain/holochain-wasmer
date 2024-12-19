@@ -1,11 +1,11 @@
 [package]
-name = "test_wasm"
+name = "test_wasm_core"
 version = "0.0.90"
 authors = ["thedavidmeister", "thedavidmeister@gmail.com"]
 edition = "2021"
 
 [lib]
-name = "test_wasm"
+name = "test_wasm_core"
 crate-type = ["cdylib", "rlib"]
 path = "src/wasm.rs"
 

@@ -10,7 +10,7 @@ cargo clippy -- --deny warnings
 ( cd crates/guest && cargo clippy --target wasm32-unknown-unknown -- --deny warnings )
 
 # test that test wasms build
-cargo build --release -p test_wasm --target wasm32-unknown-unknown
+cargo build --release -p test_wasm_core --target wasm32-unknown-unknown
 
 # tests the root workspace
 cargo test --no-default-features --features error_as_host,wasmer_sys_dev ${1-} -- --nocapture

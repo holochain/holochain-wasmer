@@ -1,12 +1,10 @@
-use std::path::Path;
-
 fn main() {
     let out_dir = std::env::var_os("OUT_DIR").unwrap();
 
     println!("cargo:rerun-if-changed=*");
 
     for &m in [
-        "test_wasm",
+        "test_wasm_core",
         "test_wasm_memory",
         "test_wasm_empty",
         "test_wasm_io",
