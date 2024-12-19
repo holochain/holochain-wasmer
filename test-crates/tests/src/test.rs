@@ -682,4 +682,10 @@ pub mod tests {
 
         assert!(res.is_ok());
     }
+
+    #[test]
+    fn test_file_macro() {
+        println!("Direct file!() output: {}", file!());
+        println!("As debug: {:?}", file!());
+    }
 }
