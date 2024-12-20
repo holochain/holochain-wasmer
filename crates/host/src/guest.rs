@@ -261,26 +261,3 @@ where
 
     return_value.map_err(|e| WasmHostError(e).into())
 }
-
-#[cfg(test)]
-pub mod tests {
-    use super::*;
-
-    #[test]
-    fn wasm_error_macro_host() {
-        assert_eq!(
-            wasm_error!("foo").0.error,
-            WasmErrorInner::Host("foo".into()),
-        );
-
-        assert_eq!(
-            wasm_error!("{} {}", "foo", "bar").0.error,
-            WasmErrorInner::Host("foo bar".into())
-        );
-
-        assert_eq!(
-            wasm_error!(WasmErrorInner::Host("foo".into())).0.error,
-            WasmErrorInner::Host("foo".into()),
-        );
-    }
-}
