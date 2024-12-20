@@ -153,9 +153,8 @@ pub extern "C" fn decrease_points(guest_ptr: usize, len: usize) -> DoubleUSize {
 #[no_mangle]
 pub extern "C" fn call_ping_via_host(_guest_ptr: usize, _len: usize) -> DoubleUSize {
     let res = host_call::<(), Vec<u8>>(__hc__call_ping_1, ()).unwrap();
-    return_ptr(res)    
+    return_ptr(res)
 }
-
 
 #[no_mangle]
 pub extern "C" fn ping(_guest_ptr: usize, _len: usize) -> DoubleUSize {

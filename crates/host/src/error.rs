@@ -32,7 +32,13 @@ impl From<WasmHostError> for wasmer::RuntimeError {
 macro_rules! wasm_host_error {
     ($e:expr) => {
       WasmHostError(WasmError {
-          file: file!().to_string(),
+          // On Windows the `file!()` macro returns a path with inconsistent formatting:
+          // from the workspace to the package root it uses backwards-slashes,
+          // then within the package it uses forwards-slashes.
+          // i.e. "test-crates\\wasm_core\\src/wasm.rs"
+          //
+          // To remedy this we normalize the formatting here.
+          file: file!().replace('\\', "/").to_string(),
           line: line!(),
           error: $e.into(),
       })

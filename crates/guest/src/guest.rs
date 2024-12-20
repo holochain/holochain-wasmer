@@ -51,6 +51,7 @@ where
 /// - Deserialize whatever bytes we can import from the host after calling the host function
 /// - Return a `Result` of the deserialized output type `O`
 #[inline(always)]
+#[allow(improper_ctypes_definitions)]
 pub fn host_call<I, O>(
     f: unsafe extern "C" fn(usize, usize) -> DoubleUSize,
     input: I,
@@ -158,27 +159,4 @@ macro_rules! try_ptr {
             Err(e) => return return_err_ptr(wasm_error!("{}: {:?}", $fail, e)),
         }
     }};
-}
-
-#[cfg(test)]
-pub mod tests {
-    use super::*;
-
-    #[test]
-    fn wasm_error_macro_guest() {
-        assert_eq!(
-            wasm_error!("foo").error,
-            WasmErrorInner::Guest("foo".into()),
-        );
-
-        assert_eq!(
-            wasm_error!("{} {}", "foo", "bar").error,
-            WasmErrorInner::Guest("foo bar".into())
-        );
-
-        assert_eq!(
-            wasm_error!(WasmErrorInner::Host("foo".into())).error,
-            WasmErrorInner::Host("foo".into()),
-        );
-    }
 }

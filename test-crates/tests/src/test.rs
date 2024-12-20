@@ -120,7 +120,7 @@ pub fn call_ping(
     let (env, mut store_mut) = function_env.data_and_store_mut();
 
     // Call ping in a new guest instance
-    let InstanceWithStore { store, instance } = TestWasm::Test.instance();
+    let InstanceWithStore { store, instance } = TestWasm::Core.instance();
     let result: Vec<u8> =
         guest::call(&mut store.lock().as_store_mut(), instance, "ping", ()).unwrap();
 
@@ -145,7 +145,7 @@ pub mod tests {
 
     #[test]
     fn host_externs_toolable() {
-        let module = (*TestWasm::Test.module(false)).clone();
+        let module = (*TestWasm::Core.module(false)).clone();
         // Imports will be the minimal set of functions actually used by the wasm
         // NOT the complete list defined by `host_externs!`.
         assert_eq!(
@@ -169,7 +169,7 @@ pub mod tests {
     fn infinite_loop() {
         // Instead of looping forever we want the metering to kick in and trap
         // the execution into an unreachable error.
-        let InstanceWithStore { store, instance } = TestWasm::Test.instance();
+        let InstanceWithStore { store, instance } = TestWasm::Core.instance();
         let result: Result<(), _> = guest::call(
             &mut store.lock().as_store_mut(),
             instance,
@@ -181,7 +181,7 @@ pub mod tests {
 
     #[test]
     fn short_circuit() {
-        let InstanceWithStore { store, instance } = TestWasm::Test.instance();
+        let InstanceWithStore { store, instance } = TestWasm::Core.instance();
         let result: String = guest::call(
             &mut store.lock().as_store_mut(),
             instance,
@@ -206,7 +206,7 @@ pub mod tests {
 
     #[test]
     fn stacked_test() {
-        let InstanceWithStore { store, instance } = TestWasm::Test.instance();
+        let InstanceWithStore { store, instance } = TestWasm::Core.instance();
         let result: String = guest::call(
             &mut store.lock().as_store_mut(),
             instance,
@@ -221,7 +221,7 @@ pub mod tests {
     #[test]
     fn literal_bytes() {
         let input: Vec<u8> = vec![1, 2, 3];
-        let InstanceWithStore { store, instance } = TestWasm::Test.instance();
+        let InstanceWithStore { store, instance } = TestWasm::Core.instance();
         let result: Vec<u8> = guest::call(
             &mut store.lock().as_store_mut(),
             instance,
@@ -234,7 +234,7 @@ pub mod tests {
 
     #[test]
     fn ignore_args_process_string_test() {
-        let InstanceWithStore { store, instance } = TestWasm::Test.instance();
+        let InstanceWithStore { store, instance } = TestWasm::Core.instance();
         let result: StringType = guest::call(
             &mut store.lock().as_store_mut(),
             instance,
@@ -249,7 +249,7 @@ pub mod tests {
     #[cfg(not(target_os = "windows"))]
     #[test_fuzz::test_fuzz]
     fn process_string_fuzz(s: String) {
-        let InstanceWithStore { store, instance } = TestWasm::Test.instance();
+        let InstanceWithStore { store, instance } = TestWasm::Core.instance();
         let result: StringType = guest::call(
             &mut store.lock().as_store_mut(),
             instance,
@@ -269,7 +269,7 @@ pub mod tests {
         // and utf-8 are both working OK
         let starter_string =
             "╰▐ ✖ 〜 ✖ ▐╯".repeat(usize::try_from(10_u32 * u32::from(u16::MAX)).unwrap());
-        let InstanceWithStore { store, instance } = TestWasm::Test.instance();
+        let InstanceWithStore { store, instance } = TestWasm::Core.instance();
         let result: StringType = guest::call(
             &mut store.lock().as_store_mut(),
             instance,
@@ -292,11 +292,11 @@ pub mod tests {
         let InstanceWithStore {
             store: store_1,
             instance: instance_1,
-        } = TestWasm::Test.instance();
+        } = TestWasm::Core.instance();
         let InstanceWithStore {
             store: store_2,
             instance: instance_2,
-        } = TestWasm::Test.instance();
+        } = TestWasm::Core.instance();
 
         let call_1 = thread::spawn({
             let some_struct = some_struct.clone();
@@ -329,7 +329,7 @@ pub mod tests {
         let some_inner = "foo";
         let some_struct = SomeStruct::new(some_inner.into());
 
-        let InstanceWithStore { store, instance } = TestWasm::Test.instance();
+        let InstanceWithStore { store, instance } = TestWasm::Core.instance();
 
         let result: SomeStruct = guest::call(
             &mut store.lock().as_store_mut(),
@@ -347,7 +347,7 @@ pub mod tests {
         let some_inner = "foo";
         let some_struct = SomeStruct::new(some_inner.into());
 
-        let InstanceWithStore { store, instance } = TestWasm::Test.instance();
+        let InstanceWithStore { store, instance } = TestWasm::Core.instance();
 
         let result: SomeStruct = guest::call(
             &mut store.lock().as_store_mut(),
@@ -366,7 +366,7 @@ pub mod tests {
         let InstanceWithStore {
             store: store_foo,
             instance: instance_foo,
-        } = TestWasm::Test.instance();
+        } = TestWasm::Core.instance();
 
         let some_struct: SomeStruct = guest::call(
             &mut store_foo.lock().as_store_mut(),
@@ -380,7 +380,7 @@ pub mod tests {
         let InstanceWithStore {
             store: store_ret_err,
             instance: instance_ret_err,
-        } = TestWasm::Test.instance();
+        } = TestWasm::Core.instance();
 
         let err: Result<SomeStruct, wasmer::RuntimeError> = guest::call(
             &mut store_ret_err.lock().as_store_mut(),
@@ -391,7 +391,7 @@ pub mod tests {
         match err {
             Err(runtime_error) => assert_eq!(
                 WasmError {
-                    file: "src/wasm.rs".into(),
+                    file: "test-crates/wasms/wasm_core/src/wasm.rs".into(),
                     line: 102,
                     error: WasmErrorInner::Guest("oh no!".into()),
                 },
@@ -406,7 +406,7 @@ pub mod tests {
         let InstanceWithStore {
             store: store_succeed,
             instance: instance_succeed,
-        } = TestWasm::Test.instance();
+        } = TestWasm::Core.instance();
 
         let success_result: Result<SomeStruct, ()> = guest::call(
             &mut store_succeed.lock().as_store_mut(),
@@ -420,7 +420,7 @@ pub mod tests {
         let InstanceWithStore {
             store: store_fail,
             instance: instance_fail,
-        } = TestWasm::Test.instance();
+        } = TestWasm::Core.instance();
 
         let fail_result: Result<(), wasmer::RuntimeError> = guest::call(
             &mut store_fail.lock().as_store_mut(),
@@ -432,7 +432,7 @@ pub mod tests {
             Err(runtime_error) => {
                 assert_eq!(
                     WasmError {
-                        file: "src/wasm.rs".into(),
+                        file: "test-crates/wasms/wasm_core/src/wasm.rs".into(),
                         line: 130,
                         error: WasmErrorInner::Guest("it fails!: ()".into()),
                     },
@@ -446,7 +446,7 @@ pub mod tests {
     #[test]
     #[cfg_attr(not(feature = "wasmer_sys"), ignore)]
     fn decrease_points_test() {
-        let InstanceWithStore { store, instance } = TestWasm::Test.instance();
+        let InstanceWithStore { store, instance } = TestWasm::Core.instance();
         let dec_by = 1_000_000_u64;
         let points_before: u64 = instance
             .exports
@@ -487,7 +487,7 @@ pub mod tests {
         // Call a guest fn
         //  which calls a host fn
         //  which calls a guest fn in a new instance
-        let InstanceWithStore { store, instance } = TestWasm::Test.instance();
+        let InstanceWithStore { store, instance } = TestWasm::Core.instance();
         let result: Vec<u8> = guest::call(
             &mut store.lock().as_store_mut(),
             instance,
@@ -504,7 +504,7 @@ pub mod tests {
         let InstanceWithStore {
             store: store_1,
             instance: instance_1,
-        } = TestWasm::Test.instance();
+        } = TestWasm::Core.instance();
         let result: Vec<u8> = guest::call(
             &mut store_1.lock().as_store_mut(),
             instance_1.clone(),
@@ -518,7 +518,7 @@ pub mod tests {
         let InstanceWithStore {
             store: store_2,
             instance: instance_2,
-        } = TestWasm::Test.instance();
+        } = TestWasm::Core.instance();
         let result: Vec<u8> =
             guest::call(&mut store_2.lock().as_store_mut(), instance_2, "ping", ())
                 .expect("call ping via host");

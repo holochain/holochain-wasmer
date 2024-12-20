@@ -135,7 +135,13 @@ pub struct WasmError {
 macro_rules! wasm_error {
     ($e:expr) => {
         $crate::WasmError {
-            file: file!().to_string(),
+            // On Windows the `file!()` macro returns a path with inconsistent formatting:
+            // from the workspace to the package root it uses backwards-slashes,
+            // then within the package it uses forwards-slashes.
+            // i.e. "test-crates\\wasm_core\\src/wasm.rs"
+            //
+            // To remedy this we normalize the formatting here.
+            file: file!().replace('\\', "/").to_string(),
             line: line!(),
             error: $e.into(),
         }
@@ -181,5 +187,45 @@ impl From<String> for WasmErrorInner {
 impl From<&str> for WasmErrorInner {
     fn from(s: &str) -> Self {
         s.to_string().into()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    #[cfg(not(feature = "error_as_host"))]
+    fn wasm_error_macro_guest() {
+        assert_eq!(
+            wasm_error!("foo").error,
+            WasmErrorInner::Guest("foo".into()),
+        );
+
+        assert_eq!(
+            wasm_error!("{} {}", "foo", "bar").error,
+            WasmErrorInner::Guest("foo bar".into())
+        );
+
+        assert_eq!(
+            wasm_error!(WasmErrorInner::Host("foo".into())).error,
+            WasmErrorInner::Host("foo".into()),
+        );
+    }
+
+    #[test]
+    #[cfg(feature = "error_as_host")]
+    fn wasm_error_macro_host() {
+        assert_eq!(wasm_error!("foo").error, WasmErrorInner::Host("foo".into()),);
+
+        assert_eq!(
+            wasm_error!("{} {}", "foo", "bar").error,
+            WasmErrorInner::Host("foo bar".into())
+        );
+
+        assert_eq!(
+            wasm_error!(WasmErrorInner::Guest("foo".into())).error,
+            WasmErrorInner::Guest("foo".into()),
+        );
     }
 }
