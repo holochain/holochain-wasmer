@@ -1,12 +1,7 @@
 [workspace]
-members = ["crates/*", "test-crates/common", "test-crates/tests", "test-crates/wasms/*"]
+members = ["crates/*", "test-crates/*"]
 default-members = ["crates/*"]
 resolver = "2"
 
 [profile.release.package.tests]
 debug = true
-
-[dependencies]
-holochain_serialized_bytes = "=0.0.55"
-wasmer = "5.0.2"
-wasmer-middlewares = "5.0.2"
