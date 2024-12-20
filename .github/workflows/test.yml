@@ -49,9 +49,7 @@ jobs:
         wasmer-feature: 
           - "wasmer_sys_dev"
           - "wasmer_sys_prod"
-          # TODO Building with wasmer_wamr feature flag on windows is not currently working.
-          # See https://github.com/holochain/holochain-wasmer/issues/117
-          # - "wasmer_wamr"
+          - "wasmer_wamr"
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4
@@ -66,6 +64,11 @@ jobs:
           LLVM_DIR=$(pwd)/${{ env.LLVM_DIR }}
           mkdir -p ${LLVM_DIR}
           curl --proto '=https' --tlsv1.2 -sSf "https://github.com/wasmerio/llvm-custom-builds/releases/download/18.x/llvm-windows-amd64.tar.xz" -L -o - | tar xJv -C ${LLVM_DIR}
+      - name: Install Ninja
+        uses: MinoruSekine/setup-scoop@v4.0.1
+        with:
+          buckets: extras
+          apps: ninja
       - name: test root
         shell: pwsh
         run: |
