@@ -7,11 +7,11 @@ authors = ["thedavidmeister", "thedavidmeister@gmail.com"]
 edition = "2021"
 
 [dependencies]
-wasmer = { version = "5.0.2", default-features = false }
-wasmer-middlewares = { version = "5.0.2", optional = true }
+wasmer = { workspace = true, default-features = false }
+wasmer-middlewares = { workspace = true, optional = true }
 
-holochain_wasmer_common = { version = "=0.0.97", path = "../common" }
-holochain_serialized_bytes = "=0.0.55"
+holochain_wasmer_common = { workspace = true }
+holochain_serialized_bytes = { workspace = true }
 serde = "1"
 tracing = "0.1"
 parking_lot = "0.12"

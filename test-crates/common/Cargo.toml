@@ -10,6 +10,6 @@ crate-type = [ "cdylib", "rlib" ]
 path = "src/common.rs"
 
 [dependencies]
-holochain_wasmer_common = { path = "../../crates/common" }
+holochain_wasmer_common = { workspace = true }
 serde = "1"
 serde_bytes = "0.11"
