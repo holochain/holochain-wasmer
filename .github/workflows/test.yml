@@ -49,8 +49,6 @@ jobs:
         wasmer-feature: 
           - "wasmer_sys_dev"
           - "wasmer_sys_prod"
-          # TODO Building with wasmer_wamr feature flag on windows is not currently working.
-          # See https://github.com/holochain/holochain-wasmer/issues/117
           - "wasmer_wamr"
     runs-on: windows-latest
     steps:
