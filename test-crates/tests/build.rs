@@ -16,7 +16,7 @@ fn main() {
 
         let status = std::process::Command::new(cargo_command)
             .arg("build")
-            .arg("-p")
+            .arg("--package")
             .arg(m)
             .arg("--release")
             .arg("--target")
