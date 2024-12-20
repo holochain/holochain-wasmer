@@ -190,7 +190,6 @@ impl From<&str> for WasmErrorInner {
     }
 }
 
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -217,10 +216,7 @@ mod tests {
     #[test]
     #[cfg(feature = "error_as_host")]
     fn wasm_error_macro_host() {
-        assert_eq!(
-            wasm_error!("foo").error,
-            WasmErrorInner::Host("foo".into()),
-        );
+        assert_eq!(wasm_error!("foo").error, WasmErrorInner::Host("foo".into()),);
 
         assert_eq!(
             wasm_error!("{} {}", "foo", "bar").error,
