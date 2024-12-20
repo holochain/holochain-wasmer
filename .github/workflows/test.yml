@@ -66,6 +66,11 @@ jobs:
           LLVM_DIR=$(pwd)/${{ env.LLVM_DIR }}
           mkdir -p ${LLVM_DIR}
           curl --proto '=https' --tlsv1.2 -sSf "https://github.com/wasmerio/llvm-custom-builds/releases/download/18.x/llvm-windows-amd64.tar.xz" -L -o - | tar xJv -C ${LLVM_DIR}
+      - name: Install Ninja
+        uses: MinoruSekine/setup-scoop@v4.0.1
+        with:
+          buckets: extras
+          apps: ninja
       - name: test root
         shell: pwsh
         run: |
