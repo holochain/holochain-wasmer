@@ -35,8 +35,6 @@ pub enum WasmErrorInner {
     ModuleBuild(String),
     /// The host failed to call a function in the guest.
     CallError(String),
-    /// Host attempted to interact with the module cache before it was initialized.
-    UninitializedSerializedModuleCache,
 }
 
 impl WasmErrorInner {
@@ -55,8 +53,6 @@ impl WasmErrorInner {
             | Self::ModuleBuild(_)
             // This is ambiguous so best to treat as potentially corrupt.
             | Self::CallError(_)
-            // We have no cache so cannot cache.
-            | Self::UninitializedSerializedModuleCache
              => true,
             // (De)serialization simply means some input/output data was
             // unrecognisable somehow, it doesn't corrupt the guest memory.

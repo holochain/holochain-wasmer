@@ -2,7 +2,7 @@ use crate::import::imports;
 #[cfg(feature = "wasmer_wamr")]
 use holochain_wasmer_host::module::build_module;
 use holochain_wasmer_host::module::InstanceWithStore;
-use holochain_wasmer_host::module::SerializedModuleCache;
+use holochain_wasmer_host::module::ModuleCache;
 use holochain_wasmer_host::prelude::*;
 use once_cell::sync::OnceCell;
 use parking_lot::RwLock;
@@ -29,9 +29,8 @@ pub enum TestWasm {
     Memory,
 }
 
-pub static SERIALIZED_MODULE_CACHE: OnceCell<RwLock<SerializedModuleCache>> = OnceCell::new();
-pub static SERIALIZED_MODULE_CACHE_UNMETERED: OnceCell<RwLock<SerializedModuleCache>> =
-    OnceCell::new();
+pub static MODULE_CACHE: OnceCell<RwLock<ModuleCache>> = OnceCell::new();
+pub static MODULE_CACHE_UNMETERED: OnceCell<RwLock<ModuleCache>> = OnceCell::new();
 
 impl TestWasm {
     pub fn bytes(&self) -> &[u8] {
@@ -77,11 +76,11 @@ impl TestWasm {
         }
     }
 
-    pub fn module_cache(&self, metered: bool) -> &OnceCell<RwLock<SerializedModuleCache>> {
+    pub fn module_cache(&self, metered: bool) -> &OnceCell<RwLock<ModuleCache>> {
         if metered {
-            &SERIALIZED_MODULE_CACHE
+            &MODULE_CACHE
         } else {
-            &SERIALIZED_MODULE_CACHE_UNMETERED
+            &MODULE_CACHE_UNMETERED
         }
     }
 
@@ -116,16 +115,16 @@ impl TestWasm {
                 // This will error if the cache is already initialized
                 // which could happen if two tests are running in parallel.
                 // It doesn't matter which one wins, so we just ignore the error.
-                let _did_init_ok = self.module_cache(metered).set(parking_lot::RwLock::new(
-                    SerializedModuleCache::default_with_engine(
-                        if metered {
-                            cranelift_fn
-                        } else {
-                            compiler_fn_unmetered
-                        },
-                        None,
-                    ),
-                ));
+                let _did_init_ok =
+                    self.module_cache(metered)
+                        .set(parking_lot::RwLock::new(ModuleCache::new(
+                            if metered {
+                                cranelift_fn
+                            } else {
+                                compiler_fn_unmetered
+                            },
+                            None,
+                        )));
 
                 // Just recurse now that the cache is initialized.
                 self.module(metered)
