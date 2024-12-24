@@ -189,11 +189,8 @@ impl ModuleCache {
     /// Get a module from the cache, or add it to both caches if not found
     pub fn get(&self, key: CacheKey, wasm: &[u8]) -> Result<Arc<Module>, wasmer::RuntimeError> {
         // Check in-memory deserialized cache for module
-        {
-            let mut deserialized_cache = self.deserialized_module_cache.write();
-            if let Some(module) = deserialized_cache.get_item(&key) {
-                return Ok(module);
-            }
+        if let Some(module) = self.get_from_deserialized_cache(key) {
+            return Ok(module);
         }
 
         // Check the filesystem cache for serialized module
@@ -312,6 +309,12 @@ impl ModuleCache {
         }
 
         Ok(())
+    }
+
+    /// Check deserialized cache for module
+    fn get_from_deserialized_cache(&self, key: CacheKey) -> Option<Arc<Module>> {
+        let mut deserialized_cache = self.deserialized_module_cache.write();
+        deserialized_cache.get_item(&key)
     }
 
     /// Add module to deserialized cache
