@@ -33,6 +33,10 @@ pub enum WasmErrorInner {
     /// Wasmer failed to build a Module from wasm byte code.
     /// With the feature `wasmer_sys` enabled, building a Module includes compiling the wasm.
     ModuleBuild(String),
+    /// Wasmer failed to serialize a Module to bytes.
+    ModuleSerialize(String),
+    /// Wasmer failed to deserialize a Module from bytes.
+    ModuleDeserialize(String),
     /// The host failed to call a function in the guest.
     CallError(String),
 }
@@ -49,8 +53,10 @@ impl WasmErrorInner {
             | Self::ErrorWhileError
             // Bad memory is bad memory.
             | Self::Memory
-            // Failing to build the wasmer Module means we cannot use it.
+            // Failing to build, serialize, or deserialize the wasmer Module means we cannot use it.
             | Self::ModuleBuild(_)
+            | Self::ModuleSerialize(_)
+            | Self::ModuleDeserialize(_)
             // This is ambiguous so best to treat as potentially corrupt.
             | Self::CallError(_)
              => true,

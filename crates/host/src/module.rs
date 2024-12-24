@@ -197,10 +197,21 @@ impl ModuleCache {
         match self.get_from_filesystem_cache(key) {
             // Filesystem cache hit, deserialize and save to deserialized cache
             Ok(Some(serialized_module)) => {
-                let module = Arc::new(
-                    unsafe { Module::deserialize(&self.runtime_engine, serialized_module.clone()) }
-                        .map_err(|e| wasm_error!(WasmErrorInner::ModuleBuild(e.to_string())))?,
-                );
+                let module_result =
+                    unsafe { Module::deserialize(&self.runtime_engine, serialized_module.clone()) };
+
+                // If deserialization fails, we assume the file is corrupt,
+                // so it is removed from the filesystem cache.
+                let module = match module_result {
+                    Ok(d) => Ok(Arc::new(d)),
+                    Err(e) => {
+                        let _ = self.remove_from_filesystem_cache(key);
+                        Err(wasm_error!(WasmErrorInner::ModuleDeserialize(
+                            e.to_string()
+                        )))
+                    }
+                }?;
+
                 self.add_to_deserialized_cache(key, module.clone());
 
                 Ok(module)
@@ -234,8 +245,9 @@ impl ModuleCache {
                     .serialize()
                     .map_err(|e| wasm_error!(WasmErrorInner::ModuleBuild(e.to_string())))?;
                 let module = Arc::new(unsafe {
-                    Module::deserialize(&self.runtime_engine, serialized_module.clone())
-                        .map_err(|e| wasm_error!(WasmErrorInner::ModuleBuild(e.to_string())))?
+                    Module::deserialize(&self.runtime_engine, serialized_module.clone()).map_err(
+                        |e| wasm_error!(WasmErrorInner::ModuleDeserialize(e.to_string())),
+                    )?
                 });
 
                 // Save serialized module to filesystem cache
@@ -311,6 +323,14 @@ impl ModuleCache {
         Ok(())
     }
 
+    // Remove serialized module from filesystem cache
+    fn remove_from_filesystem_cache(&self, key: CacheKey) -> Result<(), std::io::Error> {
+        if let Some(fs_path) = self.filesystem_cache_module_path(key) {
+            std::fs::remove_file(fs_path)?;
+        }
+
+        Ok(())
+    }
     /// Check deserialized cache for module
     fn get_from_deserialized_cache(&self, key: CacheKey) -> Option<Arc<Module>> {
         let mut deserialized_cache = self.deserialized_module_cache.write();

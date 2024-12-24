@@ -220,4 +220,71 @@ mod tests {
 
         std::fs::remove_dir_all(tmp_fs_cache_dir).unwrap();
     }
+
+    #[test]
+    fn cache_get_from_fs_corrupt() {
+        // simple example wasm taken from wasmer docs
+        // https://docs.rs/wasmer/latest/wasmer/struct.Module.html#example
+        let wasm: Vec<u8> = vec![
+            0x00, 0x61, 0x73, 0x6d, 0x01, 0x00, 0x00, 0x00, 0x01, 0x06, 0x01, 0x60, 0x01, 0x7f,
+            0x01, 0x7f, 0x03, 0x02, 0x01, 0x00, 0x07, 0x0b, 0x01, 0x07, 0x61, 0x64, 0x64, 0x5f,
+            0x6f, 0x6e, 0x65, 0x00, 0x00, 0x0a, 0x09, 0x01, 0x07, 0x00, 0x20, 0x00, 0x41, 0x01,
+            0x6a, 0x0b, 0x00, 0x1a, 0x04, 0x6e, 0x61, 0x6d, 0x65, 0x01, 0x0a, 0x01, 0x00, 0x07,
+            0x61, 0x64, 0x64, 0x5f, 0x6f, 0x6e, 0x65, 0x02, 0x07, 0x01, 0x00, 0x01, 0x00, 0x02,
+            0x70, 0x30,
+        ];
+
+        // Bad serialized_wasm
+        let bad_serialized_wasm = vec![0x00];
+
+        let tmp_fs_cache_dir = tempdir().unwrap().into_path();
+        let module_cache = ModuleCache::new(make_engine, Some(tmp_fs_cache_dir.clone()));
+        let key: CacheKey = [0u8; 32];
+
+        // Build module, serialize, save directly to filesystem
+        let serialized_module_path = tmp_fs_cache_dir.clone().join(hex::encode(key));
+        let mut file = std::fs::OpenOptions::new()
+            .write(true)
+            .create_new(true)
+            .open(&serialized_module_path)
+            .unwrap();
+        file.write_all(&bad_serialized_wasm).unwrap();
+
+        // Module cannot be retrieved from fs cache
+        let res = module_cache.get(key, &wasm);
+        assert!(res.is_err());
+
+        let compiler_engine = make_engine();
+        let module =
+            std::sync::Arc::new(Module::from_binary(&compiler_engine, wasm.as_slice()).unwrap());
+        let serialized_module = module.serialize().unwrap();
+
+        // 2nd time, module can be retrieved from cache
+        let res = module_cache.get(key, &wasm).unwrap();
+        assert_eq!(*res.serialize().unwrap(), *serialized_module);
+
+        // make sure module is stored in deserialized cache
+        {
+            let deserialized_cached_module = module_cache
+                .deserialized_module_cache
+                .write()
+                .get_item(&key)
+                .unwrap();
+            assert_eq!(
+                *deserialized_cached_module.serialize().unwrap(),
+                *module.serialize().unwrap()
+            );
+        }
+
+        // make sure module has been stored in serialized filesystem cache
+        {
+            let serialized_module_path = module_cache
+                .serialized_filesystem_cache_path
+                .unwrap()
+                .join(hex::encode(key));
+            assert!(std::fs::metadata(serialized_module_path).is_ok());
+        }
+
+        std::fs::remove_dir_all(tmp_fs_cache_dir).unwrap();
+    }
 }
