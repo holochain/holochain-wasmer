@@ -257,7 +257,7 @@ impl ModuleCache {
         &self,
         key: CacheKey,
     ) -> Result<Option<Bytes>, wasmer::RuntimeError> {
-        self.module_path(key)
+        self.filesystem_cache_module_path(key)
             .as_ref()
             .map(|module_path| {
                 // Read file into `Bytes` instead of `Vec<u8>` so that the clone is cheap
@@ -289,7 +289,7 @@ impl ModuleCache {
         key: CacheKey,
         serialized_module: Bytes,
     ) -> Result<(), wasmer::RuntimeError> {
-        if let Some(fs_path) = self.module_path(key) {
+        if let Some(fs_path) = self.filesystem_cache_module_path(key) {
             match OpenOptions::new()
                 .write(true)
                 // Using create_new here so that cache stampedes don't
@@ -321,7 +321,7 @@ impl ModuleCache {
     }
 
     /// Get filesystem cache path for a given key
-    fn module_path(&self, key: CacheKey) -> Option<PathBuf> {
+    fn filesystem_cache_module_path(&self, key: CacheKey) -> Option<PathBuf> {
         self.serialized_filesystem_cache_path
             .as_ref()
             .map(|dir_path| dir_path.clone().join(hex::encode(key)))
