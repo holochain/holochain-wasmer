@@ -157,7 +157,7 @@ pub struct ModuleCache {
 
     // A function to create a new compiler engine for every module
     make_engine: fn() -> Engine,
-    
+
     // The runtime engine is used only to execute function calls on instances,
     // so it does not require a compiler.
     //
@@ -166,7 +166,7 @@ pub struct ModuleCache {
     runtime_engine: Engine,
 
     // Filesystem path where serialized modules are cached.
-    // 
+    //
     // A serialized wasm module must still be deserialized before it can be used to build instances.
     // The deserialization process is far faster than compiling and much slower than instance building.
     serialized_filesystem_cache_path: Option<PathBuf>,
