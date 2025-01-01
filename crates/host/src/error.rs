@@ -39,6 +39,7 @@ macro_rules! wasm_host_error {
           //
           // To remedy this we normalize the formatting here.
           file: file!().replace('\\', "/").to_string(),
+          module_path: module_path!().to_string(),
           line: line!(),
           error: $e.into(),
       })
