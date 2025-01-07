@@ -78,7 +78,7 @@ pub fn get_ios_module_from_file(path: &Path) -> Result<Module, DeserializeError>
 #[cfg(test)]
 mod tests {
     use super::make_engine;
-    use crate::module::{CacheKey, ModuleCache, PlruCache};
+    use crate::module::{builder::ModuleBuilder, CacheKey, ModuleCache, PlruCache};
     use std::io::Write;
     use tempfile::tempdir;
     use wasmer::Module;
@@ -96,40 +96,31 @@ mod tests {
             0x70, 0x30,
         ];
         let tmp_fs_cache_dir = tempdir().unwrap().into_path();
-        let module_cache = ModuleCache::new(make_engine, Some(tmp_fs_cache_dir.clone()));
+        let module_builder = ModuleBuilder::new(make_engine);
+        let module_cache = ModuleCache::new(module_builder, Some(tmp_fs_cache_dir.clone()));
         assert!(module_cache
-            .serialized_filesystem_cache_path
+            .filesystem_path
             .clone()
             .unwrap()
             .read_dir()
             .unwrap()
             .next()
             .is_none());
-        assert!(module_cache
-            .deserialized_module_cache
-            .read()
-            .cache
-            .is_empty());
+        assert!(module_cache.cache.read().cache.is_empty());
 
         let key: CacheKey = [0u8; 32];
         let module = module_cache.get(key, &wasm).unwrap();
 
         // make sure module has been stored in the in-memory cache under `key`
         {
-            let deserialized_cached_module = module_cache
-                .deserialized_module_cache
-                .write()
-                .get_item(&key)
-                .unwrap();
+            let deserialized_cached_module = module_cache.cache.write().get_item(&key).unwrap();
             assert_eq!(*deserialized_cached_module, *module);
         }
 
         // make sure module has been stored in serialized filesystem cache
         {
-            let serialized_module_path = module_cache
-                .serialized_filesystem_cache_path
-                .unwrap()
-                .join(hex::encode(key));
+            let serialized_module_path =
+                module_cache.filesystem_path.unwrap().join(hex::encode(key));
             assert!(std::fs::metadata(serialized_module_path).is_ok());
         }
 
@@ -148,23 +139,16 @@ mod tests {
             0x61, 0x64, 0x64, 0x5f, 0x6f, 0x6e, 0x65, 0x02, 0x07, 0x01, 0x00, 0x01, 0x00, 0x02,
             0x70, 0x30,
         ];
-        let module_cache = ModuleCache::new(make_engine, None);
-        assert!(module_cache
-            .deserialized_module_cache
-            .read()
-            .cache
-            .is_empty());
+        let module_builder = ModuleBuilder::new(make_engine);
+        let module_cache = ModuleCache::new(module_builder, None);
+        assert!(module_cache.cache.read().cache.is_empty());
 
         let key: CacheKey = [0u8; 32];
         let module = module_cache.get(key, &wasm).unwrap();
 
         // make sure module has been stored in deserialized cache under key
         {
-            let deserialized_cached_module = module_cache
-                .deserialized_module_cache
-                .write()
-                .get_item(&key)
-                .unwrap();
+            let deserialized_cached_module = module_cache.cache.write().get_item(&key).unwrap();
             assert_eq!(*deserialized_cached_module, *module);
         }
     }
@@ -182,7 +166,8 @@ mod tests {
             0x70, 0x30,
         ];
         let tmp_fs_cache_dir = tempdir().unwrap().into_path();
-        let module_cache = ModuleCache::new(make_engine, Some(tmp_fs_cache_dir.clone()));
+        let module_builder = ModuleBuilder::new(make_engine);
+        let module_cache = ModuleCache::new(module_builder, Some(tmp_fs_cache_dir.clone()));
         let key: CacheKey = [0u8; 32];
 
         // Build module, serialize, save directly to filesystem
@@ -207,11 +192,7 @@ mod tests {
 
         // make sure module is stored in deserialized cache
         {
-            let deserialized_cached_module = module_cache
-                .deserialized_module_cache
-                .write()
-                .get_item(&key)
-                .unwrap();
+            let deserialized_cached_module = module_cache.cache.write().get_item(&key).unwrap();
             assert_eq!(
                 *deserialized_cached_module.serialize().unwrap(),
                 *module.serialize().unwrap()

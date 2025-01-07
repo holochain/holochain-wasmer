@@ -2,6 +2,7 @@ use crate::import::imports;
 #[cfg(feature = "wasmer_wamr")]
 use holochain_wasmer_host::module::build_module;
 use holochain_wasmer_host::module::InstanceWithStore;
+use holochain_wasmer_host::module::ModuleBuilder;
 use holochain_wasmer_host::module::ModuleCache;
 use holochain_wasmer_host::prelude::*;
 use once_cell::sync::OnceCell;
@@ -118,11 +119,11 @@ impl TestWasm {
                 let _did_init_ok =
                     self.module_cache(metered)
                         .set(parking_lot::RwLock::new(ModuleCache::new(
-                            if metered {
+                            ModuleBuilder::new(if metered {
                                 cranelift_fn
                             } else {
                                 compiler_fn_unmetered
-                            },
+                            }),
                             None,
                         )));
 

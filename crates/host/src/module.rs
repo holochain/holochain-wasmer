@@ -22,10 +22,12 @@ use std::fs::OpenOptions;
 use std::io::Write;
 use std::path::PathBuf;
 use std::sync::Arc;
-use wasmer::Engine;
 use wasmer::Instance;
 use wasmer::Module;
 use wasmer::Store;
+
+mod builder;
+pub use builder::ModuleBuilder;
 
 #[cfg(feature = "wasmer_sys")]
 mod wasmer_sys;
@@ -116,9 +118,9 @@ trait PlruCache {
     }
 }
 
-/// Caches deserialized wasm modules. 
+/// Caches deserialized wasm modules.
 ///
-/// Deserialization of cached modules from the cache to create callable instances is slow. 
+/// Deserialization of cached modules from the cache to create callable instances is slow.
 /// Therefore modules are cached in memory after deserialization.
 #[derive(Default, Debug)]
 struct InMemoryModuleCache {
@@ -162,29 +164,20 @@ pub struct ModuleCache {
     // The deserialization process is far faster than compiling and much slower than instance building.
     filesystem_path: Option<PathBuf>,
 
-    // A function to create a new compiler engine for every module
-    make_engine: fn() -> Engine,
-
-    // The runtime engine is used only to execute function calls on instances,
-    // so it does not require a compiler.
+    // Handles building wasm modules
     //
-    // It must live as long as the module,
+    // It includes the runtime engine that must live as long as the module,
     // so we keep it in the cache and use for all modules.
-    runtime_engine: Engine,
+    builder: ModuleBuilder,
 }
 
 impl ModuleCache {
-    pub fn new(
-        make_engine: fn() -> Engine,
-        filesystem_path: Option<PathBuf>,
-    ) -> Self {
+    pub fn new(builder: ModuleBuilder, filesystem_path: Option<PathBuf>) -> Self {
         let cache = Arc::new(RwLock::new(InMemoryModuleCache::default()));
         ModuleCache {
             cache,
             filesystem_path,
-
-            make_engine,
-            runtime_engine: make_runtime_engine(),
+            builder,
         }
     }
 
@@ -196,13 +189,10 @@ impl ModuleCache {
         }
 
         // Check the filesystem for module
-        match self.get_from_filesystem_cache(key) {
+        match self.get_from_filesystem(key) {
             // Filesystem cache hit, deserialize and save to cache
             Ok(Some(serialized_module)) => {
-                let module = Arc::new(
-                    unsafe { Module::deserialize(&self.runtime_engine, serialized_module.clone()) }
-                        .map_err(|e| wasm_error!(WasmErrorInner::ModuleBuild(e.to_string())))?,
-                );
+                let module = self.builder.from_serialized_module(serialized_module)?;
                 self.add_to_cache(key, module.clone());
 
                 Ok(module)
@@ -213,9 +203,7 @@ impl ModuleCache {
                 // Each module needs to be compiled with a new engine because
                 // of middleware like metering. Middleware is compiled into the
                 // module once and available in all instances created from it.
-                let compiler_engine = (self.make_engine)();
-                let module = Module::from_binary(&compiler_engine, wasm)
-                    .map_err(|e| wasm_error!(WasmErrorInner::ModuleBuild(e.to_string())))?;
+                let module = self.builder.from_binary(wasm)?;
 
                 // Round trip the wasmer Module through serialization.
                 //
@@ -235,10 +223,9 @@ impl ModuleCache {
                 let serialized_module = module
                     .serialize()
                     .map_err(|e| wasm_error!(WasmErrorInner::ModuleBuild(e.to_string())))?;
-                let module = Arc::new(unsafe {
-                    Module::deserialize(&self.runtime_engine, serialized_module.clone())
-                        .map_err(|e| wasm_error!(WasmErrorInner::ModuleBuild(e.to_string())))?
-                });
+                let module = self
+                    .builder
+                    .from_serialized_module(serialized_module.clone())?;
 
                 // Save serialized module to filesystem cache
                 self.add_to_filesystem(key, serialized_module)?;
@@ -252,11 +239,8 @@ impl ModuleCache {
     }
 
     /// Get serialized module from filesystem
-    fn get_from_filesystem(
-        &self,
-        key: CacheKey,
-    ) -> Result<Option<Bytes>, wasmer::RuntimeError> {
-        self.filesystem_cache_module_path(key)
+    fn get_from_filesystem(&self, key: CacheKey) -> Result<Option<Bytes>, wasmer::RuntimeError> {
+        self.filesystem_module_path(key)
             .as_ref()
             .map(|module_path| {
                 // Read file into `Bytes` instead of `Vec<u8>` so that the clone is cheap
