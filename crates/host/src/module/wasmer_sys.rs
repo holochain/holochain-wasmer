@@ -80,7 +80,7 @@ mod tests {
     use super::make_engine;
     use crate::module::{builder::ModuleBuilder, CacheKey, ModuleCache, PlruCache};
     use std::io::Write;
-    use tempfile::tempdir;
+    use tempfile::TempDir;
     use wasmer::Module;
 
     #[test]
@@ -95,9 +95,10 @@ mod tests {
             0x61, 0x64, 0x64, 0x5f, 0x6f, 0x6e, 0x65, 0x02, 0x07, 0x01, 0x00, 0x01, 0x00, 0x02,
             0x70, 0x30,
         ];
-        let tmp_fs_cache_dir = tempdir().unwrap().into_path();
+        let tmp_fs_cache_dir = TempDir::new().unwrap();
         let module_builder = ModuleBuilder::new(make_engine);
-        let module_cache = ModuleCache::new(module_builder, Some(tmp_fs_cache_dir.clone()));
+        let module_cache =
+            ModuleCache::new(module_builder, Some(tmp_fs_cache_dir.path().to_owned()));
         assert!(module_cache
             .filesystem_path
             .clone()
@@ -123,8 +124,6 @@ mod tests {
                 module_cache.filesystem_path.unwrap().join(hex::encode(key));
             assert!(std::fs::metadata(serialized_module_path).is_ok());
         }
-
-        std::fs::remove_dir_all(tmp_fs_cache_dir).unwrap();
     }
 
     #[test]
@@ -165,9 +164,10 @@ mod tests {
             0x61, 0x64, 0x64, 0x5f, 0x6f, 0x6e, 0x65, 0x02, 0x07, 0x01, 0x00, 0x01, 0x00, 0x02,
             0x70, 0x30,
         ];
-        let tmp_fs_cache_dir = tempdir().unwrap().into_path();
+        let tmp_fs_cache_dir = TempDir::new().unwrap();
         let module_builder = ModuleBuilder::new(make_engine);
-        let module_cache = ModuleCache::new(module_builder, Some(tmp_fs_cache_dir.clone()));
+        let module_cache =
+            ModuleCache::new(module_builder, Some(tmp_fs_cache_dir.path().to_owned()));
         let key: CacheKey = [0u8; 32];
 
         // Build module, serialize, save directly to filesystem
@@ -175,7 +175,7 @@ mod tests {
         let module =
             std::sync::Arc::new(Module::from_binary(&compiler_engine, wasm.as_slice()).unwrap());
         let serialized_module = module.serialize().unwrap();
-        let serialized_module_path = tmp_fs_cache_dir.clone().join(hex::encode(key));
+        let serialized_module_path = tmp_fs_cache_dir.path().join(hex::encode(key));
         let mut file = std::fs::OpenOptions::new()
             .write(true)
             .create_new(true)
@@ -198,8 +198,6 @@ mod tests {
                 *module.serialize().unwrap()
             );
         }
-
-        std::fs::remove_dir_all(tmp_fs_cache_dir).unwrap();
     }
 
     #[test]
@@ -218,13 +216,14 @@ mod tests {
         // Bad serialized_wasm
         let bad_serialized_wasm = vec![0x00];
 
-        let tmp_fs_cache_dir = tempdir().unwrap().into_path();
+        let tmp_fs_cache_dir = TempDir::new().unwrap();
         let module_builder = ModuleBuilder::new(make_engine);
-        let module_cache = ModuleCache::new(module_builder, Some(tmp_fs_cache_dir.clone()));
+        let module_cache =
+            ModuleCache::new(module_builder, Some(tmp_fs_cache_dir.path().to_owned()));
         let key: CacheKey = [0u8; 32];
 
         // Build module, serialize, save directly to filesystem
-        let serialized_module_path = tmp_fs_cache_dir.clone().join(hex::encode(key));
+        let serialized_module_path = tmp_fs_cache_dir.path().join(hex::encode(key));
         let mut file = std::fs::OpenOptions::new()
             .write(true)
             .create_new(true)
@@ -232,18 +231,13 @@ mod tests {
             .unwrap();
         file.write_all(&bad_serialized_wasm).unwrap();
 
-        // Module cannot be retrieved from fs cache
+        // Module can still be retrieved from fs cache, as it has been deleted from the filesystem and re-added to the cache
         let res = module_cache.get(key, &wasm);
-        assert!(res.is_err());
+        assert!(res.is_ok());
 
         let compiler_engine = make_engine();
         let module =
             std::sync::Arc::new(Module::from_binary(&compiler_engine, wasm.as_slice()).unwrap());
-        let serialized_module = module.serialize().unwrap();
-
-        // 2nd time, module can be retrieved from cache
-        let res = module_cache.get(key, &wasm).unwrap();
-        assert_eq!(*res.serialize().unwrap(), *serialized_module);
 
         // make sure module is stored in deserialized cache
         {
@@ -260,7 +254,5 @@ mod tests {
                 module_cache.filesystem_path.unwrap().join(hex::encode(key));
             assert!(std::fs::metadata(serialized_module_path).is_ok());
         }
-
-        std::fs::remove_dir_all(tmp_fs_cache_dir).unwrap();
     }
 }
