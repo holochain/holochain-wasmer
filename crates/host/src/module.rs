@@ -121,13 +121,13 @@ trait PlruCache {
 /// Deserialization of cached modules from the cache to create callable instances is slow. 
 /// Therefore modules are cached in memory after deserialization.
 #[derive(Default, Debug)]
-struct DeserializedModuleCache {
+struct InMemoryModuleCache {
     plru: MicroCache,
     key_map: PlruKeyMap,
     cache: BTreeMap<CacheKey, Arc<Module>>,
 }
 
-impl PlruCache for DeserializedModuleCache {
+impl PlruCache for InMemoryModuleCache {
     type Item = Module;
 
     fn plru_mut(&mut self) -> &mut MicroCache {
@@ -154,7 +154,13 @@ impl PlruCache for DeserializedModuleCache {
 #[derive(Debug)]
 pub struct ModuleCache {
     // The in-memory cache of deserialized modules
-    deserialized_module_cache: Arc<RwLock<DeserializedModuleCache>>,
+    cache: Arc<RwLock<InMemoryModuleCache>>,
+
+    // Filesystem path where serialized modules are cached.
+    //
+    // A serialized wasm module must still be deserialized before it can be used to build instances.
+    // The deserialization process is far faster than compiling and much slower than instance building.
+    filesystem_path: Option<PathBuf>,
 
     // A function to create a new compiler engine for every module
     make_engine: fn() -> Engine,
@@ -165,44 +171,39 @@ pub struct ModuleCache {
     // It must live as long as the module,
     // so we keep it in the cache and use for all modules.
     runtime_engine: Engine,
-
-    // Filesystem path where serialized modules are cached.
-    //
-    // A serialized wasm module must still be deserialized before it can be used to build instances.
-    // The deserialization process is far faster than compiling and much slower than instance building.
-    serialized_filesystem_cache_path: Option<PathBuf>,
 }
 
 impl ModuleCache {
     pub fn new(
         make_engine: fn() -> Engine,
-        serialized_filesystem_cache_path: Option<PathBuf>,
+        filesystem_path: Option<PathBuf>,
     ) -> Self {
-        let deserialized_module_cache = Arc::new(RwLock::new(DeserializedModuleCache::default()));
+        let cache = Arc::new(RwLock::new(InMemoryModuleCache::default()));
         ModuleCache {
-            deserialized_module_cache,
+            cache,
+            filesystem_path,
+
             make_engine,
             runtime_engine: make_runtime_engine(),
-            serialized_filesystem_cache_path,
         }
     }
 
     /// Get a module from the cache, or add it to both caches if not found
     pub fn get(&self, key: CacheKey, wasm: &[u8]) -> Result<Arc<Module>, wasmer::RuntimeError> {
-        // Check in-memory deserialized cache for module
-        if let Some(module) = self.get_from_deserialized_cache(key) {
+        // Check in-memory cache for module
+        if let Some(module) = self.get_from_cache(key) {
             return Ok(module);
         }
 
-        // Check the filesystem cache for serialized module
+        // Check the filesystem for module
         match self.get_from_filesystem_cache(key) {
-            // Filesystem cache hit, deserialize and save to deserialized cache
+            // Filesystem cache hit, deserialize and save to cache
             Ok(Some(serialized_module)) => {
                 let module = Arc::new(
                     unsafe { Module::deserialize(&self.runtime_engine, serialized_module.clone()) }
                         .map_err(|e| wasm_error!(WasmErrorInner::ModuleBuild(e.to_string())))?,
                 );
-                self.add_to_deserialized_cache(key, module.clone());
+                self.add_to_cache(key, module.clone());
 
                 Ok(module)
             }
@@ -240,18 +241,18 @@ impl ModuleCache {
                 });
 
                 // Save serialized module to filesystem cache
-                self.add_to_filesystem_cache(key, serialized_module)?;
+                self.add_to_filesystem(key, serialized_module)?;
 
-                // Save module to in-memory deserialized cache
-                self.add_to_deserialized_cache(key, module.clone());
+                // Save module to in-memory cache
+                self.add_to_cache(key, module.clone());
 
                 Ok(module)
             }
         }
     }
 
-    /// Check filesystem cache for serialized module
-    fn get_from_filesystem_cache(
+    /// Get serialized module from filesystem
+    fn get_from_filesystem(
         &self,
         key: CacheKey,
     ) -> Result<Option<Bytes>, wasmer::RuntimeError> {
@@ -282,12 +283,12 @@ impl ModuleCache {
     }
 
     /// Add serialized module to filesystem cache
-    fn add_to_filesystem_cache(
+    fn add_to_filesystem(
         &self,
         key: CacheKey,
         serialized_module: Bytes,
     ) -> Result<(), wasmer::RuntimeError> {
-        if let Some(fs_path) = self.filesystem_cache_module_path(key) {
+        if let Some(fs_path) = self.filesystem_module_path(key) {
             match OpenOptions::new()
                 .write(true)
                 // Using create_new here so that cache stampedes don't
@@ -312,21 +313,21 @@ impl ModuleCache {
         Ok(())
     }
 
-    /// Check deserialized cache for module
-    fn get_from_deserialized_cache(&self, key: CacheKey) -> Option<Arc<Module>> {
-        let mut deserialized_cache = self.deserialized_module_cache.write();
-        deserialized_cache.get_item(&key)
+    /// Check cache for module
+    fn get_from_cache(&self, key: CacheKey) -> Option<Arc<Module>> {
+        let mut cache = self.cache.write();
+        cache.get_item(&key)
     }
 
-    /// Add module to deserialized cache
-    fn add_to_deserialized_cache(&self, key: CacheKey, module: Arc<Module>) {
-        let mut deserialized_cache = self.deserialized_module_cache.write();
-        deserialized_cache.put_item(key, module.clone());
+    /// Add module to cache
+    fn add_to_cache(&self, key: CacheKey, module: Arc<Module>) {
+        let mut cache = self.cache.write();
+        cache.put_item(key, module.clone());
     }
 
     /// Get filesystem cache path for a given key
-    fn filesystem_cache_module_path(&self, key: CacheKey) -> Option<PathBuf> {
-        self.serialized_filesystem_cache_path
+    fn filesystem_module_path(&self, key: CacheKey) -> Option<PathBuf> {
+        self.filesystem_path
             .as_ref()
             .map(|dir_path| dir_path.clone().join(hex::encode(key)))
     }
