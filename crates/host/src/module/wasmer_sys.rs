@@ -114,7 +114,7 @@ mod tests {
         let key: CacheKey = [0u8; 32];
         let module = module_cache.get(key, &wasm).unwrap();
 
-        // make sure module has been stored in deserialized cache under key
+        // make sure module has been stored in the in-memory cache under `key`
         {
             let deserialized_cached_module = module_cache
                 .deserialized_module_cache
