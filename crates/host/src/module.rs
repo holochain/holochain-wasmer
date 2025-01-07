@@ -192,50 +192,74 @@ impl ModuleCache {
         match self.get_from_filesystem(key) {
             // Filesystem cache hit, deserialize and save to cache
             Ok(Some(serialized_module)) => {
-                let module = self.builder.from_serialized_module(serialized_module)?;
+                let module_result = self.builder.from_serialized_module(serialized_module);
+
+                // If deserialization fails, we assume the file is corrupt,
+                // so it is removed from the filesystem cache,
+                // and the wasm is re-added to the cache again.
+                let module = match module_result {
+                    Ok(d) => Ok(d),
+                    Err(_) => {
+                        // Remove from filesystem
+                        if let Err(e) = self.remove_from_filesystem(key) {
+                            tracing::debug!("Failed to remove cached wasm from filesystem with cache key {:?}: {:?}", key, e);
+                        }
+
+                        // Build wasm and save to both caches
+                        self.add_to_cache_and_filesystem(key, wasm)
+                    }
+                }?;
+
                 self.add_to_cache(key, module.clone());
 
                 Ok(module)
             }
 
             // Filesystem cache miss, build wasm and save to both caches
-            _ => {
-                // Each module needs to be compiled with a new engine because
-                // of middleware like metering. Middleware is compiled into the
-                // module once and available in all instances created from it.
-                let module = self.builder.from_binary(wasm)?;
-
-                // Round trip the wasmer Module through serialization.
-                //
-                // A new middleware per module is required, hence a new engine
-                // per module is needed too. Serialization allows for uncoupling
-                // the module from the engine that was used for compilation.
-                // After that another engine can be used to deserialize the
-                // module again. The engine has to live as long as the module to
-                // prevent memory access out of bounds errors.
-                //
-                // This procedure facilitates caching of modules that can be
-                // instantiated with fresh stores free from state. Instance
-                // creation is highly performant which makes caching of instances
-                // and stores unnecessary.
-                //
-                // See https://github.com/wasmerio/wasmer/discussions/3829#discussioncomment-5790763
-                let serialized_module = module
-                    .serialize()
-                    .map_err(|e| wasm_error!(WasmErrorInner::ModuleBuild(e.to_string())))?;
-                let module = self
-                    .builder
-                    .from_serialized_module(serialized_module.clone())?;
-
-                // Save serialized module to filesystem cache
-                self.add_to_filesystem(key, serialized_module)?;
-
-                // Save module to in-memory cache
-                self.add_to_cache(key, module.clone());
-
-                Ok(module)
-            }
+            _ => self.add_to_cache_and_filesystem(key, wasm),
         }
+    }
+
+    /// Build a wasm, then save it to both the in-memory cache and filesystem
+    fn add_to_cache_and_filesystem(
+        &self,
+        key: CacheKey,
+        wasm: &[u8],
+    ) -> Result<Arc<Module>, wasmer::RuntimeError> {
+        // Each module needs to be compiled with a new engine because
+        // of middleware like metering. Middleware is compiled into the
+        // module once and available in all instances created from it.
+        let module = self.builder.from_binary(wasm)?;
+
+        // Round trip the wasmer Module through serialization.
+        //
+        // A new middleware per module is required, hence a new engine
+        // per module is needed too. Serialization allows for uncoupling
+        // the module from the engine that was used for compilation.
+        // After that another engine can be used to deserialize the
+        // module again. The engine has to live as long as the module to
+        // prevent memory access out of bounds errors.
+        //
+        // This procedure facilitates caching of modules that can be
+        // instantiated with fresh stores free from state. Instance
+        // creation is highly performant which makes caching of instances
+        // and stores unnecessary.
+        //
+        // See https://github.com/wasmerio/wasmer/discussions/3829#discussioncomment-5790763
+        let serialized_module = module
+            .serialize()
+            .map_err(|e| wasm_error!(WasmErrorInner::ModuleBuild(e.to_string())))?;
+        let module = self
+            .builder
+            .from_serialized_module(serialized_module.clone())?;
+
+        // Save serialized module to filesystem cache
+        self.add_to_filesystem(key, serialized_module)?;
+
+        // Save module to in-memory cache
+        self.add_to_cache(key, module.clone());
+
+        Ok(module)
     }
 
     /// Get serialized module from filesystem
@@ -292,6 +316,15 @@ impl ModuleCache {
                     tracing::warn!("{} Path: {}", e, fs_path.display());
                 }
             }
+        }
+
+        Ok(())
+    }
+
+    // Remove serialized module from filesystem cache
+    fn remove_from_filesystem(&self, key: CacheKey) -> Result<(), std::io::Error> {
+        if let Some(fs_path) = self.filesystem_module_path(key) {
+            std::fs::remove_file(fs_path)?;
         }
 
         Ok(())

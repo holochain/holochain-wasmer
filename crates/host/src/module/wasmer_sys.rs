@@ -80,7 +80,7 @@ mod tests {
     use super::make_engine;
     use crate::module::{builder::ModuleBuilder, CacheKey, ModuleCache, PlruCache};
     use std::io::Write;
-    use tempfile::tempdir;
+    use tempfile::TempDir;
     use wasmer::Module;
 
     #[test]
@@ -95,9 +95,10 @@ mod tests {
             0x61, 0x64, 0x64, 0x5f, 0x6f, 0x6e, 0x65, 0x02, 0x07, 0x01, 0x00, 0x01, 0x00, 0x02,
             0x70, 0x30,
         ];
-        let tmp_fs_cache_dir = tempdir().unwrap().into_path();
+        let tmp_fs_cache_dir = TempDir::new().unwrap();
         let module_builder = ModuleBuilder::new(make_engine);
-        let module_cache = ModuleCache::new(module_builder, Some(tmp_fs_cache_dir.clone()));
+        let module_cache =
+            ModuleCache::new(module_builder, Some(tmp_fs_cache_dir.path().to_owned()));
         assert!(module_cache
             .filesystem_path
             .clone()
@@ -123,8 +124,6 @@ mod tests {
                 module_cache.filesystem_path.unwrap().join(hex::encode(key));
             assert!(std::fs::metadata(serialized_module_path).is_ok());
         }
-
-        std::fs::remove_dir_all(tmp_fs_cache_dir).unwrap();
     }
 
     #[test]
@@ -165,9 +164,10 @@ mod tests {
             0x61, 0x64, 0x64, 0x5f, 0x6f, 0x6e, 0x65, 0x02, 0x07, 0x01, 0x00, 0x01, 0x00, 0x02,
             0x70, 0x30,
         ];
-        let tmp_fs_cache_dir = tempdir().unwrap().into_path();
+        let tmp_fs_cache_dir = TempDir::new().unwrap();
         let module_builder = ModuleBuilder::new(make_engine);
-        let module_cache = ModuleCache::new(module_builder, Some(tmp_fs_cache_dir.clone()));
+        let module_cache =
+            ModuleCache::new(module_builder, Some(tmp_fs_cache_dir.path().to_owned()));
         let key: CacheKey = [0u8; 32];
 
         // Build module, serialize, save directly to filesystem
@@ -175,7 +175,7 @@ mod tests {
         let module =
             std::sync::Arc::new(Module::from_binary(&compiler_engine, wasm.as_slice()).unwrap());
         let serialized_module = module.serialize().unwrap();
-        let serialized_module_path = tmp_fs_cache_dir.clone().join(hex::encode(key));
+        let serialized_module_path = tmp_fs_cache_dir.path().join(hex::encode(key));
         let mut file = std::fs::OpenOptions::new()
             .write(true)
             .create_new(true)
@@ -198,7 +198,61 @@ mod tests {
                 *module.serialize().unwrap()
             );
         }
+    }
 
-        std::fs::remove_dir_all(tmp_fs_cache_dir).unwrap();
+    #[test]
+    fn cache_get_from_fs_corrupt() {
+        // simple example wasm taken from wasmer docs
+        // https://docs.rs/wasmer/latest/wasmer/struct.Module.html#example
+        let wasm: Vec<u8> = vec![
+            0x00, 0x61, 0x73, 0x6d, 0x01, 0x00, 0x00, 0x00, 0x01, 0x06, 0x01, 0x60, 0x01, 0x7f,
+            0x01, 0x7f, 0x03, 0x02, 0x01, 0x00, 0x07, 0x0b, 0x01, 0x07, 0x61, 0x64, 0x64, 0x5f,
+            0x6f, 0x6e, 0x65, 0x00, 0x00, 0x0a, 0x09, 0x01, 0x07, 0x00, 0x20, 0x00, 0x41, 0x01,
+            0x6a, 0x0b, 0x00, 0x1a, 0x04, 0x6e, 0x61, 0x6d, 0x65, 0x01, 0x0a, 0x01, 0x00, 0x07,
+            0x61, 0x64, 0x64, 0x5f, 0x6f, 0x6e, 0x65, 0x02, 0x07, 0x01, 0x00, 0x01, 0x00, 0x02,
+            0x70, 0x30,
+        ];
+
+        // Bad serialized_wasm
+        let bad_serialized_wasm = vec![0x00];
+
+        let tmp_fs_cache_dir = TempDir::new().unwrap();
+        let module_builder = ModuleBuilder::new(make_engine);
+        let module_cache =
+            ModuleCache::new(module_builder, Some(tmp_fs_cache_dir.path().to_owned()));
+        let key: CacheKey = [0u8; 32];
+
+        // Build module, serialize, save directly to filesystem
+        let serialized_module_path = tmp_fs_cache_dir.path().join(hex::encode(key));
+        let mut file = std::fs::OpenOptions::new()
+            .write(true)
+            .create_new(true)
+            .open(&serialized_module_path)
+            .unwrap();
+        file.write_all(&bad_serialized_wasm).unwrap();
+
+        // Module can still be retrieved from fs cache, as it has been deleted from the filesystem and re-added to the cache
+        let res = module_cache.get(key, &wasm);
+        assert!(res.is_ok());
+
+        let compiler_engine = make_engine();
+        let module =
+            std::sync::Arc::new(Module::from_binary(&compiler_engine, wasm.as_slice()).unwrap());
+
+        // make sure module is stored in deserialized cache
+        {
+            let deserialized_cached_module = module_cache.cache.write().get_item(&key).unwrap();
+            assert_eq!(
+                *deserialized_cached_module.serialize().unwrap(),
+                *module.serialize().unwrap()
+            );
+        }
+
+        // make sure module has been stored in serialized filesystem cache
+        {
+            let serialized_module_path =
+                module_cache.filesystem_path.unwrap().join(hex::encode(key));
+            assert!(std::fs::metadata(serialized_module_path).is_ok());
+        }
     }
 }
