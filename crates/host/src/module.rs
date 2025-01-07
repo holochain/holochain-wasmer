@@ -230,7 +230,7 @@ impl ModuleCache {
                 // creation is highly performant which makes caching of instances
                 // and stores unnecessary.
                 //
-                // See https://github.com/wasmerio/wasmer/issues/4377
+                // See https://github.com/wasmerio/wasmer/discussions/3829#discussioncomment-5790763
                 let serialized_module = module
                     .serialize()
                     .map_err(|e| wasm_error!(WasmErrorInner::ModuleBuild(e.to_string())))?;
