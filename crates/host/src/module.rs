@@ -116,9 +116,10 @@ trait PlruCache {
     }
 }
 
-/// Caches deserialized wasm modules. Deserialization of cached modules from
-/// the cache to create callable instances is slow. Therefore modules are
-/// cached in memory after deserialization.
+/// Caches deserialized wasm modules. 
+///
+/// Deserialization of cached modules from the cache to create callable instances is slow. 
+/// Therefore modules are cached in memory after deserialization.
 #[derive(Default, Debug)]
 struct DeserializedModuleCache {
     plru: MicroCache,
