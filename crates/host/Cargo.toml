@@ -6,6 +6,11 @@ version = "0.0.97"
 authors = ["thedavidmeister", "thedavidmeister@gmail.com"]
 edition = "2021"
 
+[lib]
+name = "holochain_wasmer_host"
+crate-type = ["cdylib", "rlib"]
+path = "src/lib.rs"
+
 [dependencies]
 wasmer = { version = "5.0.2", default-features = false }
 wasmer-middlewares = { version = "5.0.2", optional = true }
@@ -20,10 +25,8 @@ bytes = "1"
 hex = "0.4"
 thiserror = "2"
 
-[lib]
-name = "holochain_wasmer_host"
-crate-type = ["cdylib", "rlib"]
-path = "src/lib.rs"
+[dev-dependencies]
+tempfile = "3.14.0"
 
 [features]
 default = ["error_as_host", "wasmer_sys_dev"]
