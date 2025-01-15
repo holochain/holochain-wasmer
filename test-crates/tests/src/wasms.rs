@@ -123,7 +123,7 @@ impl TestWasm {
                     .unwrap(),
             );
 
-            #[cfg(feature = "wasmer_sys")] 
+            #[cfg(feature = "wasmer_sys")]
             {
                 data_mut.wasmer_metering_points_exhausted = Some(
                     instance
