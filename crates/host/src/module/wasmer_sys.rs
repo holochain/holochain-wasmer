@@ -19,7 +19,7 @@ pub const WASM_METERING_LIMIT: u64 = 100_000_000_000;
 #[cfg(test)]
 /// ten mega ops.
 /// We don't want tests to run forever, and it can take several minutes for 100 giga ops to run.
-pub const WASM_METERING_LIMIT: u64 = 10_000_000;
+pub const WASM_METERING_LIMIT: u64 = u64::MAX;
 
 /// Generate an engine with a wasm compiler
 /// and Metering (use limits) in place.
