@@ -4,9 +4,16 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+### Changed
 - Removed separate cargo workspaces for `crates/guest` and `test` and separate cargo projects for test wasms. Now all crates are members of a single cargo workspace.
+- Re-enable CI testing on windows with feature `wasmer_wamr`.
+- Removes the in-memory serialized module cache which was redundant. Now there is just a `ModuleCache` which stores modules in-memory as well as optionally persisting modules by serializing and saving them to the filesystem.
 
-## [0.0.96]
+### Added
+- Add CI job "check" which passes if all other jobs pass.
+- When the `ModuleCache` fails to deserialize a Module that was perisisted to the filesystem, the persisted file is deleted and the original wasm is added to the cache again.
+
+## [0.0.97] - 2024-12-18
 
 ### Changed
 - Bumped wasmer version to 5.x
@@ -19,6 +26,16 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
   to be faster and more optimized for production. In testing so far, the compile step is slower with LLVM but the runtime is
   faster. More testing is needed yet to confirm the difference.
 - A new public function `build_module`, which builds a wasmer Module directly, bypassing the `ModuleCache`. It is only implemented for the feature flag `wasmer_wamr`. On the feature flags `wasmer_sys_dev` and `wasmer_sys_prod` it will panic as unimplemented. This enforces the use of the `ModuleCache` when wasmer is used in a compiled mode, and allows bypassing the cache when wasmer is used in interpreter mode as caching is not relevant.
+
+## [0.0.96] - 2024-08-28
+
+### Added
+Two new mutually-exclusive feature flags `wasmer_sys` and `wasmer_wamr` for toggling different wasm runtime engines:
+- `wasmer_sys` sets wasmer to use the cranelift compiler
+- `wasmer_wamr` sets wasmer to use the wasm-micro-runtime in interpreter mode
+
+### Changed
+- Use the full path to `WasmError` within the `wasm_error!` macro, so that the consumer does not need to manually import `WasmError`.
 
 ## [0.0.95] - 2024-08-28
 
