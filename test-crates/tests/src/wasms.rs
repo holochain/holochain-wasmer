@@ -116,16 +116,16 @@ impl TestWasm {
                 // This will error if the cache is already initialized
                 // which could happen if two tests are running in parallel.
                 // It doesn't matter which one wins, so we just ignore the error.
-                let _did_init_ok =
-                    self.module_cache(metered)
-                        .set(parking_lot::RwLock::new(ModuleCache::new(
-                            ModuleBuilder::new(if metered {
-                                cranelift_fn
-                            } else {
-                                compiler_fn_unmetered
-                            }),
-                            None,
-                        )));
+                let _did_init_ok = self.module_cache(metered).set(parking_lot::RwLock::new(
+                    ModuleCache::new_with_builder(
+                        ModuleBuilder::new(if metered {
+                            cranelift_fn
+                        } else {
+                            compiler_fn_unmetered
+                        }),
+                        None,
+                    ),
+                ));
 
                 // Just recurse now that the cache is initialized.
                 self.module(metered)
