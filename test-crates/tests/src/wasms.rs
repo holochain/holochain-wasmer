@@ -123,21 +123,23 @@ impl TestWasm {
                     .unwrap(),
             );
 
-            #[cfg(feature = "wasmer_sys")]
-            data_mut.wasmer_metering_points_exhausted = Some(
-                instance
-                    .exports
-                    .get_global("wasmer_metering_points_exhausted")
-                    .unwrap()
-                    .clone(),
-            );
-            data_mut.wasmer_metering_remaining_points = Some(
-                instance
-                    .exports
-                    .get_global("wasmer_metering_remaining_points")
-                    .unwrap()
-                    .clone(),
-            );
+            #[cfg(feature = "wasmer_sys")] 
+            {
+                data_mut.wasmer_metering_points_exhausted = Some(
+                    instance
+                        .exports
+                        .get_global("wasmer_metering_points_exhausted")
+                        .unwrap()
+                        .clone(),
+                );
+                data_mut.wasmer_metering_remaining_points = Some(
+                    instance
+                        .exports
+                        .get_global("wasmer_metering_remaining_points")
+                        .unwrap()
+                        .clone(),
+                );
+            }
         }
 
         InstanceWithStore {
