@@ -4,6 +4,8 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+## [0.0.98] - 2025-01-15
+
 ### Changed
 - Removed separate cargo workspaces for `crates/guest` and `test` and separate cargo projects for test wasms. Now all crates are members of a single cargo workspace.
 - Re-enable CI testing on windows with feature `wasmer_wamr`.
