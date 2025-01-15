@@ -81,8 +81,7 @@ impl TestWasm {
                 // which could happen if two tests are running in parallel.
                 // It doesn't matter which one wins, so we just ignore the error.
                 let _did_init_ok =
-                    self.module_cache(metered)
-                        .set(parking_lot::RwLock::new(ModuleCache::new(None)));
+                    &MODULE_CACHE.set(parking_lot::RwLock::new(ModuleCache::new(None)));
 
                 // Just recurse now that the cache is initialized.
                 self.module()

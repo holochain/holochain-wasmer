@@ -96,8 +96,7 @@ mod tests {
             0x70, 0x30,
         ];
         let tmp_fs_cache_dir = TempDir::new().unwrap();
-        let module_cache =
-            ModuleCache::new(Some(tmp_fs_cache_dir.path().to_owned()));
+        let module_cache = ModuleCache::new(Some(tmp_fs_cache_dir.path().to_owned()));
         assert!(module_cache
             .filesystem_path
             .clone()
@@ -163,8 +162,7 @@ mod tests {
             0x70, 0x30,
         ];
         let tmp_fs_cache_dir = TempDir::new().unwrap();
-        let module_cache =
-            ModuleCache::new(Some(tmp_fs_cache_dir.path().to_owned()));
+        let module_cache = ModuleCache::new(Some(tmp_fs_cache_dir.path().to_owned()));
         let key: CacheKey = [0u8; 32];
 
         // Build module, serialize, save directly to filesystem
@@ -214,8 +212,7 @@ mod tests {
         let bad_serialized_wasm = vec![0x00];
 
         let tmp_fs_cache_dir = TempDir::new().unwrap();
-        let module_cache =
-            ModuleCache::new(Some(tmp_fs_cache_dir.path().to_owned()));
+        let module_cache = ModuleCache::new(Some(tmp_fs_cache_dir.path().to_owned()));
         let key: CacheKey = [0u8; 32];
 
         // Build module, serialize, save directly to filesystem

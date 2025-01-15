@@ -20,6 +20,12 @@ pub struct ModuleBuilder {
     runtime_engine: Engine,
 }
 
+impl Default for ModuleBuilder {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl ModuleBuilder {
     pub fn new() -> Self {
         Self {
