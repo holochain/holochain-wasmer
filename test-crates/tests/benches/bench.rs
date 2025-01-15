@@ -64,7 +64,7 @@ pub fn wasm_module(c: &mut Criterion) {
     ] {
         group.bench_function(BenchmarkId::new("wasm_module", wasm.name()), |b| {
             b.iter(|| {
-                wasm.module(false);
+                wasm.module();
             })
         });
     }

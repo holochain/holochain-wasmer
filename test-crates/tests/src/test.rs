@@ -145,7 +145,7 @@ pub mod tests {
 
     #[test]
     fn host_externs_toolable() {
-        let module = (*TestWasm::Core.module(false)).clone();
+        let module = (*TestWasm::Core.module()).clone();
         // Imports will be the minimal set of functions actually used by the wasm
         // NOT the complete list defined by `host_externs!`.
         assert_eq!(
