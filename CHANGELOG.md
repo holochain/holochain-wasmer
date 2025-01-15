@@ -4,6 +4,9 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+- No longer exposed `ModuleBuilder` or `ModuleBuilder::make_engine` function. Instead `ModuleCache` constructs a new `ModuleBuilder` with default settings.
+- Remove tests of `ModuleCache` with `wasmer_sys` feature and metering disabled, as this is not exposed as an option anywhere. Metering is always enabled with the `wasmer_sys` feature.
+
 ## [0.0.98] - 2025-01-15
 
 ### Changed
