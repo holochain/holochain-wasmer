@@ -21,7 +21,7 @@ pub struct ModuleBuilder {
 }
 
 impl ModuleBuilder {
-    pub fn new(make_engine: fn() -> Engine) -> Self {
+    pub fn new() -> Self {
         Self {
             make_engine,
             runtime_engine: make_runtime_engine(),

@@ -78,7 +78,7 @@ pub fn get_ios_module_from_file(path: &Path) -> Result<Module, DeserializeError>
 #[cfg(test)]
 mod tests {
     use super::make_engine;
-    use crate::module::{builder::ModuleBuilder, CacheKey, ModuleCache, PlruCache};
+    use crate::module::{CacheKey, ModuleCache, PlruCache};
     use std::io::Write;
     use tempfile::TempDir;
     use wasmer::Module;
@@ -96,9 +96,8 @@ mod tests {
             0x70, 0x30,
         ];
         let tmp_fs_cache_dir = TempDir::new().unwrap();
-        let module_builder = ModuleBuilder::new(make_engine);
         let module_cache =
-            ModuleCache::new(module_builder, Some(tmp_fs_cache_dir.path().to_owned()));
+            ModuleCache::new(Some(tmp_fs_cache_dir.path().to_owned()));
         assert!(module_cache
             .filesystem_path
             .clone()
@@ -138,8 +137,7 @@ mod tests {
             0x61, 0x64, 0x64, 0x5f, 0x6f, 0x6e, 0x65, 0x02, 0x07, 0x01, 0x00, 0x01, 0x00, 0x02,
             0x70, 0x30,
         ];
-        let module_builder = ModuleBuilder::new(make_engine);
-        let module_cache = ModuleCache::new(module_builder, None);
+        let module_cache = ModuleCache::new(None);
         assert!(module_cache.cache.read().cache.is_empty());
 
         let key: CacheKey = [0u8; 32];
@@ -165,9 +163,8 @@ mod tests {
             0x70, 0x30,
         ];
         let tmp_fs_cache_dir = TempDir::new().unwrap();
-        let module_builder = ModuleBuilder::new(make_engine);
         let module_cache =
-            ModuleCache::new(module_builder, Some(tmp_fs_cache_dir.path().to_owned()));
+            ModuleCache::new(Some(tmp_fs_cache_dir.path().to_owned()));
         let key: CacheKey = [0u8; 32];
 
         // Build module, serialize, save directly to filesystem
@@ -217,9 +214,8 @@ mod tests {
         let bad_serialized_wasm = vec![0x00];
 
         let tmp_fs_cache_dir = TempDir::new().unwrap();
-        let module_builder = ModuleBuilder::new(make_engine);
         let module_cache =
-            ModuleCache::new(module_builder, Some(tmp_fs_cache_dir.path().to_owned()));
+            ModuleCache::new(Some(tmp_fs_cache_dir.path().to_owned()));
         let key: CacheKey = [0u8; 32];
 
         // Build module, serialize, save directly to filesystem

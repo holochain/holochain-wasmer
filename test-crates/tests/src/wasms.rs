@@ -31,7 +31,6 @@ pub enum TestWasm {
 }
 
 pub static MODULE_CACHE: OnceCell<RwLock<ModuleCache>> = OnceCell::new();
-pub static MODULE_CACHE_UNMETERED: OnceCell<RwLock<ModuleCache>> = OnceCell::new();
 
 impl TestWasm {
     pub fn bytes(&self) -> &[u8] {
@@ -64,82 +63,40 @@ impl TestWasm {
         }
     }
 
-    pub fn key(&self, metered: bool) -> [u8; 32] {
-        match (self, metered) {
-            (TestWasm::Empty, false) => [0; 32],
-            (TestWasm::Empty, true) => [1; 32],
-            (TestWasm::Io, false) => [2; 32],
-            (TestWasm::Io, true) => [3; 32],
-            (TestWasm::Core, false) => [4; 32],
-            (TestWasm::Core, true) => [5; 32],
-            (TestWasm::Memory, false) => [6; 32],
-            (TestWasm::Memory, true) => [7; 32],
-        }
-    }
-
-    pub fn module_cache(&self, metered: bool) -> &OnceCell<RwLock<ModuleCache>> {
-        if metered {
-            &MODULE_CACHE
-        } else {
-            &MODULE_CACHE_UNMETERED
+    pub fn key(&self) -> [u8; 32] {
+        match self {
+            TestWasm::Empty => [1; 32],
+            TestWasm::Io => [2; 32],
+            TestWasm::Core => [3; 32],
+            TestWasm::Memory => [4; 32],
         }
     }
 
     #[cfg(feature = "wasmer_sys")]
-    pub fn module(&self, metered: bool) -> Arc<Module> {
-        match self.module_cache(metered).get() {
-            Some(cache) => cache.write().get(self.key(metered), self.bytes()).unwrap(),
+    pub fn module(&self) -> Arc<Module> {
+        match &MODULE_CACHE.get() {
+            Some(cache) => cache.write().get(self.key(), self.bytes()).unwrap(),
             None => {
-                let cranelift_fn = || {
-                    let cost_function = |_operator: &Operator| -> u64 { 1 };
-                    let metering = Arc::new(Metering::new(10_000_000_000, cost_function));
-                    #[cfg(feature = "wasmer_sys_dev")]
-                    let mut compiler = wasmer::Cranelift::default();
-                    #[cfg(feature = "wasmer_sys_prod")]
-                    let mut compiler = wasmer::LLVM::default();
-
-                    compiler.canonicalize_nans(true);
-                    compiler.push_middleware(metering);
-                    Engine::from(compiler)
-                };
-
-                let compiler_fn_unmetered = || {
-                    #[cfg(feature = "wasmer_sys_dev")]
-                    let mut compiler = wasmer::Cranelift::default();
-                    #[cfg(feature = "wasmer_sys_prod")]
-                    let mut compiler = wasmer::LLVM::default();
-
-                    compiler.canonicalize_nans(true);
-                    Engine::from(compiler)
-                };
-
                 // This will error if the cache is already initialized
                 // which could happen if two tests are running in parallel.
                 // It doesn't matter which one wins, so we just ignore the error.
                 let _did_init_ok =
                     self.module_cache(metered)
-                        .set(parking_lot::RwLock::new(ModuleCache::new(
-                            ModuleBuilder::new(if metered {
-                                cranelift_fn
-                            } else {
-                                compiler_fn_unmetered
-                            }),
-                            None,
-                        )));
+                        .set(parking_lot::RwLock::new(ModuleCache::new(None)));
 
                 // Just recurse now that the cache is initialized.
-                self.module(metered)
+                self.module()
             }
         }
     }
 
     #[cfg(feature = "wasmer_wamr")]
-    pub fn module(&self, _metered: bool) -> Arc<Module> {
+    pub fn module(&self) -> Arc<Module> {
         build_module(self.bytes()).unwrap()
     }
 
-    pub fn _instance(&self, metered: bool) -> InstanceWithStore {
-        let module = self.module(metered);
+    pub fn instance(&self) -> InstanceWithStore {
+        let module = self.module();
         let mut store = Store::default();
         let function_env;
         let instance;
@@ -168,41 +125,25 @@ impl TestWasm {
             );
 
             #[cfg(feature = "wasmer_sys")]
-            if metered {
-                data_mut.wasmer_metering_points_exhausted = Some(
-                    instance
-                        .exports
-                        .get_global("wasmer_metering_points_exhausted")
-                        .unwrap()
-                        .clone(),
-                );
-                data_mut.wasmer_metering_remaining_points = Some(
-                    instance
-                        .exports
-                        .get_global("wasmer_metering_remaining_points")
-                        .unwrap()
-                        .clone(),
-                );
-            }
+            data_mut.wasmer_metering_points_exhausted = Some(
+                instance
+                    .exports
+                    .get_global("wasmer_metering_points_exhausted")
+                    .unwrap()
+                    .clone(),
+            );
+            data_mut.wasmer_metering_remaining_points = Some(
+                instance
+                    .exports
+                    .get_global("wasmer_metering_remaining_points")
+                    .unwrap()
+                    .clone(),
+            );
         }
 
         InstanceWithStore {
             store: Arc::new(Mutex::new(store)),
             instance: Arc::new(instance),
         }
-    }
-
-    #[cfg(feature = "wasmer_sys")]
-    pub fn instance(&self) -> InstanceWithStore {
-        self._instance(true)
-    }
-
-    #[cfg(feature = "wasmer_wamr")]
-    pub fn instance(&self) -> InstanceWithStore {
-        self.unmetered_instance()
-    }
-
-    pub fn unmetered_instance(&self) -> InstanceWithStore {
-        self._instance(false)
     }
 }

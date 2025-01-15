@@ -172,12 +172,12 @@ pub struct ModuleCache {
 }
 
 impl ModuleCache {
-    pub fn new(builder: ModuleBuilder, filesystem_path: Option<PathBuf>) -> Self {
+    pub fn new(filesystem_path: Option<PathBuf>) -> Self {
         let cache = Arc::new(RwLock::new(InMemoryModuleCache::default()));
         ModuleCache {
             cache,
             filesystem_path,
-            builder,
+            builder: ModuleBuilder::new(),
         }
     }
 
