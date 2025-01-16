@@ -2,7 +2,7 @@
 name = "holochain_wasmer_host"
 description = "wasm host code"
 license = "Apache-2.0"
-version = "0.0.98"
+version = "0.0.99"
 authors = ["thedavidmeister", "thedavidmeister@gmail.com"]
 edition = "2021"
 
@@ -15,7 +15,7 @@ path = "src/lib.rs"
 wasmer = { version = "5.0.2", default-features = false }
 wasmer-middlewares = { version = "5.0.2", optional = true }
 
-holochain_wasmer_common = { version = "=0.0.98", path = "../common" }
+holochain_wasmer_common = { version = "=0.0.99", path = "../common" }
 holochain_serialized_bytes = "=0.0.55"
 serde = "1"
 tracing = "0.1"
