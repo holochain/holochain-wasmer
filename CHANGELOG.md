@@ -4,6 +4,8 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+## [0.0.99] - 2025-01-16
+
 - Modify the `ModuleCache::new` constructor to no longer take a `ModuleBuilder` parameter.
 - Add a `ModuleCache::new_with_builder` constructor which does take a `ModuleBuilder` parameter.
 
