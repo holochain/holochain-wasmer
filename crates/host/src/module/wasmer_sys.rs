@@ -1,15 +1,10 @@
-use std::path::Path;
 use std::sync::Arc;
-use tracing::info;
 use wasmer::sys::BaseTunables;
 use wasmer::sys::CompilerConfig;
 use wasmer::wasmparser;
-use wasmer::CompileError;
-use wasmer::DeserializeError;
 use wasmer::Engine;
 use wasmer::Module;
 use wasmer::NativeEngineExt;
-use wasmer::Store;
 use wasmer_middlewares::Metering;
 
 #[cfg(not(test))]
@@ -57,22 +52,6 @@ pub(crate) fn make_runtime_engine() -> Engine {
 /// Build an interpreter module from wasm bytes.
 pub fn build_module(_wasm: &[u8]) -> Result<Arc<Module>, wasmer::RuntimeError> {
     unimplemented!("The feature flag 'wasmer_wamr' must be enabled to support building a Module directly. Please use the ModuleCache instead.");
-}
-
-/// Take WASM binary and prepare a wasmer Module suitable for iOS
-pub fn build_ios_module(wasm: &[u8]) -> Result<Module, CompileError> {
-    info!(
-        "Found wasm and was instructed to serialize it for ios in wasmer format, doing so now..."
-    );
-    let compiler_engine = make_engine();
-    let store = Store::new(compiler_engine);
-    Module::from_binary(&store, wasm)
-}
-
-/// Deserialize a previously compiled module for iOS from a file.
-pub fn get_ios_module_from_file(path: &Path) -> Result<Module, DeserializeError> {
-    let engine = Engine::headless();
-    unsafe { Module::deserialize_from_file(&engine, path) }
 }
 
 #[cfg(test)]

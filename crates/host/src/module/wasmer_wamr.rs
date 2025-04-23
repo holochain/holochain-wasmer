@@ -25,16 +25,6 @@ pub fn build_module(wasm: &[u8]) -> Result<Arc<Module>, wasmer::RuntimeError> {
     Ok(Arc::new(module))
 }
 
-/// Take WASM binary and prepare a wasmer Module suitable for iOS
-pub fn build_ios_module(_wasm: &[u8]) -> Result<Module, CompileError> {
-    unimplemented!("The feature flag 'wasmer_sys' must be enabled to support compiling wasm");
-}
-
-/// Deserialize a previously compiled module for iOS from a file.
-pub fn get_ios_module_from_file(_path: &Path) -> Result<Module, DeserializeError> {
-    unimplemented!("The feature flag 'wasmer_sys' must be enabled to support compiling wasm");
-}
-
 #[cfg(test)]
 mod tests {
     use super::build_module;

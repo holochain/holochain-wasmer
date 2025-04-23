@@ -4,6 +4,8 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+- **BREAKING CHANGE** Functions that are no longer used by holochain have been removed: `build_ios_module` and `get_ios_module_from_file`. Their only use was deprecated in holochain 0.5 and has been removed in 0.6.
+
 ## [0.0.99] - 2025-01-16
 
 - Modify the `ModuleCache::new` constructor to no longer take a `ModuleBuilder` parameter.
