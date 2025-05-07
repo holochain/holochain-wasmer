@@ -1,5 +1,5 @@
 use crate::import::imports;
-#[cfg(feature = "wasmer_wamr")]
+#[cfg(any(feature = "wasmer_wamr", feature = "wasmer_v8"))]
 use holochain_wasmer_host::module::build_module;
 use holochain_wasmer_host::module::InstanceWithStore;
 use holochain_wasmer_host::module::ModuleBuilder;
@@ -9,10 +9,10 @@ use once_cell::sync::OnceCell;
 use parking_lot::RwLock;
 use std::sync::Arc;
 #[cfg(feature = "wasmer_sys")]
+use wasmer::sys::CompilerConfig;
+#[cfg(feature = "wasmer_sys")]
 use wasmer::wasmparser::Operator;
 use wasmer::AsStoreMut;
-#[cfg(feature = "wasmer_sys")]
-use wasmer::CompilerConfig;
 #[cfg(feature = "wasmer_sys")]
 use wasmer::Engine;
 use wasmer::FunctionEnv;
@@ -94,9 +94,9 @@ impl TestWasm {
                     let cost_function = |_operator: &Operator| -> u64 { 1 };
                     let metering = Arc::new(Metering::new(10_000_000_000, cost_function));
                     #[cfg(feature = "wasmer_sys_dev")]
-                    let mut compiler = wasmer::Cranelift::default();
+                    let mut compiler = wasmer::sys::Cranelift::default();
                     #[cfg(feature = "wasmer_sys_prod")]
-                    let mut compiler = wasmer::LLVM::default();
+                    let mut compiler = wasmer::sys::LLVM::default();
 
                     compiler.canonicalize_nans(true);
                     compiler.push_middleware(metering);
@@ -105,9 +105,9 @@ impl TestWasm {
 
                 let compiler_fn_unmetered = || {
                     #[cfg(feature = "wasmer_sys_dev")]
-                    let mut compiler = wasmer::Cranelift::default();
+                    let mut compiler = wasmer::sys::Cranelift::default();
                     #[cfg(feature = "wasmer_sys_prod")]
-                    let mut compiler = wasmer::LLVM::default();
+                    let mut compiler = wasmer::sys::LLVM::default();
 
                     compiler.canonicalize_nans(true);
                     Engine::from(compiler)
@@ -133,7 +133,7 @@ impl TestWasm {
         }
     }
 
-    #[cfg(feature = "wasmer_wamr")]
+    #[cfg(any(feature = "wasmer_wamr", feature = "wasmer_v8"))]
     pub fn module(&self, _metered: bool) -> Arc<Module> {
         build_module(self.bytes()).unwrap()
     }
@@ -197,7 +197,7 @@ impl TestWasm {
         self._instance(true)
     }
 
-    #[cfg(feature = "wasmer_wamr")]
+    #[cfg(any(feature = "wasmer_wamr", feature = "wasmer_v8"))]
     pub fn instance(&self) -> InstanceWithStore {
         self.unmetered_instance()
     }

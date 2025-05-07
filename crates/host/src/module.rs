@@ -39,6 +39,11 @@ mod wasmer_wamr;
 #[cfg(feature = "wasmer_wamr")]
 pub use wasmer_wamr::*;
 
+#[cfg(feature = "wasmer_v8")]
+mod wasmer_v8;
+#[cfg(feature = "wasmer_v8")]
+pub use wasmer_v8::*;
+
 /// We expect cache keys to be produced via hashing so 32 bytes is enough for all
 /// purposes.
 pub type CacheKey = [u8; 32];
