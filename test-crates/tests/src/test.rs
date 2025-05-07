@@ -78,7 +78,7 @@ pub fn decrease_points(
     )
 }
 
-#[cfg(feature = "wasmer_wamr")]
+#[cfg(any(feature = "wasmer_wamr", feature = "wasmer_v8"))]
 pub fn decrease_points(
     _function_env: FunctionEnvMut<Env>,
     _guest_ptr: GuestPtr,

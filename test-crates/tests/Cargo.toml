@@ -54,3 +54,7 @@ wasmer_wamr = [
   "wasmer/wamr",
   "holochain_wasmer_host/wasmer_wamr"
 ]
+wasmer_v8 = [
+  "wasmer/v8",
+  "holochain_wasmer_host/wasmer_v8"
+]

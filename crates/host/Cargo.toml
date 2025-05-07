@@ -44,6 +44,9 @@ wasmer_sys_prod = [
   "wasmer_sys",
   "wasmer/llvm",
 ]
+wasmer_v8 = [
+  "wasmer/v8"
+]
 wasmer_wamr = [
   "wasmer/wamr"
 ]
