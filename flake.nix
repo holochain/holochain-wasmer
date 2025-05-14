@@ -29,7 +29,7 @@
                   llvmPackages.libclang.lib
                   ninja
                   # These packages are required to build Wasmer with the production config
-                  llvm_19
+                  llvm_18
                   libffi
                   libxml2
                   zlib
