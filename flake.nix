@@ -32,6 +32,7 @@
                   llvm_18
                   libffi
                   libxml2
+                  libunwind
                   zlib
                   ncurses
                 ];
