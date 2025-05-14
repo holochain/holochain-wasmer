@@ -6,7 +6,7 @@ on:
       - develop
   pull_request: {}
 
-concurrency: 
+concurrency:
   group: test-${{ github.workflow }}-${{ github.ref || github.run_id }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
@@ -46,7 +46,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        wasmer-feature: 
+        wasmer-feature:
           - "wasmer_sys_dev"
           - "wasmer_sys_prod"
           - "wasmer_wamr"
@@ -56,6 +56,11 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
         with:
           targets: wasm32-unknown-unknown
+      # Need to install 3.x version of cmake instead of default 4.x
+      - name: Setup cmake
+        uses: jwlawson/actions-setup-cmake@v2
+        with:
+          cmake-version: '3.31.x'
       - name: Install LLVM
         env:
           LLVM_DIR: .llvm
