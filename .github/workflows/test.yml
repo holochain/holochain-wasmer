@@ -77,6 +77,7 @@ jobs:
       - name: test root
         shell: pwsh
         run: |
+          cmake --version
           $env:LLVM_SYS_180_PREFIX="$(pwd)/.llvm"
           cargo test --release --no-default-features --features error_as_host,${{ matrix.wasmer-feature }} -- --nocapture
       - name: test
