@@ -25,6 +25,7 @@
                   # These packages and env vars are required to build Wasmer with the 'wamr' feature
                   cmake
                   clang
+                  mold
                   llvmPackages.libclang.lib
                   ninja
                   # These packages are required to build Wasmer with the production config
