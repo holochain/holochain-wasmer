@@ -49,7 +49,6 @@ jobs:
         wasmer-feature:
           - "wasmer_sys_dev"
           - "wasmer_sys_prod"
-          - "wasmer_wamr"
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4
