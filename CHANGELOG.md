@@ -4,6 +4,8 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+## [0.0.100] - 2025-05-16
+
 - Updated to wasmer v6.
 - **BREAKING CHANGE** Functions that are no longer used by holochain have been removed: `build_ios_module` and `get_ios_module_from_file`. Their only use was deprecated in holochain 0.5 and has been removed in 0.6.
 

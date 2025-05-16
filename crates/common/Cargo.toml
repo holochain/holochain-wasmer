@@ -2,7 +2,7 @@
 name = "holochain_wasmer_common"
 description = "commons for both host and guest"
 license = "Apache-2.0"
-version = "0.0.99"
+version = "0.0.100"
 authors = ["thedavidmeister", "thedavidmeister@gmail.com"]
 edition = "2021"
 
@@ -18,6 +18,4 @@ holochain_wasmer_common = { path = ".", features = ["fuzzing"] }
 
 [features]
 error_as_host = []
-fuzzing = [
-    "dep:test-fuzz",
-]
+fuzzing = ["dep:test-fuzz"]
