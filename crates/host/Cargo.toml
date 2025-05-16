@@ -2,7 +2,7 @@
 name = "holochain_wasmer_host"
 description = "wasm host code"
 license = "Apache-2.0"
-version = "0.0.99"
+version = "0.0.100"
 authors = ["thedavidmeister", "thedavidmeister@gmail.com"]
 edition = "2021"
 
@@ -15,7 +15,7 @@ path = "src/lib.rs"
 wasmer = { version = "6.0.0", default-features = false }
 wasmer-middlewares = { version = "6.0.0", optional = true }
 
-holochain_wasmer_common = { version = "=0.0.99", path = "../common" }
+holochain_wasmer_common = { version = "=0.0.100", path = "../common" }
 holochain_serialized_bytes = "=0.0.55"
 serde = "1"
 tracing = "0.1"
@@ -32,18 +32,7 @@ tempfile = "3.14.0"
 default = ["error_as_host", "wasmer_sys_dev"]
 debug_memory = []
 error_as_host = ["holochain_wasmer_common/error_as_host"]
-wasmer_sys = [
-  "dep:wasmer-middlewares",
-  "wasmer/sys",
-]
-wasmer_sys_dev = [
-  "wasmer_sys",
-  "wasmer/default",
-]
-wasmer_sys_prod = [
-  "wasmer_sys",
-  "wasmer/llvm",
-]
-wasmer_wamr = [
-  "wasmer/wamr"
-]
+wasmer_sys = ["dep:wasmer-middlewares", "wasmer/sys"]
+wasmer_sys_dev = ["wasmer_sys", "wasmer/default"]
+wasmer_sys_prod = ["wasmer_sys", "wasmer/llvm"]
+wasmer_wamr = ["wasmer/wamr"]
