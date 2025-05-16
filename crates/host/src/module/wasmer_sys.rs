@@ -1,10 +1,10 @@
 use std::sync::Arc;
 use wasmer::sys::BaseTunables;
 use wasmer::sys::CompilerConfig;
+use wasmer::sys::NativeEngineExt;
 use wasmer::wasmparser;
 use wasmer::Engine;
 use wasmer::Module;
-use wasmer::NativeEngineExt;
 use wasmer_middlewares::Metering;
 
 #[cfg(not(test))]
@@ -26,9 +26,9 @@ pub(crate) fn make_engine() -> Engine {
 
     // the only place where the wasm compiler engine is set
     #[cfg(feature = "wasmer_sys_dev")]
-    let mut compiler = wasmer::Cranelift::default();
+    let mut compiler = wasmer::sys::Cranelift::default();
     #[cfg(feature = "wasmer_sys_prod")]
-    let mut compiler = wasmer::LLVM::default();
+    let mut compiler = wasmer::sys::LLVM::default();
 
     compiler.canonicalize_nans(true);
     compiler.push_middleware(metering);

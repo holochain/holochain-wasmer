@@ -6,7 +6,7 @@ on:
       - develop
   pull_request: {}
 
-concurrency: 
+concurrency:
   group: test-${{ github.workflow }}-${{ github.ref || github.run_id }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
@@ -46,9 +46,45 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        wasmer-feature: 
+        wasmer-feature:
           - "wasmer_sys_dev"
           - "wasmer_sys_prod"
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: wasm32-unknown-unknown
+      - name: Install LLVM
+        env:
+          LLVM_DIR: .llvm
+        shell: bash
+        run: |
+          LLVM_DIR=$(pwd)/${{ env.LLVM_DIR }}
+          mkdir -p ${LLVM_DIR}
+          curl --proto '=https' --tlsv1.2 -sSf "https://github.com/wasmerio/llvm-custom-builds/releases/download/18.x/llvm-windows-amd64.tar.xz" -L -o - | tar xJv -C ${LLVM_DIR}
+      - name: Install Ninja
+        uses: MinoruSekine/setup-scoop@v4.0.1
+        with:
+          buckets: extras
+          apps: ninja
+      - name: test root
+        shell: pwsh
+        run: |
+          $env:LLVM_SYS_180_PREFIX="$(pwd)/.llvm"
+          cargo test --release --no-default-features --features error_as_host,${{ matrix.wasmer-feature }} -- --nocapture
+      - name: test
+        shell: pwsh
+        run: |
+          $env:LLVM_SYS_180_PREFIX="$(pwd)/.llvm"
+          cargo test --release -p tests --no-default-features --features ${{ matrix.wasmer-feature }} -- --nocapture
+
+  # Split wasmer_wamr into a separate job for now because we don't require it to pass
+  test-windows-wamr:
+    strategy:
+      fail-fast: false
+      matrix:
+        wasmer-feature:
           - "wasmer_wamr"
     runs-on: windows-latest
     steps:
@@ -80,9 +116,10 @@ jobs:
           $env:LLVM_SYS_180_PREFIX="$(pwd)/.llvm"
           cargo test --release -p tests --no-default-features --features ${{ matrix.wasmer-feature }} -- --nocapture
 
+
   check:
     if: ${{ always() }}
-    name: "All Jobs Pass"
+    name: "All Required Jobs Pass"
     runs-on: "ubuntu-latest"
     needs:
       - test-and-bench
