@@ -392,6 +392,7 @@ pub mod tests {
             Err(runtime_error) => assert_eq!(
                 WasmError {
                     file: "test-crates/wasms/wasm_core/src/wasm.rs".into(),
+                    module_path: "test_wasm_core".into(),
                     line: 102,
                     error: WasmErrorInner::Guest("oh no!".into()),
                 },
@@ -433,6 +434,7 @@ pub mod tests {
                 assert_eq!(
                     WasmError {
                         file: "test-crates/wasms/wasm_core/src/wasm.rs".into(),
+                        module_path: "test_wasm_core".into(),
                         line: 130,
                         error: WasmErrorInner::Guest("it fails!: ()".into()),
                     },
@@ -681,5 +683,30 @@ pub mod tests {
         );
 
         assert!(res.is_ok());
+    }
+
+    #[test]
+    fn wasm_error_fmt() {
+        let InstanceWithStore {
+            store: store_fail,
+            instance: instance_fail,
+        } = TestWasm::Core.instance();
+
+        let res: Result<(), wasmer::RuntimeError> = guest::call(
+            &mut store_fail.lock().as_store_mut(),
+            instance_fail,
+            "try_ptr_fails_fast",
+            (),
+        );
+        
+        assert_eq!(
+            format!("{}", res.clone().err().unwrap()),
+            "RuntimeError: WasmError { file: \"test-crates/wasms/wasm_core/src/wasm.rs\", module_path: \"test_wasm_core\", line: 130, error: Guest(\"it fails!: ()\") }"
+        );
+
+        assert_eq!(
+            format!("{:?}", res.err().unwrap()),
+            "RuntimeError { source: User(WasmError { file: \"test-crates/wasms/wasm_core/src/wasm.rs\", module_path: \"test_wasm_core\", line: 130, error: Guest(\"it fails!: ()\") }), wasm_trace: [] }"
+        );
     }
 }

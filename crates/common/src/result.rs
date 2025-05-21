@@ -103,6 +103,7 @@ impl From<SerializedBytesError> for WasmErrorInner {
 #[rustfmt::skip]
 pub struct WasmError {
     pub file: String,
+    pub module_path: String,
     pub line: u32,
     pub error: WasmErrorInner,
 }
@@ -144,6 +145,7 @@ macro_rules! wasm_error {
             //
             // To remedy this we normalize the formatting here.
             file: file!().replace('\\', "/").to_string(),
+            module_path: module_path!().to_string(),
             line: line!(),
             error: $e.into(),
         }
