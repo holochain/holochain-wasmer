@@ -12,5 +12,21 @@ compile_error!(
     "feature \"wasmer_sys\" and feature \"wasmer_wamr\" cannot be enabled at the same time"
 );
 
-#[cfg(all(not(feature = "wasmer_sys"), not(feature = "wasmer_wamr"),))]
-compile_error!("One of: `wasmer_sys`, `wasmer_wamr` features must be enabled. Please, pick one.");
+#[cfg(all(feature = "wasmer_sys", feature = "wasmer_v8"))]
+compile_error!(
+    "feature \"wasmer_sys\" and feature \"wasmer_v8\" cannot be enabled at the same time"
+);
+
+#[cfg(all(feature = "wasmer_wamr", feature = "wasmer_v8"))]
+compile_error!(
+    "feature \"wasmer_wamr\" and feature \"wasmer_v8\" cannot be enabled at the same time"
+);
+
+#[cfg(all(
+    not(feature = "wasmer_sys"),
+    not(feature = "wasmer_wamr"),
+    not(feature = "wasmer_v8")
+))]
+compile_error!(
+    "One of: `wasmer_sys`, `wasmer_wamr`, `wasmer_v8` features must be enabled. Please, pick one."
+);
