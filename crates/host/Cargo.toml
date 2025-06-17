@@ -2,6 +2,7 @@
 name = "holochain_wasmer_host"
 version.workspace = true
 description = "wasm host code"
+documentation = "https://docs.rs/holochain_wasmer_host"
 homepage.workspace = true
 repository.workspace = true
 license.workspace = true

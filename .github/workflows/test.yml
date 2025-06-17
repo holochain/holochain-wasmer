@@ -40,9 +40,7 @@ jobs:
         with:
           name: holochain-ci
           authToken: "${{ secrets.CACHIX_AUTH_TOKEN }}"
-      - env:
-          NIXPKGS_ALLOW_BROKEN: "1" # Temporary, mold is marked as broken on macos-latest
-        run: nix develop --impure --command ./scripts/${{ matrix.script }}-${{ matrix.wasmer-feature }}.sh
+      - run: nix develop --command ./scripts/${{ matrix.script }}-${{ matrix.wasmer-feature }}.sh
 
   test-windows:
     strategy:
