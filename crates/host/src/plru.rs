@@ -109,7 +109,7 @@ pub fn create(lines: usize) -> DynamicCache {
 
     // We divide it by 64 to get the target length of the vector, but instead of rounding down, we
     // ensure that we have the right length by using rounding up division through this simple trick.
-    let len = (lines + 63) / 64;
+    let len = lines.div_ceil(64);
 
     // Allocate a `len` capacity vector.
     let mut vec = Vec::with_capacity(len);

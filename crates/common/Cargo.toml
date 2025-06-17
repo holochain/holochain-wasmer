@@ -1,17 +1,19 @@
 [package]
 name = "holochain_wasmer_common"
+version.workspace = true
 description = "commons for both host and guest"
-license = "Apache-2.0"
-version = "0.0.100"
-authors = ["thedavidmeister", "thedavidmeister@gmail.com"]
-edition = "2021"
+homepage.workspace = true
+repository.workspace = true
+license.workspace = true
+authors.workspace = true
+edition.workspace = true
 
 [dependencies]
-holochain_serialized_bytes = "=0.0.55"
-serde = "1"
-thiserror = "2"
-serde_bytes = "0.11"
-test-fuzz = { version = "6.0.0", optional = true }
+holochain_serialized_bytes.workspace = true
+serde .workspace = true
+thiserror.workspace = true
+serde_bytes.workspace = true
+test-fuzz = { workspace = true, optional = true }
 
 [dev-dependencies]
 holochain_wasmer_common = { path = ".", features = ["fuzzing"] }
