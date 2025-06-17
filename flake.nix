@@ -15,6 +15,7 @@
 
       devShells.default = pkgs.mkShell {
         packages = with pkgs; [
+          bzip2
           # These packages and env vars are required to build Wasmer with the 'wamr' feature
           cmake
           clang
