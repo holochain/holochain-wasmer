@@ -2,7 +2,7 @@ use criterion::BenchmarkId;
 use criterion::Throughput;
 use criterion::{criterion_group, criterion_main, Criterion};
 use holochain_wasmer_host::prelude::*;
-use rand::prelude::*;
+use rand::{prelude::*, rng};
 use tempfile::TempDir;
 use test::wasms::TestWasm;
 use wasmer::AsStoreMut;
@@ -102,7 +102,7 @@ pub fn wasm_call(c: &mut Criterion) {
         ( $fs:expr; $t:tt; $n:ident; $build:expr; ) => {
             let mut fs = $fs;
             // shuffle to avoid accidental hysteresis
-            fs.shuffle(&mut thread_rng());
+            fs.shuffle(&mut rng());
 
             for f in fs {
                 for $n in vec![0, 1, 1_000, 1_000_000] {
@@ -168,7 +168,7 @@ pub fn wasm_call_n(c: &mut Criterion) {
         ( $fs:expr; $t:ty; ) => {
             let mut fs = $fs;
             // randomise order to avoid hysteresis
-            fs.shuffle(&mut thread_rng());
+            fs.shuffle(&mut rng());
 
             for f in fs {
                 for n in vec![0_u32, 1, 1_000, 1_000_000] {

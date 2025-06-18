@@ -1,8 +1,9 @@
 [package]
 name = "test_wasm_memory"
 version = "0.0.84"
-authors = ["thedavidmeister", "thedavidmeister@gmail.com"]
-edition = "2021"
+authors.workspace = true
+edition.workspace = true
+publish = false
 
 [lib]
 name = "test_wasm_memory"
@@ -10,8 +11,5 @@ crate-type = ["cdylib", "rlib"]
 path = "src/wasm.rs"
 
 [dependencies]
-holochain_wasmer_guest = { path = "../../../crates/guest" }
-test_common = { path = "../../common", default-features = false }
-holochain_serialized_bytes = "=0.0.55"
-paste = "0.1"
-serde = "1"
+holochain_wasmer_guest.workspace = true
+paste.workspace = true

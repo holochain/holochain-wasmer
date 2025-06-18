@@ -1,8 +1,9 @@
 [package]
 name = "test_wasm_empty"
 version = "0.0.90"
-authors = [ "thedavidmeister", "thedavidmeister@gmail.com" ]
-edition = "2021"
+authors.workspace = true
+edition.workspace = true
+publish = false
 
 [lib]
 name = "test_wasm_empty"
@@ -10,4 +11,4 @@ crate-type = [ "cdylib", "rlib" ]
 path = "src/wasm.rs"
 
 [dependencies]
-holochain_wasmer_guest = { path = "../../../crates/guest" }
+holochain_wasmer_guest.workspace = true
