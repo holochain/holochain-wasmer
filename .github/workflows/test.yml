@@ -17,7 +17,7 @@ jobs:
       matrix:
         script: ["test", "bench"]
         os: ["ubuntu-latest", "macos-latest"]
-        wasmer-feature: ["wasmer_sys_dev", "wasmer_sys_prod", "wasmer_wamr"]
+        wasmer-feature: ["wasmer_sys_dev", "wasmer_sys_prod", "wasmer_wamr", "wasmer_v8"]
         exclude:
           # TODO bench suite on macos-latest is killed by system due to running out of swap space
           # All benches run fine individually

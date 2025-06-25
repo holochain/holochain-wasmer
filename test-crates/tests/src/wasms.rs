@@ -1,5 +1,5 @@
 use crate::import::imports;
-#[cfg(feature = "wasmer_wamr")]
+#[cfg(any(feature = "wasmer_wamr", feature = "wasmer_v8"))]
 use holochain_wasmer_host::module::build_module;
 use holochain_wasmer_host::module::InstanceWithStore;
 use holochain_wasmer_host::module::ModuleBuilder;
@@ -133,7 +133,7 @@ impl TestWasm {
         }
     }
 
-    #[cfg(feature = "wasmer_wamr")]
+    #[cfg(any(feature = "wasmer_wamr", feature = "wasmer_v8"))]
     pub fn module(&self, _metered: bool) -> Arc<Module> {
         build_module(self.bytes()).unwrap()
     }
@@ -197,7 +197,7 @@ impl TestWasm {
         self._instance(true)
     }
 
-    #[cfg(feature = "wasmer_wamr")]
+    #[cfg(any(feature = "wasmer_wamr", feature = "wasmer_v8"))]
     pub fn instance(&self) -> InstanceWithStore {
         self.unmetered_instance()
     }
