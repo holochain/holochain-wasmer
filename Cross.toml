@@ -1,0 +1,17 @@
+[target.aarch64-linux-android]
+pre-build = [
+    "dpkg --add-architecture arm64",
+    "apt-get update && apt-get install --assume-yes android-libunwind-dev:arm64",
+]
+
+[target.aarch64-linux-android.env]
+passthrough = ["RUSTFLAGS=-L /lib/aarch64-linux-gnu/android"]
+
+[target.x86_64-linux-android]
+pre-build = [
+    "dpkg --add-architecture $CROSS_DEB_ARCH",
+    "apt-get update && apt-get install --assume-yes android-libunwind-dev:$CROSS_DEB_ARCH",
+]
+
+[target.x86_64-linux-android.env]
+passthrough = ["RUSTFLAGS=-L /lib/x86_64-linux-gnu/android"]
