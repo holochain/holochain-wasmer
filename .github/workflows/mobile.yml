@@ -1,4 +1,5 @@
 name: mobile.yml
+
 on:
   push: {}
 
@@ -8,7 +9,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Install git-cliff
+      - name: Install Cross
         uses: taiki-e/install-action@v2
         with:
           tool: cross@0.2.5
@@ -24,3 +25,20 @@ jobs:
       - name: Build for armv7-linux-androideabi
         run: |
           cross build --target armv7-linux-androideabi --release
+
+  ios:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install binutils for objcopy
+        run: |
+          brew install binutils
+          echo "/opt/homebrew/opt/binutils/bin" >> $GITHUB_PATH
+
+      - name: Build for iOS
+        run: |
+          rustup target add aarch64-apple-ios
+          
+          cargo build --target aarch64-apple-ios --release --package holochain_wasmer_host \
+            --no-default-features --features error_as_host,wasmer_wamr
