@@ -31,11 +31,11 @@ jobs:
         uses: actionhippie/swap-space@v1
         with:
           size: 15G
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - name: Install nix
         uses: cachix/install-nix-action@v31
       - name: Setup cachix
-        uses: cachix/cachix-action@v16
+        uses: cachix/cachix-action@v17
         if: ${{ ! contains(matrix.platform.runs-on, 'self-hosted') }}
         with:
           name: holochain-ci
@@ -51,7 +51,7 @@ jobs:
           - "wasmer_sys_prod"
     runs-on: windows-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - uses: dtolnay/rust-toolchain@stable
         with:
           targets: wasm32-unknown-unknown
@@ -88,7 +88,7 @@ jobs:
           - "wasmer_wamr"
     runs-on: windows-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - uses: dtolnay/rust-toolchain@stable
         with:
           targets: wasm32-unknown-unknown
