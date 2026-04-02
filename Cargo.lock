@@ -1115,7 +1115,7 @@ dependencies = [
 
 [[package]]
 name = "holochain_wasmer_common"
-version = "0.0.101"
+version = "0.0.102"
 dependencies = [
  "holochain_serialized_bytes",
  "holochain_wasmer_common",
@@ -1127,7 +1127,7 @@ dependencies = [
 
 [[package]]
 name = "holochain_wasmer_guest"
-version = "0.0.101"
+version = "0.0.102"
 dependencies = [
  "holochain_serialized_bytes",
  "holochain_wasmer_common",
@@ -1139,7 +1139,7 @@ dependencies = [
 
 [[package]]
 name = "holochain_wasmer_host"
-version = "0.0.101"
+version = "0.0.102"
 dependencies = [
  "bimap",
  "bytes",
