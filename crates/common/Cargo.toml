@@ -11,7 +11,7 @@ edition.workspace = true
 
 [dependencies]
 holochain_serialized_bytes.workspace = true
-serde .workspace = true
+serde.workspace = true
 thiserror.workspace = true
 serde_bytes.workspace = true
 test-fuzz = { workspace = true, optional = true }

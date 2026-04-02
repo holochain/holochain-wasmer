@@ -33,7 +33,7 @@
         LIBCLANG_PATH = "${pkgs.llvmPackages.libclang.lib}/lib";
         # Used by wasmer production config
         shellHook = ''
-          # This binary lives in a different derivation to `llvm_15` and isn't re-exported through that derivation
+          # This binary lives in a different derivation to `llvm_18` and isn't re-exported through that derivation
           export LLVM_SYS_180_PREFIX=$(which llvm-config | xargs dirname | xargs dirname)
           export LD_LIBRARY_PATH="${pkgs.stdenv.cc.cc.lib}/lib:${pkgs.libffi}/lib:${pkgs.zlib}/lib:${pkgs.ncurses}/lib"
         '';
