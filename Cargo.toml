@@ -3,7 +3,7 @@ members = [
     "crates/*",
     "test-crates/tests",
     "test-crates/common",
-    "test-crates/wasms/*"
+    "test-crates/wasms/*",
 ]
 default-members = ["crates/*"]
 resolver = "2"
@@ -13,11 +13,15 @@ version = "0.0.101"
 homepage = "https://holochain.org"
 repository = "https://holochain/holochain-wasmer"
 license = "Apache-2.0"
-authors = ["Holochain Core Dev Team <devcore@holochain.org>", "thedavidmeister", "thedavidmeister@gmail.com"]
+authors = [
+    "Holochain Core Dev Team <devcore@holochain.org>",
+    "thedavidmeister",
+    "thedavidmeister@gmail.com",
+]
 edition = "2021"
 
 [workspace.dependencies]
-holochain_serialized_bytes = "=0.0.56"
+holochain_serialized_bytes = "=0.0.57"
 serde = "1"
 thiserror = "2"
 serde_bytes = "0.11"

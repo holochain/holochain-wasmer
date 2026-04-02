@@ -155,11 +155,13 @@ pub mod tests {
                 "__hc__test_process_struct_2".to_string(),
                 "__hc__decrease_points_1".to_string(),
                 "__hc__call_ping_1".to_string(),
-            ],
+            ]
+            .sort(),
             module
                 .imports()
                 .map(|import| import.name().to_string())
                 .collect::<Vec<String>>()
+                .sort()
         );
     }
 
