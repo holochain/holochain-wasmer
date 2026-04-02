@@ -8,7 +8,7 @@ To update Holonix, run the following command:
 
 ```bash
 nix flake update
-````
+```
 
 ## Why?
 
@@ -17,7 +17,7 @@ with Rust.
 
 Luckily Rust provides us with enough tools to abstract what we need at the
 compiler level. Most details are not visible downstream to happ devs and can be
-achieved via. 'zero cost abstraction'.
+achieved via 'zero cost abstraction'.
 
 That said, there _are_ some limitations by design that we enforce here to allow
 the whole wasm stack to be simple to maintain and understand.
@@ -350,7 +350,7 @@ As the host is dealing with strings rather than functions, we implemented a 'hoo
 
 E.g. the guest could implement `validate_MY_THING` and the host can call
 `"validate_MY_THING"` if the function exists in the wasm module or just `validate`
-if the less specfic version exists.
+if the less specific version exists.
 
 This means that structured data for input/output and `Result` style return
 values (and therefore also `?`) need to be handled through serialization and
@@ -607,7 +607,7 @@ pointer to freshly allocated memory, then copies length prefixed bytes straight
 to this location. The host then calls the desired function on the guest passing
 the pointer and length of input data as arguments for the call.
 
-This is handled via. `host::guest::call()` on the host side and the `host_args`
+This is handled via `host::guest::call()` on the host side and the `host_args`
 macro on the guest side.
 
 - The host moves serialized `SomeDataType` on the host using the host allocator

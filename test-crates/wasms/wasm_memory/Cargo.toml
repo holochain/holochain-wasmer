@@ -1,6 +1,6 @@
 [package]
 name = "test_wasm_memory"
-version = "0.0.84"
+version = "0.0.90"
 authors.workspace = true
 edition.workspace = true
 publish = false
