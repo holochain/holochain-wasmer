@@ -2,8 +2,20 @@
 
 All notable changes to this project will be documented in this file.
 
-The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
-and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+
+## \[[0.0.102](https://github.com/holochain/holochain-wasmer/compare/v0.0.101...v0.0.102)\] - 2026-04-02
+
+### Miscellaneous Tasks
+
+- Upgrade prepare release action to v1.6.0 by @jost-s
+- Bump hsb to 0.0.57 by @jost-s
+- Add iOS build check by @ThetaSinner in [#161](https://github.com/holochain/holochain-wasmer/pull/161)
+- Test on Android by @ThetaSinner
+
+### CI
+
+- Bump more CI versions by @ThetaSinner in [#162](https://github.com/holochain/holochain-wasmer/pull/162)
 
 ## [0.0.101] - 2025-06-19
 
