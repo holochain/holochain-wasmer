@@ -38,7 +38,5 @@ jobs:
 
       - name: Build for iOS
         run: |
-          rustup target add aarch64-apple-ios
-          
           cargo build --target aarch64-apple-ios --release --package holochain_wasmer_host \
             --no-default-features --features error_as_host,wasmer_wamr

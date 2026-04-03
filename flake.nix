@@ -2,19 +2,28 @@
   description = "Flake for Holochain app development";
 
   inputs = {
-    holonix.url = "github:holochain/holonix?ref=main";
-
-    nixpkgs.follows = "holonix/nixpkgs";
-    flake-parts.follows = "holonix/flake-parts";
+    nixpkgs.url = "github:nixos/nixpkgs/nixos-25.05";
+    flake-parts.url = "github:hercules-ci/flake-parts";
+    rust-overlay = {
+      url = "github:oxalica/rust-overlay";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
   };
 
-  outputs = inputs@{ flake-parts, ... }: flake-parts.lib.mkFlake { inherit inputs; } {
-    systems = builtins.attrNames inputs.holonix.devShells;
-    perSystem = { inputs', pkgs, ... }: {
+  outputs = inputs@{ flake-parts, rust-overlay, ... }: flake-parts.lib.mkFlake { inherit inputs; } {
+    systems = [ "aarch64-darwin" "aarch64-linux" "x86_64-darwin" "x86_64-linux" ];
+    perSystem = { system, ... }: let
+      pkgs = import inputs.nixpkgs {
+        inherit system;
+        overlays = [ rust-overlay.overlays.default ];
+      };
+      rustToolchain = pkgs.rust-bin.fromRustupToolchainFile ./rust-toolchain.toml;
+    in {
       formatter = pkgs.nixpkgs-fmt;
 
       devShells.default = pkgs.mkShell {
         packages = with pkgs; [
+          rustToolchain
           bzip2
           # These packages and env vars are required to build Wasmer with the 'wamr' feature
           cmake
@@ -28,7 +37,7 @@
           libxml2
           zlib
           ncurses
-        ] ++ [ inputs'.holonix.packages.rust ];
+        ];
         # Used by `wamr`
         LIBCLANG_PATH = "${pkgs.llvmPackages.libclang.lib}/lib";
         # Used by wasmer production config
