@@ -153,7 +153,7 @@ where
         .exports
         .get_function("__hc__allocate_1")
         .map_err(|e| wasm_error!(WasmErrorInner::CallError(e.to_string())))?
-        .call(store_mut, &[guest_input_length_value.clone()])
+        .call(store_mut, std::slice::from_ref(&guest_input_length_value))
         .map_err(|e| wasm_error!(WasmErrorInner::CallError(e.to_string())))?
         .first()
     {
