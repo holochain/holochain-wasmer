@@ -1,5 +1,5 @@
 use crate::import::imports;
-#[cfg(any(feature = "wasmer_wamr", feature = "wasmer_wasmi"))]
+#[cfg(feature = "wasmer_wasmi")]
 use holochain_wasmer_host::module::build_module;
 #[cfg(feature = "wasmer_wasmi")]
 use holochain_wasmer_host::module::make_engine;
@@ -135,7 +135,7 @@ impl TestWasm {
         }
     }
 
-    #[cfg(any(feature = "wasmer_wamr", feature = "wasmer_wasmi"))]
+    #[cfg(feature = "wasmer_wasmi")]
     pub fn module(&self, _metered: bool) -> Arc<Module> {
         build_module(self.bytes()).unwrap()
     }
@@ -146,7 +146,7 @@ impl TestWasm {
         // "encountered foreign entity in func type registry" if the store and
         // module disagree on engine, so build the store from the same shared
         // engine that built the module.
-        #[cfg(any(feature = "wasmer_sys", feature = "wasmer_wamr"))]
+        #[cfg(feature = "wasmer_sys")]
         let mut store = Store::default();
         #[cfg(feature = "wasmer_wasmi")]
         let mut store = Store::new(make_engine());
@@ -206,7 +206,7 @@ impl TestWasm {
         self._instance(true)
     }
 
-    #[cfg(any(feature = "wasmer_wamr", feature = "wasmer_wasmi"))]
+    #[cfg(feature = "wasmer_wasmi")]
     pub fn instance(&self) -> InstanceWithStore {
         self.unmetered_instance()
     }

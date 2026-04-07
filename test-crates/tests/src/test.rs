@@ -78,14 +78,14 @@ pub fn decrease_points(
     )
 }
 
-#[cfg(any(feature = "wasmer_wamr", feature = "wasmer_wasmi"))]
+#[cfg(feature = "wasmer_wasmi")]
 pub fn decrease_points(
     _function_env: FunctionEnvMut<Env>,
     _guest_ptr: GuestPtr,
     _len: Len,
 ) -> Result<u64, wasmer::RuntimeError> {
     Err(wasm_error!(WasmErrorInner::Guest(
-        "Metering is not supported with the wasmer interpreter backends".into()
+        "Metering is not supported with the wasmer wasmi backend".into()
     ))
     .into())
 }
