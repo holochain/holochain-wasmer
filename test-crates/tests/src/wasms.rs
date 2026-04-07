@@ -1,9 +1,8 @@
 use crate::import::imports;
-#[cfg(feature = "wasmer_wasmi")]
-use holochain_wasmer_host::module::build_module;
-#[cfg(feature = "wasmer_wasmi")]
-use holochain_wasmer_host::module::make_engine;
+#[cfg(all(feature = "wasmer_wasmi", not(feature = "wasmer_sys")))]
+use holochain_wasmer_host::module::wasmi::build_module;
 use holochain_wasmer_host::module::InstanceWithStore;
+#[cfg(feature = "wasmer_sys")]
 use holochain_wasmer_host::module::ModuleBuilder;
 use holochain_wasmer_host::module::ModuleCache;
 use holochain_wasmer_host::prelude::*;
@@ -87,17 +86,22 @@ impl TestWasm {
         }
     }
 
+    // The test harness uses the sys backend when it is enabled and falls back
+    // to wasmi otherwise. With both backends enabled (e.g. the "all backends"
+    // CI leg), sys takes priority because it's the metered backend and
+    // exercises more of the codepaths under test. The wasmi-only matrix leg
+    // covers wasmi's runtime behaviour.
     #[cfg(feature = "wasmer_sys")]
     pub fn module(&self, metered: bool) -> Arc<Module> {
         match self.module_cache(metered).get() {
             Some(cache) => cache.write().get(self.key(metered), self.bytes()).unwrap(),
             None => {
-                let cranelift_fn = || {
+                let metered_fn = || {
                     let cost_function = |_operator: &Operator| -> u64 { 1 };
                     let metering = Arc::new(Metering::new(10_000_000_000, cost_function));
-                    #[cfg(feature = "wasmer_sys_dev")]
+                    #[cfg(feature = "wasmer_sys_cranelift")]
                     let mut compiler = wasmer::sys::Cranelift::default();
-                    #[cfg(feature = "wasmer_sys_prod")]
+                    #[cfg(all(feature = "wasmer_sys_llvm", not(feature = "wasmer_sys_cranelift")))]
                     let mut compiler = wasmer::sys::LLVM::default();
 
                     compiler.canonicalize_nans(true);
@@ -105,10 +109,10 @@ impl TestWasm {
                     Engine::from(compiler)
                 };
 
-                let compiler_fn_unmetered = || {
-                    #[cfg(feature = "wasmer_sys_dev")]
+                let unmetered_fn = || {
+                    #[cfg(feature = "wasmer_sys_cranelift")]
                     let mut compiler = wasmer::sys::Cranelift::default();
-                    #[cfg(feature = "wasmer_sys_prod")]
+                    #[cfg(all(feature = "wasmer_sys_llvm", not(feature = "wasmer_sys_cranelift")))]
                     let mut compiler = wasmer::sys::LLVM::default();
 
                     compiler.canonicalize_nans(true);
@@ -120,11 +124,10 @@ impl TestWasm {
                 // It doesn't matter which one wins, so we just ignore the error.
                 let _did_init_ok = self.module_cache(metered).set(parking_lot::RwLock::new(
                     ModuleCache::new_with_builder(
-                        ModuleBuilder::new(if metered {
-                            cranelift_fn
-                        } else {
-                            compiler_fn_unmetered
-                        }),
+                        ModuleBuilder::new(
+                            if metered { metered_fn } else { unmetered_fn },
+                            holochain_wasmer_host::module::sys::make_runtime_engine,
+                        ),
                         None,
                     ),
                 ));
@@ -135,21 +138,22 @@ impl TestWasm {
         }
     }
 
-    #[cfg(feature = "wasmer_wasmi")]
+    #[cfg(all(feature = "wasmer_wasmi", not(feature = "wasmer_sys")))]
     pub fn module(&self, _metered: bool) -> Arc<Module> {
         build_module(self.bytes()).unwrap()
     }
 
     pub fn _instance(&self, metered: bool) -> InstanceWithStore {
         let module = self.module(metered);
-        // wasmi keeps a per-engine function-type registry and panics with
-        // "encountered foreign entity in func type registry" if the store and
-        // module disagree on engine, so build the store from the same shared
-        // engine that built the module.
+        // The sys backend lets us pair any engine with any store, so a default
+        // store is fine. wasmi keeps a per-engine function-type registry and
+        // panics with "encountered foreign entity in func type registry" if
+        // the store and module disagree on engine, so the wasmi-only branch
+        // builds the store from the same shared engine that built the module.
         #[cfg(feature = "wasmer_sys")]
         let mut store = Store::default();
-        #[cfg(feature = "wasmer_wasmi")]
-        let mut store = Store::new(make_engine());
+        #[cfg(all(feature = "wasmer_wasmi", not(feature = "wasmer_sys")))]
+        let mut store = Store::new(holochain_wasmer_host::module::wasmi::make_engine());
         let function_env;
         let instance;
         {
@@ -206,7 +210,7 @@ impl TestWasm {
         self._instance(true)
     }
 
-    #[cfg(feature = "wasmer_wasmi")]
+    #[cfg(all(feature = "wasmer_wasmi", not(feature = "wasmer_sys")))]
     pub fn instance(&self) -> InstanceWithStore {
         self.unmetered_instance()
     }

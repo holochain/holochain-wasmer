@@ -21,7 +21,7 @@ jobs:
           - aarch64-linux-android
           - armv7-linux-androideabi
         wasmer-feature:
-          - wasmer_sys_dev
+          - wasmer_sys_cranelift
           - wasmer_wasmi
     steps:
       - uses: actions/checkout@v6

@@ -1,6 +1,6 @@
 #! /usr/bin/env bash
 
-cargo bench -p tests --no-default-features --features wasmer_sys_dev
+cargo bench -p tests --no-default-features --features wasmer_sys_cranelift
 
 # it's possible to flamegraph the benchmarks like this:
 #

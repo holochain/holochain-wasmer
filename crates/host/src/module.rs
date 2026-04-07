@@ -1,12 +1,15 @@
 //! Wasmer Host Module Manager
 //!
-//! This provides two ways to build & access wasm modules:
+//! Two backends are supported and they are independent: with the `wasmer_sys`
+//! feature you build modules through the [`ModuleCache`] (so that wasm is
+//! compiled once and reused), and with the `wasmer_wasmi` feature you build
+//! modules directly via [`wasmi::build_module`] (no cache, the wasm is
+//! interpreted on every call).
 //!
-//! 1. When using the feature flag `wasmer_sys`, modules should be accessed only via the [`ModuleCache`].
-//!    This ensures that wasm modules are compiled once, then cached and stored efficiently.
-//!
-//! 2. When using the feature flag `wasmer_wasmi`, modules should be built via the exported build_module function.
-//!    There is no need for caching, as the wasm module is interpreted.
+//! Both feature flags can be enabled simultaneously. The choice of which
+//! backend to use is then made at the call site, by passing the appropriate
+//! engine factory ([`sys::make_cranelift_engine`] / [`sys::make_llvm_engine`]
+//! / [`wasmi::make_engine`]) to [`ModuleBuilder::new`].
 
 use crate::plru::MicroCache;
 use crate::prelude::*;
@@ -22,6 +25,7 @@ use std::fs::OpenOptions;
 use std::io::Write;
 use std::path::PathBuf;
 use std::sync::Arc;
+use wasmer::Engine;
 use wasmer::Instance;
 use wasmer::Module;
 use wasmer::Store;
@@ -30,14 +34,10 @@ mod builder;
 pub use builder::ModuleBuilder;
 
 #[cfg(feature = "wasmer_sys")]
-mod wasmer_sys;
-#[cfg(feature = "wasmer_sys")]
-pub use wasmer_sys::*;
+pub mod sys;
 
 #[cfg(feature = "wasmer_wasmi")]
-mod wasmer_wasmi;
-#[cfg(feature = "wasmer_wasmi")]
-pub use wasmer_wasmi::*;
+pub mod wasmi;
 
 /// We expect cache keys to be produced via hashing so 32 bytes is enough for all
 /// purposes.
@@ -172,9 +172,22 @@ pub struct ModuleCache {
 }
 
 impl ModuleCache {
-    /// Construct a ModuleCache with the default ModuleBuilder
-    pub fn new(filesystem_path: Option<PathBuf>) -> Self {
-        Self::new_with_builder(ModuleBuilder::new(make_engine), filesystem_path)
+    /// Convenience constructor for a `ModuleCache` backed by a freshly built
+    /// [`ModuleBuilder`].
+    ///
+    /// `make_engine` and `make_runtime_engine` are the per-backend engine
+    /// factories — see [`ModuleBuilder::new`] for the available choices.
+    /// Callers that need finer control over the builder (e.g. supplying a
+    /// custom closure for testing) should use [`Self::new_with_builder`].
+    pub fn new(
+        make_engine: fn() -> Engine,
+        make_runtime_engine: fn() -> Engine,
+        filesystem_path: Option<PathBuf>,
+    ) -> Self {
+        Self::new_with_builder(
+            ModuleBuilder::new(make_engine, make_runtime_engine),
+            filesystem_path,
+        )
     }
 
     /// Construct a ModuleCache with a custom ModuleBuilder

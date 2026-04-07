@@ -78,7 +78,9 @@ pub fn decrease_points(
     )
 }
 
-#[cfg(feature = "wasmer_wasmi")]
+// Stub used when only the wasmi backend is compiled in. With the sys backend
+// also enabled the real metered version above takes precedence.
+#[cfg(all(feature = "wasmer_wasmi", not(feature = "wasmer_sys")))]
 pub fn decrease_points(
     _function_env: FunctionEnvMut<Env>,
     _guest_ptr: GuestPtr,
@@ -181,14 +183,16 @@ pub mod tests {
         assert!(result.is_err());
     }
 
-    // Disabled on the wasmi backend: wasmer 7.1.0's wasmi backend constructs
-    // a wasm trap from a non-NUL-terminated byte vector in
+    // Disabled when the test harness is running through the wasmi backend
+    // (i.e. wasmi-only, no sys): wasmer 7.1.0's wasmi backend constructs a
+    // wasm trap from a non-NUL-terminated byte vector in
     // `wasmer/src/backend/wasmi/error.rs::Trap::into_wasm_trap`, which
     // panics inside `wasmi_c_api_impl::wasm_trap_new`. The panic is
     // non-unwinding and aborts the whole test process. Tracked upstream as
-    // https://github.com/wasmerio/wasmer/issues/6397.
+    // https://github.com/wasmerio/wasmer/issues/6397. When sys is also
+    // enabled the harness routes through sys and this test runs fine.
     #[cfg_attr(
-        feature = "wasmer_wasmi",
+        all(feature = "wasmer_wasmi", not(feature = "wasmer_sys")),
         ignore = "wasmerio/wasmer#6397: wasmi backend panics in wasm_trap_new on host-returned errors"
     )]
     #[test]

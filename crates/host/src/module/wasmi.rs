@@ -23,7 +23,14 @@ pub fn make_engine() -> Engine {
     shared_engine().clone()
 }
 
-pub(crate) fn make_runtime_engine() -> Engine {
+/// Runtime engine factory for the wasmi backend.
+///
+/// wasmi has no separate "headless" engine — modules and instances both run
+/// against the same shared engine — so this just returns a clone of the
+/// process-wide engine, identical to [`make_engine`]. It exists as a separate
+/// function so that callers can pass it as the `make_runtime_engine`
+/// parameter to [`crate::module::ModuleBuilder::new`].
+pub fn make_runtime_engine() -> Engine {
     shared_engine().clone()
 }
 

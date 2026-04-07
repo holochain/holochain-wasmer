@@ -34,21 +34,25 @@ path = "src/test.rs"
 
 [features]
 debug_memory = ["holochain_wasmer_host/debug_memory"]
-default = ["wasmer_sys_dev"]
+default = ["wasmer_sys", "wasmer_sys_cranelift"]
 wasmer_sys = [
   "dep:wasmer-middlewares",
   "wasmer/sys",
+  "holochain_wasmer_host/wasmer_sys",
 ]
-wasmer_sys_dev = [
+wasmer_sys_cranelift = [
   "wasmer_sys",
-  "wasmer/default",
-  "holochain_wasmer_host/wasmer_sys_dev"
+  "wasmer/cranelift",
+  "wasmer/wat",
+  "holochain_wasmer_host/wasmer_sys_cranelift",
 ]
-wasmer_sys_prod = [
+wasmer_sys_llvm = [
   "wasmer_sys",
-  "holochain_wasmer_host/wasmer_sys_prod"
+  "wasmer/llvm",
+  "wasmer/wat",
+  "holochain_wasmer_host/wasmer_sys_llvm",
 ]
 wasmer_wasmi = [
   "wasmer/wasmi",
-  "holochain_wasmer_host/wasmer_wasmi"
+  "holochain_wasmer_host/wasmer_wasmi",
 ]

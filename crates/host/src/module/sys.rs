@@ -16,51 +16,90 @@ pub const WASM_METERING_LIMIT: u64 = 100_000_000_000;
 /// We don't want tests to run forever, and it can take several minutes for 100 giga ops to run.
 pub const WASM_METERING_LIMIT: u64 = 10_000_000;
 
-/// Generate an engine with a wasm compiler
-/// and Metering (use limits) in place.
-pub(crate) fn make_engine() -> Engine {
+/// Configure a compiler with the metering middleware and our standard
+/// nans-canonicalisation setting. Shared by both per-compiler factories below
+/// so the metering policy lives in one place.
+fn configure_compiler<C: CompilerConfig>(compiler: &mut C) {
     let cost_function = |_operator: &wasmparser::Operator| -> u64 { 1 };
     // @todo 100 giga-ops is totally arbitrary cutoff so we probably
     // want to make the limit configurable somehow.
     let metering = Arc::new(Metering::new(WASM_METERING_LIMIT, cost_function));
-
-    // the only place where the wasm compiler engine is set
-    #[cfg(feature = "wasmer_sys_dev")]
-    let mut compiler = wasmer::sys::Cranelift::default();
-    #[cfg(feature = "wasmer_sys_prod")]
-    let mut compiler = wasmer::sys::LLVM::default();
-
     compiler.canonicalize_nans(true);
     compiler.push_middleware(metering);
+}
 
-    // Workaround for invalid memory access on iOS.
-    // https://github.com/holochain/holochain/issues/3096
-    let mut engine = Engine::from(compiler);
+/// Apply our standard tunables to an engine.
+///
+/// Workaround for invalid memory access on iOS:
+/// <https://github.com/holochain/holochain/issues/3096>
+fn apply_tunables(mut engine: Engine) -> Engine {
     engine.set_tunables(BaseTunables {
         static_memory_bound: 0x4000.into(),
         static_memory_offset_guard_size: 0x1_0000,
         dynamic_memory_offset_guard_size: 0x1_0000,
     });
-
     engine
 }
 
-pub(crate) fn make_runtime_engine() -> Engine {
+/// Build a sys engine backed by the Cranelift compiler.
+#[cfg(feature = "wasmer_sys_cranelift")]
+pub fn make_cranelift_engine() -> Engine {
+    let mut compiler = wasmer::sys::Cranelift::default();
+    configure_compiler(&mut compiler);
+    apply_tunables(Engine::from(compiler))
+}
+
+/// Build a sys engine backed by the LLVM compiler.
+#[cfg(feature = "wasmer_sys_llvm")]
+pub fn make_llvm_engine() -> Engine {
+    let mut compiler = wasmer::sys::LLVM::default();
+    configure_compiler(&mut compiler);
+    apply_tunables(Engine::from(compiler))
+}
+
+/// Default sys engine factory used by the test module and re-exported for
+/// convenience by callers that don't care which compiler is in use.
+///
+/// When both compilers are enabled, prefer Cranelift as it is the development
+/// default and matches the historic behaviour of this crate.
+#[cfg(feature = "wasmer_sys_cranelift")]
+pub fn make_engine() -> Engine {
+    make_cranelift_engine()
+}
+
+#[cfg(all(feature = "wasmer_sys_llvm", not(feature = "wasmer_sys_cranelift")))]
+pub fn make_engine() -> Engine {
+    make_llvm_engine()
+}
+
+/// The runtime engine is used only to deserialise pre-compiled artifacts and
+/// to execute function calls on the resulting instances. It does not need a
+/// compiler so it is the same regardless of which sys compiler is enabled.
+pub fn make_runtime_engine() -> Engine {
     Engine::headless()
 }
 
-/// Build an interpreter module from wasm bytes.
+/// `build_module` is the wasmi-side direct module builder. It is intentionally
+/// unimplemented for the sys backend: sys modules should always go through
+/// [`crate::module::ModuleCache`] so that compilation results are reused
+/// across calls. Calling this on a sys-only build is a programmer error.
 pub fn build_module(_wasm: &[u8]) -> Result<Arc<Module>, wasmer::RuntimeError> {
-    unimplemented!("The 'wasmer_wasmi' feature must be enabled to support building a Module directly. Please use the ModuleCache instead.");
+    unimplemented!(
+        "build_module is only supported on the wasmi backend. Use ModuleCache for the sys backend."
+    );
 }
 
 #[cfg(test)]
 mod tests {
-    use super::make_engine;
+    use super::{make_engine, make_runtime_engine};
     use crate::module::{CacheKey, ModuleCache, PlruCache};
     use std::io::Write;
     use tempfile::TempDir;
     use wasmer::Module;
+
+    fn module_cache(filesystem_path: Option<std::path::PathBuf>) -> ModuleCache {
+        ModuleCache::new(make_engine, make_runtime_engine, filesystem_path)
+    }
 
     #[test]
     fn cache_save_to_memory_and_fs() {
@@ -75,7 +114,7 @@ mod tests {
             0x70, 0x30,
         ];
         let tmp_fs_cache_dir = TempDir::new().unwrap();
-        let module_cache = ModuleCache::new(Some(tmp_fs_cache_dir.path().to_owned()));
+        let module_cache = module_cache(Some(tmp_fs_cache_dir.path().to_owned()));
         assert!(module_cache
             .filesystem_path
             .clone()
@@ -115,7 +154,7 @@ mod tests {
             0x61, 0x64, 0x64, 0x5f, 0x6f, 0x6e, 0x65, 0x02, 0x07, 0x01, 0x00, 0x01, 0x00, 0x02,
             0x70, 0x30,
         ];
-        let module_cache = ModuleCache::new(None);
+        let module_cache = module_cache(None);
         assert!(module_cache.cache.read().cache.is_empty());
 
         let key: CacheKey = [0u8; 32];
@@ -141,7 +180,7 @@ mod tests {
             0x70, 0x30,
         ];
         let tmp_fs_cache_dir = TempDir::new().unwrap();
-        let module_cache = ModuleCache::new(Some(tmp_fs_cache_dir.path().to_owned()));
+        let module_cache = module_cache(Some(tmp_fs_cache_dir.path().to_owned()));
         let key: CacheKey = [0u8; 32];
 
         // Build module, serialize, save directly to filesystem
@@ -191,7 +230,7 @@ mod tests {
         let bad_serialized_wasm = vec![0x00];
 
         let tmp_fs_cache_dir = TempDir::new().unwrap();
-        let module_cache = ModuleCache::new(Some(tmp_fs_cache_dir.path().to_owned()));
+        let module_cache = module_cache(Some(tmp_fs_cache_dir.path().to_owned()));
         let key: CacheKey = [0u8; 32];
 
         // Build module, serialize, save directly to filesystem

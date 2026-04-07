@@ -3,12 +3,6 @@ use bytes::Bytes;
 use std::sync::Arc;
 use wasmer::{Engine, Module};
 
-#[cfg(feature = "wasmer_sys")]
-pub use super::wasmer_sys::*;
-
-#[cfg(feature = "wasmer_wasmi")]
-pub use super::wasmer_wasmi::*;
-
 /// Responsible for storing the wasmer Engine used to build wasmer Modules.
 #[derive(Debug)]
 pub struct ModuleBuilder {
@@ -21,7 +15,21 @@ pub struct ModuleBuilder {
 }
 
 impl ModuleBuilder {
-    pub fn new(make_engine: fn() -> Engine) -> Self {
+    /// Construct a `ModuleBuilder` for a particular wasmer backend.
+    ///
+    /// `make_engine` is invoked every time a new module is compiled
+    /// (which on the sys backend means every time the cache misses).
+    /// `make_runtime_engine` is invoked once at construction to produce
+    /// the engine that deserialised modules are bound to.
+    ///
+    /// The two factories are passed in explicitly so that callers can
+    /// pick a backend at the call site — for example
+    /// `ModuleBuilder::new(sys::make_cranelift_engine, sys::make_runtime_engine)`
+    /// for the cranelift-flavoured sys backend, or
+    /// `ModuleBuilder::new(wasmi::make_engine, wasmi::make_runtime_engine)`
+    /// for the wasmi interpreter. Both backend feature flags can be
+    /// enabled simultaneously and the choice is made here at runtime.
+    pub fn new(make_engine: fn() -> Engine, make_runtime_engine: fn() -> Engine) -> Self {
         Self {
             make_engine,
             runtime_engine: make_runtime_engine(),
