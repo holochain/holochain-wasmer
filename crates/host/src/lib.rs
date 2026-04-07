@@ -7,10 +7,20 @@ pub mod module;
 pub mod plru;
 pub mod prelude;
 
-#[cfg(all(feature = "wasmer_sys", feature = "wasmer_wasmi"))]
+// At least one wasmer backend must be enabled. The two backends (`wasmer_sys`
+// and `wasmer_wasmi`) are independent and can be enabled simultaneously; the
+// caller picks one at runtime by passing the appropriate engine factory to
+// [`module::ModuleBuilder::new`].
+#[cfg(not(any(feature = "wasmer_sys", feature = "wasmer_wasmi")))]
 compile_error!(
-    "features \"wasmer_sys\" and \"wasmer_wasmi\" are mutually exclusive — pick exactly one"
+    "at least one wasmer backend feature must be enabled: `wasmer_sys` (with `wasmer_sys_cranelift` and/or `wasmer_sys_llvm`) and/or `wasmer_wasmi`"
 );
 
-#[cfg(all(not(feature = "wasmer_sys"), not(feature = "wasmer_wasmi")))]
-compile_error!("One of: `wasmer_sys`, `wasmer_wasmi` features must be enabled. Please, pick one.");
+// `wasmer_sys` requires at least one compiler sub-feature.
+#[cfg(all(
+    feature = "wasmer_sys",
+    not(any(feature = "wasmer_sys_cranelift", feature = "wasmer_sys_llvm"))
+))]
+compile_error!(
+    "the `wasmer_sys` feature requires at least one of `wasmer_sys_cranelift` or `wasmer_sys_llvm` to also be enabled"
+);

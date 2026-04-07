@@ -32,10 +32,18 @@ thiserror.workspace = true
 tempfile.workspace = true
 
 [features]
-default = ["error_as_host", "wasmer_sys_dev"]
+default = ["error_as_host", "wasmer_sys", "wasmer_sys_cranelift"]
 debug_memory = []
 error_as_host = ["holochain_wasmer_common/error_as_host"]
+
+# The sys backend uses wasmer's native compilation pipeline. Enable at least
+# one of the compiler sub-features below alongside `wasmer_sys` to actually
+# get a working sys backend.
 wasmer_sys = ["dep:wasmer-middlewares", "wasmer/sys"]
-wasmer_sys_dev = ["wasmer_sys", "wasmer/default"]
-wasmer_sys_prod = ["wasmer_sys", "wasmer/llvm"]
+wasmer_sys_cranelift = ["wasmer_sys", "wasmer/cranelift", "wasmer/wat"]
+wasmer_sys_llvm = ["wasmer_sys", "wasmer/llvm", "wasmer/wat"]
+
+# The wasmi backend is a pure-Rust interpreter. It is independent of the sys
+# backend; both can be enabled simultaneously and selected at runtime by the
+# caller via the appropriate engine factory in `module::sys` or `module::wasmi`.
 wasmer_wasmi = ["wasmer/wasmi"]

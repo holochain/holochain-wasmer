@@ -17,7 +17,7 @@ jobs:
       matrix:
         script: ["test", "bench"]
         os: ["ubuntu-latest", "macos-latest"]
-        wasmer-feature: ["wasmer_sys_dev", "wasmer_sys_prod", "wasmer_wasmi"]
+        wasmer-feature: ["wasmer_sys_cranelift", "wasmer_sys_llvm", "wasmer_wasmi"]
     runs-on: ${{ matrix.os }}
     steps:
       - name: increase swap space
@@ -35,17 +35,43 @@ jobs:
           authToken: "${{ secrets.CACHIX_AUTH_TOKEN }}"
       - run: nix develop --command ./scripts/${{ matrix.script }}-${{ matrix.wasmer-feature }}.sh
 
+  # Verifies the additivity guarantee: every backend feature can be enabled in
+  # the same build. If this leg ever fails, something has re-introduced a
+  # mutual exclusion between backends or compilers.
+  test-all-backends:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - name: Install nix
+        uses: cachix/install-nix-action@v31
+      - name: Setup cachix
+        uses: cachix/cachix-action@v17
+        with:
+          name: holochain-ci
+          authToken: "${{ secrets.CACHIX_AUTH_TOKEN }}"
+      - name: build host crate with all backends enabled
+        run: |
+          nix develop --command cargo build -p holochain_wasmer_host \
+            --no-default-features \
+            --features error_as_host,wasmer_sys,wasmer_sys_cranelift,wasmer_sys_llvm,wasmer_wasmi
+      - name: test the host crate with all backends enabled
+        run: |
+          nix develop --command cargo test -p holochain_wasmer_host \
+            --no-default-features \
+            --features error_as_host,wasmer_sys,wasmer_sys_cranelift,wasmer_sys_llvm,wasmer_wasmi \
+            -- --nocapture
+
   test-windows:
     strategy:
       fail-fast: false
       matrix:
-        wasmer-feature: ["wasmer_sys_dev", "wasmer_sys_prod", "wasmer_wasmi"]
+        wasmer-feature: ["wasmer_sys_cranelift", "wasmer_sys_llvm", "wasmer_wasmi"]
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v6
-      # The prebuilt LLVM is needed by `wasmer_sys_prod` (which links against
+      # The prebuilt LLVM is needed by `wasmer_sys_llvm` (which links against
       # llvm-sys 211) and by `wasmer_wasmi` (whose wasmer build script invokes
-      # bindgen and needs `libclang.dll`). It is harmless for `wasmer_sys_dev`.
+      # bindgen and needs `libclang.dll`). It is harmless for `wasmer_sys_cranelift`.
       - name: Install LLVM
         env:
           LLVM_DIR: .llvm
@@ -72,6 +98,7 @@ jobs:
     runs-on: "ubuntu-latest"
     needs:
       - test-and-bench
+      - test-all-backends
       - test-windows
     steps:
       - name: check status
