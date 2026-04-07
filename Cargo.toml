@@ -39,7 +39,6 @@ holochain_wasmer_guest = { version = "=0.0.102", path = "crates/guest" }
 holochain_wasmer_host = { version = "=0.0.102", path = "crates/host", default-features = false }
 
 # Dev dependencies
-test-fuzz = "7.2"
 tempfile = "3.14.0"
 criterion = { version = "0.6" }
 rand = { version = "0.9" }

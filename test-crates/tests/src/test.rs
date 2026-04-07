@@ -257,22 +257,28 @@ pub mod tests {
         assert_eq!(String::new(), String::from(result));
     }
 
-    // https://github.com/trailofbits/test-fuzz/issues/171
-    #[cfg(not(target_os = "windows"))]
-    #[test_fuzz::test_fuzz]
-    fn process_string_fuzz(s: String) {
+    #[test]
+    fn process_string_seeds() {
         let InstanceWithStore { store, instance } = TestWasm::Core.instance();
-        let result: StringType = guest::call(
-            &mut store.lock().as_store_mut(),
-            instance,
-            "process_string",
-            StringType::from(s.clone()),
-        )
-        .expect("process string call");
+        for s in [
+            String::new(),
+            "a".to_string(),
+            "hello, world".to_string(),
+            "✖ 〜 ✖".to_string(),
+            "\0\u{1}\u{7f}".to_string(),
+            "x".repeat(10_000),
+        ] {
+            let result: StringType = guest::call(
+                &mut store.lock().as_store_mut(),
+                instance.clone(),
+                "process_string",
+                StringType::from(s.clone()),
+            )
+            .expect("process string call");
 
-        let expected_string = format!("host: guest: {}", s);
-
-        assert_eq!(&String::from(result), &expected_string);
+            let expected_string = format!("host: guest: {}", s);
+            assert_eq!(&String::from(result), &expected_string);
+        }
     }
 
     #[test]

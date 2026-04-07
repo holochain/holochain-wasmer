@@ -13,7 +13,6 @@ test_common.workspace = true
 criterion = { workspace = true, features = ["html_reports"] }
 rand = { workspace = true, features = ["std_rng"] }
 parking_lot.workspace = true
-test-fuzz.workspace = true
 once_cell.workspace = true
 tempfile.workspace = true
 

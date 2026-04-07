@@ -21,8 +21,3 @@ serde.workspace = true
 tracing.workspace = true
 paste.workspace = true
 
-[dev-dependencies]
-holochain_wasmer_common = { workspace = true, features = [
-    "fuzzing",
-] }
-test-fuzz.workspace = true
