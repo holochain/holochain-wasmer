@@ -41,10 +41,11 @@
         ];
         # Used by `wamr`
         LIBCLANG_PATH = "${pkgs.llvmPackages.libclang.lib}/lib";
-        # Used by wasmer production config
+        # Used by wasmer production config. Point llvm-sys directly at the
+        # LLVM 21 dev output so we are not at the mercy of PATH ordering with
+        # `clang` (which may bring its own llvm-config).
+        LLVM_SYS_211_PREFIX = "${pkgs.llvmPackages_21.llvm.dev}";
         shellHook = ''
-          # This binary lives in a different derivation to `llvm_21` and isn't re-exported through that derivation
-          export LLVM_SYS_211_PREFIX=$(which llvm-config | xargs dirname | xargs dirname)
           export LD_LIBRARY_PATH="${pkgs.stdenv.cc.cc.lib}/lib:${pkgs.libffi}/lib:${pkgs.zlib}/lib:${pkgs.ncurses}/lib"
         '';
       };
