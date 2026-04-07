@@ -60,19 +60,6 @@ There are several places we need to implement things:
 - Holochain HDK needs to use the `holochain_wasmer_guest` functions to wrap externs in something ergonomic for happ developers
 - Happ developers need to be broadly aware of how to send cleanly serializable inputs and work with serde
 
-## Fuzzing
-
-You can fuzz this repository as:
-
-```
-docker run --rm --env FUZZ_TARGET="<some fuzz target>" -it holochain/fuzzbox:holochain-wasmer
-```
-
-You may need to pull the tag before fuzzing to get the latest code as it is built
-on CI against main.
-
-For more information on fuzzbox see https://github.com/holochain/fuzzbox.
-
 ### Holochain core
 
 #### Being a good wasm host
