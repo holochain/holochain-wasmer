@@ -1,8 +1,5 @@
 use crate::prelude::*;
-use std::path::Path;
 use std::sync::Arc;
-use wasmer::CompileError;
-use wasmer::DeserializeError;
 use wasmer::Engine;
 use wasmer::Module;
 

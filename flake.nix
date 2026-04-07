@@ -30,9 +30,10 @@
           clang
           llvmPackages.libclang.lib
           ninja
-          # These packages are required to build Wasmer with the production config
-          llvm_18
-          llvmPackages_18.libunwind
+          # These packages are required to build Wasmer with the production config.
+          # Wasmer 7.x links against LLVM 21 via llvm-sys 211.
+          llvm_21
+          llvmPackages_21.libunwind
           libffi
           libxml2
           zlib
@@ -42,8 +43,8 @@
         LIBCLANG_PATH = "${pkgs.llvmPackages.libclang.lib}/lib";
         # Used by wasmer production config
         shellHook = ''
-          # This binary lives in a different derivation to `llvm_18` and isn't re-exported through that derivation
-          export LLVM_SYS_180_PREFIX=$(which llvm-config | xargs dirname | xargs dirname)
+          # This binary lives in a different derivation to `llvm_21` and isn't re-exported through that derivation
+          export LLVM_SYS_211_PREFIX=$(which llvm-config | xargs dirname | xargs dirname)
           export LD_LIBRARY_PATH="${pkgs.stdenv.cc.cc.lib}/lib:${pkgs.libffi}/lib:${pkgs.zlib}/lib:${pkgs.ncurses}/lib"
         '';
       };
