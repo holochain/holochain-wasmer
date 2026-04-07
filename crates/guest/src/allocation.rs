@@ -57,37 +57,25 @@ pub mod tests {
         dbg!(&bytes_round);
     }
 
-    fn _round_trip_allocation(bytes: Vec<u8>) {
-        let bytes_round = consume_bytes(write_bytes(bytes.clone()), bytes.len());
-
-        assert_eq!(bytes, bytes_round);
-    }
-
-    // https://github.com/trailofbits/test-fuzz/issues/171
-    #[cfg(not(target_os = "windows"))]
-    #[test_fuzz::test_fuzz]
-    fn round_trip_allocation(bytes: Vec<u8>) {
-        _round_trip_allocation(bytes);
+    #[test]
+    fn round_trip_allocation() {
+        for bytes in [
+            vec![],
+            vec![0],
+            vec![1, 2, 3],
+            vec![0xff; 1024],
+            (0u8..=255).collect::<Vec<_>>(),
+            (0..4096).map(|i| (i % 251) as u8).collect::<Vec<_>>(),
+        ] {
+            let bytes_round = consume_bytes(write_bytes(bytes.clone()), bytes.len());
+            assert_eq!(bytes, bytes_round);
+        }
     }
 
     #[test]
-    fn some_round_trip_allocation() {
-        _round_trip_allocation(vec![1, 2, 3]);
-    }
-
-    fn _alloc_dealloc(len: usize) {
-        __hc__deallocate_1(__hc__allocate_1(len), len);
-    }
-
-    // https://github.com/trailofbits/test-fuzz/issues/171
-    #[cfg(not(target_os = "windows"))]
-    #[test_fuzz::test_fuzz]
-    fn alloc_dealloc(len: usize) {
-        _alloc_dealloc(len);
-    }
-
-    #[test]
-    fn some_alloc_dealloc() {
-        _alloc_dealloc(1_000_000_000_usize);
+    fn alloc_dealloc() {
+        for len in [0, 1, 8, 64, 4096, 1_000_000, 1_000_000_000_usize] {
+            __hc__deallocate_1(__hc__allocate_1(len), len);
+        }
     }
 }

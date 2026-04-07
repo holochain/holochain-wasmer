@@ -14,11 +14,6 @@ holochain_serialized_bytes.workspace = true
 serde.workspace = true
 thiserror.workspace = true
 serde_bytes.workspace = true
-test-fuzz = { workspace = true, optional = true }
-
-[dev-dependencies]
-holochain_wasmer_common = { path = ".", features = ["fuzzing"] }
 
 [features]
 error_as_host = []
-fuzzing = ["dep:test-fuzz"]

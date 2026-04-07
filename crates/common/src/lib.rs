@@ -87,60 +87,53 @@ pub fn split_usize(u: DoubleUSize) -> Result<(usize, usize), WasmError> {
 pub mod tests {
     use super::*;
 
-    fn _round_trip_u32(a: u32, b: u32) {
-        let (out_a, out_b) = split_u64(merge_u32(a, b).unwrap()).unwrap();
-
-        assert_eq!(a, out_a);
-        assert_eq!(b, out_b);
-    }
-
-    // https://github.com/trailofbits/test-fuzz/issues/171
-    #[cfg(not(target_os = "windows"))]
-    #[test_fuzz::test_fuzz]
-    fn round_trip_u32(a: u32, b: u32) {
-        _round_trip_u32(a, b);
+    #[test]
+    fn round_trip_u32() {
+        for (a, b) in [
+            (0, 0),
+            (0, 1),
+            (1, 0),
+            (1, u32::MAX),
+            (u32::MAX, 1),
+            (u32::MAX, u32::MAX),
+            (0xdead_beef, 0xcafe_d00d),
+        ] {
+            let (out_a, out_b) = split_u64(merge_u32(a, b).unwrap()).unwrap();
+            assert_eq!(a, out_a);
+            assert_eq!(b, out_b);
+        }
     }
 
     #[test]
-    fn some_round_trip_u32() {
-        _round_trip_u32(u32::MAX, u32::MAX);
-    }
-
-    fn _round_trip_u64(a: u64, b: u64) {
-        let (out_a, out_b) = split_u128(merge_u64(a, b).unwrap()).unwrap();
-
-        assert_eq!(a, out_a);
-        assert_eq!(b, out_b);
-    }
-
-    // https://github.com/trailofbits/test-fuzz/issues/171
-    #[cfg(not(target_os = "windows"))]
-    #[test_fuzz::test_fuzz]
-    fn round_trip_u64(a: u64, b: u64) {
-        _round_trip_u64(a, b);
-    }
-
-    #[test]
-    fn some_round_trip_u64() {
-        _round_trip_u64(u64::MAX, u64::MAX);
-    }
-
-    fn _round_trip_usize(a: usize, b: usize) {
-        let (out_a, out_b) = split_usize(merge_usize(a, b).unwrap()).unwrap();
-
-        assert_eq!(a, out_a,);
-        assert_eq!(b, out_b,);
-    }
-
-    // https://github.com/trailofbits/test-fuzz/issues/171
-    #[cfg(not(target_os = "windows"))]
-    #[test_fuzz::test_fuzz]
-    fn round_trip_usize(a: usize, b: usize) {
-        _round_trip_usize(a, b);
+    fn round_trip_u64() {
+        for (a, b) in [
+            (0, 0),
+            (0, 1),
+            (1, 0),
+            (1, u64::MAX),
+            (u64::MAX, 1),
+            (u64::MAX, u64::MAX),
+            (0xdead_beef_dead_beef, 0xcafe_d00d_cafe_d00d),
+        ] {
+            let (out_a, out_b) = split_u128(merge_u64(a, b).unwrap()).unwrap();
+            assert_eq!(a, out_a);
+            assert_eq!(b, out_b);
+        }
     }
 
     #[test]
-    fn some_round_trip_usize() {
-        _round_trip_usize(usize::MAX, usize::MAX);
+    fn round_trip_usize() {
+        for (a, b) in [
+            (0, 0),
+            (0, 1),
+            (1, 0),
+            (1, usize::MAX),
+            (usize::MAX, 1),
+            (usize::MAX, usize::MAX),
+        ] {
+            let (out_a, out_b) = split_usize(merge_usize(a, b).unwrap()).unwrap();
+            assert_eq!(a, out_a);
+            assert_eq!(b, out_b);
+        }
     }
 }
