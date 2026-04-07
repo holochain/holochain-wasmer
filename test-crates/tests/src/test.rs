@@ -78,14 +78,14 @@ pub fn decrease_points(
     )
 }
 
-#[cfg(feature = "wasmer_wamr")]
+#[cfg(any(feature = "wasmer_wamr", feature = "wasmer_wasmi"))]
 pub fn decrease_points(
     _function_env: FunctionEnvMut<Env>,
     _guest_ptr: GuestPtr,
     _len: Len,
 ) -> Result<u64, wasmer::RuntimeError> {
     Err(wasm_error!(WasmErrorInner::Guest(
-        "Metering is not supported in wasmer_wamr".into()
+        "Metering is not supported with the wasmer interpreter backends".into()
     ))
     .into())
 }
@@ -181,6 +181,16 @@ pub mod tests {
         assert!(result.is_err());
     }
 
+    // Disabled on the wasmi backend: wasmer 7.1.0's wasmi backend constructs
+    // a wasm trap from a non-NUL-terminated byte vector in
+    // `wasmer/src/backend/wasmi/error.rs::Trap::into_wasm_trap`, which
+    // panics inside `wasmi_c_api_impl::wasm_trap_new`. The panic is
+    // non-unwinding and aborts the whole test process. Tracked upstream as
+    // https://github.com/wasmerio/wasmer/issues/6397.
+    #[cfg_attr(
+        feature = "wasmer_wasmi",
+        ignore = "wasmerio/wasmer#6397: wasmi backend panics in wasm_trap_new on host-returned errors"
+    )]
     #[test]
     fn short_circuit() {
         let InstanceWithStore { store, instance } = TestWasm::Core.instance();
