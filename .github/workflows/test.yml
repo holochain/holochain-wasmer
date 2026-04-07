@@ -3,7 +3,7 @@ name: run tests
 on:
   push:
     branches:
-      - develop
+      - main
   pull_request: {}
 
 concurrency:
@@ -17,16 +17,7 @@ jobs:
       matrix:
         script: ["test", "bench"]
         os: ["ubuntu-latest", "macos-latest"]
-        wasmer-feature: ["wasmer_sys_dev", "wasmer_sys_prod", "wasmer_wamr", "wasmer_wasmi"]
-        exclude:
-          # TODO bench suite on macos-latest is killed by system due to running out of swap space
-          # All benches run fine individually
-          - script: bench
-            os: macos-latest
-            wasmer-feature: wasmer_wamr
-          - script: bench
-            os: macos-latest
-            wasmer-feature: wasmer_wasmi
+        wasmer-feature: ["wasmer_sys_dev", "wasmer_sys_prod", "wasmer_wasmi"]
     runs-on: ${{ matrix.os }}
     steps:
       - name: increase swap space
@@ -39,7 +30,6 @@ jobs:
         uses: cachix/install-nix-action@v31
       - name: Setup cachix
         uses: cachix/cachix-action@v17
-        if: ${{ ! contains(matrix.platform.runs-on, 'self-hosted') }}
         with:
           name: holochain-ci
           authToken: "${{ secrets.CACHIX_AUTH_TOKEN }}"
@@ -49,12 +39,13 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        wasmer-feature:
-          - "wasmer_sys_dev"
-          - "wasmer_sys_prod"
+        wasmer-feature: ["wasmer_sys_dev", "wasmer_sys_prod", "wasmer_wasmi"]
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v6
+      # The prebuilt LLVM is needed by `wasmer_sys_prod` (which links against
+      # llvm-sys 211) and by `wasmer_wasmi` (whose wasmer build script invokes
+      # bindgen and needs `libclang.dll`). It is harmless for `wasmer_sys_dev`.
       - name: Install LLVM
         env:
           LLVM_DIR: .llvm
@@ -63,54 +54,17 @@ jobs:
           LLVM_DIR=$(pwd)/${{ env.LLVM_DIR }}
           mkdir -p ${LLVM_DIR}
           curl --proto '=https' --tlsv1.2 -sSf "https://github.com/wasmerio/llvm-custom-builds/releases/download/21.x/llvm-windows-amd64.tar.xz" -L -o - | tar xJv -C ${LLVM_DIR}
-      - name: Install Ninja
-        uses: MinoruSekine/setup-scoop@v4.0.1
-        with:
-          buckets: extras
-          apps: ninja
       - name: test root
         shell: pwsh
         run: |
           $env:LLVM_SYS_211_PREFIX="$(pwd)/.llvm"
+          $env:LIBCLANG_PATH="$(pwd)/.llvm/bin"
           cargo test --release --no-default-features --features error_as_host,${{ matrix.wasmer-feature }} -- --nocapture
       - name: test
         shell: pwsh
         run: |
           $env:LLVM_SYS_211_PREFIX="$(pwd)/.llvm"
-          cargo test --release -p tests --no-default-features --features ${{ matrix.wasmer-feature }} -- --nocapture
-
-  # Split wasmer_wamr into a separate job for now because we don't require it to pass
-  test-windows-wamr:
-    strategy:
-      fail-fast: false
-      matrix:
-        wasmer-feature:
-          - "wasmer_wamr"
-    runs-on: windows-latest
-    steps:
-      - uses: actions/checkout@v6
-      - name: Install LLVM
-        env:
-          LLVM_DIR: .llvm
-        shell: bash
-        run: |
-          LLVM_DIR=$(pwd)/${{ env.LLVM_DIR }}
-          mkdir -p ${LLVM_DIR}
-          curl --proto '=https' --tlsv1.2 -sSf "https://github.com/wasmerio/llvm-custom-builds/releases/download/21.x/llvm-windows-amd64.tar.xz" -L -o - | tar xJv -C ${LLVM_DIR}
-      - name: Install Ninja
-        uses: MinoruSekine/setup-scoop@v4.0.1
-        with:
-          buckets: extras
-          apps: ninja
-      - name: test root
-        shell: pwsh
-        run: |
-          $env:LLVM_SYS_211_PREFIX="$(pwd)/.llvm"
-          cargo test --release --no-default-features --features error_as_host,${{ matrix.wasmer-feature }} -- --nocapture
-      - name: test
-        shell: pwsh
-        run: |
-          $env:LLVM_SYS_211_PREFIX="$(pwd)/.llvm"
+          $env:LIBCLANG_PATH="$(pwd)/.llvm/bin"
           cargo test --release -p tests --no-default-features --features ${{ matrix.wasmer-feature }} -- --nocapture
 
   ci_pass:
