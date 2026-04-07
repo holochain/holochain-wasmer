@@ -95,22 +95,29 @@ impl From<SerializedBytesError> for WasmErrorInner {
     }
 }
 
-/// Wraps a WasmErrorInner with a file and line number.
-/// The easiest way to generate this is with the `wasm_error!` macro that will
-/// insert the correct file/line and can create strings by forwarding args to
-/// the `format!` macro.
+/// Wraps a [`WasmErrorInner`] with the location it was raised at.
+///
+/// `module_path` is the fully qualified Rust module path of the call site
+/// (e.g. `holochain_wasmer_host::module::wasmer_sys`) as produced by the
+/// built-in [`std::module_path!`] macro, paired with `line` from
+/// [`std::line!`]. Together they identify the call site without leaking the
+/// filesystem layout of whatever machine compiled the wasm.
+///
+/// The easiest way to construct this is with the [`wasm_error!`] macro,
+/// which fills in `module_path` and `line` automatically.
 #[derive(Clone, Debug, PartialEq, Eq, Hash, PartialOrd, Ord, Serialize, Deserialize, Error)]
 #[rustfmt::skip]
 pub struct WasmError {
-    pub file: String,
+    pub module_path: String,
     pub line: u32,
     pub error: WasmErrorInner,
 }
 
 /// Helper macro for returning an error from a WASM.
 ///
-/// Automatically included in the error are the file and the line number where the
-/// error occurred. The error type is one of the [`WasmErrorInner`] variants.
+/// Automatically included in the error are the module path and line number
+/// where the error occurred. The error type is one of the [`WasmErrorInner`]
+/// variants.
 ///
 /// This macro is the recommended way of returning an error from a Zome function.
 ///
@@ -137,14 +144,8 @@ pub struct WasmError {
 macro_rules! wasm_error {
     ($e:expr) => {
         $crate::WasmError {
-            // On Windows the `file!()` macro returns a path with inconsistent formatting:
-            // from the workspace to the package root it uses backwards-slashes,
-            // then within the package it uses forwards-slashes.
-            // i.e. "test-crates\\wasm_core\\src/wasm.rs"
-            //
-            // To remedy this we normalize the formatting here.
-            file: file!().replace('\\', "/").to_string(),
-            line: line!(),
+            module_path: ::core::module_path!().to_string(),
+            line: ::core::line!(),
             error: $e.into(),
         }
     };
@@ -160,8 +161,11 @@ impl From<WasmError> for String {
 }
 
 impl std::fmt::Display for WasmError {
+    /// Formats as `module::path:line: <inner error>`. The inner error is
+    /// rendered with `Debug` because [`WasmErrorInner`] does not implement
+    /// `Display` and we want a stable, parseable representation.
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{:?}", self)
+        write!(f, "{}:{}: {:?}", self.module_path, self.line, self.error)
     }
 }
 

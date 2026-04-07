@@ -204,7 +204,11 @@ where
             _ => return Err(wasm_error!(WasmErrorInner::PointerMap).into()),
         },
         Err(e) => match e.downcast::<WasmError>() {
-            Ok(WasmError { file, line, error }) => match error {
+            Ok(WasmError {
+                module_path,
+                line,
+                error,
+            }) => match error {
                 WasmErrorInner::HostShortCircuit(encoded) => {
                     return match holochain_serialized_bytes::decode(&encoded) {
                         Ok(v) => Ok(v),
@@ -219,7 +223,14 @@ where
                         }
                     }
                 }
-                _ => return Err(WasmHostError(WasmError { file, line, error }).into()),
+                _ => {
+                    return Err(WasmHostError(WasmError {
+                        module_path,
+                        line,
+                        error,
+                    })
+                    .into())
+                }
             },
             Err(e) => return Err(wasm_error!(WasmErrorInner::CallError(e.to_string())).into()),
         },
