@@ -49,10 +49,6 @@ wasmer_sys_prod = [
   "wasmer_sys",
   "holochain_wasmer_host/wasmer_sys_prod"
 ]
-wasmer_wamr = [
-  "wasmer/wamr",
-  "holochain_wasmer_host/wasmer_wamr"
-]
 wasmer_wasmi = [
   "wasmer/wasmi",
   "holochain_wasmer_host/wasmer_wasmi"

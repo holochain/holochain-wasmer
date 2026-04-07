@@ -25,11 +25,11 @@
         packages = with pkgs; [
           rustToolchain
           bzip2
-          # These packages and env vars are required to build Wasmer with the 'wamr' feature
-          cmake
+          # clang + libclang are required by wasmer's build script when the
+          # `wasmi` feature is enabled — it runs bindgen against the wasmi C API
+          # headers to generate Rust bindings.
           clang
           llvmPackages.libclang.lib
-          ninja
           # These packages are required to build Wasmer with the production config.
           # Wasmer 7.x links against LLVM 21 via llvm-sys 211.
           llvm_21
@@ -39,7 +39,7 @@
           zlib
           ncurses
         ];
-        # Used by `wamr`
+        # Used by bindgen when wasmer is built with the `wasmi` feature.
         LIBCLANG_PATH = "${pkgs.llvmPackages.libclang.lib}/lib";
         # Used by wasmer production config. Point llvm-sys directly at the
         # LLVM 21 dev output so we are not at the mercy of PATH ordering with

@@ -6,9 +6,6 @@ use wasmer::{Engine, Module};
 #[cfg(feature = "wasmer_sys")]
 pub use super::wasmer_sys::*;
 
-#[cfg(feature = "wasmer_wamr")]
-pub use super::wasmer_wamr::*;
-
 #[cfg(feature = "wasmer_wasmi")]
 pub use super::wasmer_wasmi::*;
 
