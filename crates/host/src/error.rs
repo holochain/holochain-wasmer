@@ -2,17 +2,18 @@ use holochain_wasmer_common::WasmError;
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
-/// Wraps a WasmErrorInner with a file and line number.
-/// The easiest way to generate this is with the `wasm_error!` macro that will
-/// insert the correct file/line and can create strings by forwarding args to
-/// the `format!` macro.
+/// Host-side wrapper around [`WasmError`].
+///
+/// This is the host-side counterpart to [`wasm_error!`](holochain_wasmer_common::wasm_error)
+/// and exists so that the common crate doesn't need a direct `wasmer`
+/// dependency just to convert errors into [`wasmer::RuntimeError`].
 #[derive(Clone, Debug, PartialEq, Eq, Hash, PartialOrd, Ord, Serialize, Deserialize, Error)]
 #[rustfmt::skip]
 pub struct WasmHostError(pub WasmError);
 
 impl std::fmt::Display for WasmHostError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{:?}", self.0)
+        std::fmt::Display::fmt(&self.0, f)
     }
 }
 
@@ -31,17 +32,11 @@ impl From<WasmHostError> for wasmer::RuntimeError {
 #[macro_export]
 macro_rules! wasm_host_error {
     ($e:expr) => {
-      WasmHostError(WasmError {
-          // On Windows the `file!()` macro returns a path with inconsistent formatting:
-          // from the workspace to the package root it uses backwards-slashes,
-          // then within the package it uses forwards-slashes.
-          // i.e. "test-crates\\wasm_core\\src/wasm.rs"
-          //
-          // To remedy this we normalize the formatting here.
-          file: file!().replace('\\', "/").to_string(),
-          line: line!(),
-          error: $e.into(),
-      })
+        WasmHostError(WasmError {
+            module_path: ::core::module_path!().to_string(),
+            line: ::core::line!(),
+            error: $e.into(),
+        })
     };
     ($($arg:tt)*) => {{
         $crate::wasm_host_error!(std::format!($($arg)*))
