@@ -5,7 +5,7 @@
 //! 1. When using the feature flag `wasmer_sys`, modules should be accessed only via the [`ModuleCache`].
 //!    This ensures that wasm modules are compiled once, then cached and stored efficiently.
 //!
-//! 2. When using the feature flag `wasmer_wamr`, modules should be built via the exported build_module function.
+//! 2. When using the feature flag `wasmer_wamr` or `wasmer_wasmi`, modules should be built via the exported build_module function.
 //!    There is no need for caching, as the wasm module is interpreted.
 
 use crate::plru::MicroCache;
@@ -38,6 +38,11 @@ pub use wasmer_sys::*;
 mod wasmer_wamr;
 #[cfg(feature = "wasmer_wamr")]
 pub use wasmer_wamr::*;
+
+#[cfg(feature = "wasmer_wasmi")]
+mod wasmer_wasmi;
+#[cfg(feature = "wasmer_wasmi")]
+pub use wasmer_wasmi::*;
 
 /// We expect cache keys to be produced via hashing so 32 bytes is enough for all
 /// purposes.

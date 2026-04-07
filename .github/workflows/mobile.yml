@@ -28,6 +28,14 @@ jobs:
 
   ios:
     runs-on: macos-latest
+    # The wasmer_wamr leg is known-broken on iOS — the upstream WAMR iOS build
+    # only produces `iwasm.dylib` and not the `vmlib` that wasmer expects — so
+    # treat that matrix entry as advisory until wamr is removed (#168).
+    continue-on-error: ${{ matrix['wasmer-feature'] == 'wasmer_wamr' }}
+    strategy:
+      fail-fast: false
+      matrix:
+        wasmer-feature: ["wasmer_wamr", "wasmer_wasmi"]
     steps:
       - uses: actions/checkout@v4
 
@@ -39,4 +47,4 @@ jobs:
       - name: Build for iOS
         run: |
           cargo build --target aarch64-apple-ios --release --package holochain_wasmer_host \
-            --no-default-features --features error_as_host,wasmer_wamr
+            --no-default-features --features error_as_host,${{ matrix.wasmer-feature }}

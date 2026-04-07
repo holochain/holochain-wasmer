@@ -7,10 +7,20 @@ pub mod module;
 pub mod plru;
 pub mod prelude;
 
-#[cfg(all(feature = "wasmer_sys", feature = "wasmer_wamr"))]
+#[cfg(any(
+    all(feature = "wasmer_sys", feature = "wasmer_wamr"),
+    all(feature = "wasmer_sys", feature = "wasmer_wasmi"),
+    all(feature = "wasmer_wamr", feature = "wasmer_wasmi"),
+))]
 compile_error!(
-    "feature \"wasmer_sys\" and feature \"wasmer_wamr\" cannot be enabled at the same time"
+    "features \"wasmer_sys\", \"wasmer_wamr\" and \"wasmer_wasmi\" are mutually exclusive — pick exactly one"
 );
 
-#[cfg(all(not(feature = "wasmer_sys"), not(feature = "wasmer_wamr"),))]
-compile_error!("One of: `wasmer_sys`, `wasmer_wamr` features must be enabled. Please, pick one.");
+#[cfg(all(
+    not(feature = "wasmer_sys"),
+    not(feature = "wasmer_wamr"),
+    not(feature = "wasmer_wasmi"),
+))]
+compile_error!(
+    "One of: `wasmer_sys`, `wasmer_wamr`, `wasmer_wasmi` features must be enabled. Please, pick one."
+);

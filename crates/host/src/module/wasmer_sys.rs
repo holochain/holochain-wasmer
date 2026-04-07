@@ -51,7 +51,7 @@ pub(crate) fn make_runtime_engine() -> Engine {
 
 /// Build an interpreter module from wasm bytes.
 pub fn build_module(_wasm: &[u8]) -> Result<Arc<Module>, wasmer::RuntimeError> {
-    unimplemented!("The feature flag 'wasmer_wamr' must be enabled to support building a Module directly. Please use the ModuleCache instead.");
+    unimplemented!("One of the interpreter feature flags ('wasmer_wamr' or 'wasmer_wasmi') must be enabled to support building a Module directly. Please use the ModuleCache instead.");
 }
 
 #[cfg(test)]
