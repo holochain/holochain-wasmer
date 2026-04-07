@@ -18,7 +18,7 @@ pub extern "C" fn bytes_round_trip(_: usize, _: usize) -> DoubleUSize {
     for i in 0..100_000 {
         // thrash a bunch of little chunks of bytes so that we can be reasonably sure the
         // allocations are in the correct position and not overlapping
-        let bytes: Vec<[u8; 5]> = std::iter::repeat([1, 2, 3, 4, 5]).take(100).collect();
+        let bytes: Vec<[u8; 5]> = std::iter::repeat_n([1, 2, 3, 4, 5], 100).collect();
 
         let ptrs: Vec<usize> = bytes
             .iter()

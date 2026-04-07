@@ -31,8 +31,8 @@ parking_lot = "0.12"
 bimap = "0.6"
 bytes = "1"
 hex = "0.4"
-wasmer = { version = "6.0.0", default-features = false }
-wasmer-middlewares = { version = "6.0.0" }
+wasmer = { version = "7.1.0", default-features = false }
+wasmer-middlewares = { version = "7.1.0" }
 
 holochain_wasmer_common = { version = "=0.0.102", path = "crates/common" }
 holochain_wasmer_guest = { version = "=0.0.102", path = "crates/guest" }
