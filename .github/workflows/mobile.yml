@@ -1,43 +1,46 @@
-name: mobile.yml
+name: build for mobile
 
 on:
-  push: {}
+  push:
+    branches:
+      - main
+  pull_request: {}
+
+concurrency:
+  group: mobile-${{ github.workflow }}-${{ github.ref || github.run_id }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
   android:
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        target:
+          - x86_64-linux-android
+          - aarch64-linux-android
+          - armv7-linux-androideabi
+        wasmer-feature:
+          - wasmer_sys_dev
+          - wasmer_wasmi
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Install Cross
         uses: taiki-e/install-action@v2
         with:
           tool: cross@0.2.5
 
-      - name: Build for x86_64-linux-android
+      - name: Build
         run: |
-          cross build --target x86_64-linux-android --release
-
-      - name: Build for aarch64-linux-android
-        run: |
-          cross build --target aarch64-linux-android --release
-
-      - name: Build for armv7-linux-androideabi
-        run: |
-          cross build --target armv7-linux-androideabi --release
+          cross build --target ${{ matrix.target }} --release \
+            --package holochain_wasmer_host \
+            --no-default-features --features error_as_host,${{ matrix.wasmer-feature }}
 
   ios:
     runs-on: macos-latest
-    # The wasmer_wamr leg is known-broken on iOS — the upstream WAMR iOS build
-    # only produces `iwasm.dylib` and not the `vmlib` that wasmer expects — so
-    # treat that matrix entry as advisory until wamr is removed (#168).
-    continue-on-error: ${{ matrix['wasmer-feature'] == 'wasmer_wamr' }}
-    strategy:
-      fail-fast: false
-      matrix:
-        wasmer-feature: ["wasmer_wamr", "wasmer_wasmi"]
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Install binutils for objcopy
         run: |
@@ -46,5 +49,6 @@ jobs:
 
       - name: Build for iOS
         run: |
-          cargo build --target aarch64-apple-ios --release --package holochain_wasmer_host \
-            --no-default-features --features error_as_host,${{ matrix.wasmer-feature }}
+          cargo build --target aarch64-apple-ios --release \
+            --package holochain_wasmer_host \
+            --no-default-features --features error_as_host,wasmer_wasmi
