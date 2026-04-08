@@ -30,8 +30,16 @@ jobs:
       # to download the same prebuilt LLVM bundle the Windows test job
       # uses (see test.yml) and export the prefix env var so subsequent
       # steps — including the prepare step — can find it.
+      #
+      # The LLVM bundle MUST be installed outside `$GITHUB_WORKSPACE` so it
+      # doesn't end up staged into the auto-generated release commit by the
+      # downstream `peter-evans/create-pull-request` step. `$RUNNER_TEMP` is
+      # the canonical place: persistent across steps within the job, but
+      # outside the workspace and so invisible to git operations against the
+      # repo. Putting it under the workspace previously got the push
+      # rejected by GitHub's 100 MB file size limit on `clang-21`.
       setup_script: |
-        LLVM_DIR="$PWD/.llvm"
+        LLVM_DIR="$RUNNER_TEMP/llvm"
         mkdir -p "$LLVM_DIR"
         curl --proto '=https' --tlsv1.2 -sSf \
           "https://github.com/wasmerio/llvm-custom-builds/releases/download/21.x/llvm-linux-amd64.tar.xz" \
