@@ -9,7 +9,7 @@ default-members = ["crates/*"]
 resolver = "2"
 
 [workspace.package]
-version = "0.0.102"
+version = "0.0.103"
 homepage = "https://holochain.org"
 repository = "https://github.com/holochain/holochain-wasmer"
 license = "Apache-2.0"
@@ -34,9 +34,9 @@ hex = "0.4"
 wasmer = { version = "7.1.0", default-features = false }
 wasmer-middlewares = { version = "7.1.0" }
 
-holochain_wasmer_common = { version = "=0.0.102", path = "crates/common" }
-holochain_wasmer_guest = { version = "=0.0.102", path = "crates/guest" }
-holochain_wasmer_host = { version = "=0.0.102", path = "crates/host", default-features = false }
+holochain_wasmer_common = { version = "0.0.103", path = "crates/common" }
+holochain_wasmer_guest = { version = "0.0.103", path = "crates/guest" }
+holochain_wasmer_host = { version = "0.0.103", path = "crates/host", default-features = false }
 
 # Dev dependencies
 tempfile = "3.14.0"
