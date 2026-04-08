@@ -31,6 +31,14 @@ thiserror.workspace = true
 [dev-dependencies]
 tempfile.workspace = true
 
+[package.metadata.docs.rs]
+# Build docs with both backends visible so intra-doc links to
+# `module::sys::*` and `module::wasmi::*` resolve. The LLVM compiler
+# sub-feature is intentionally omitted because `llvm-sys` requires a
+# prebuilt LLVM toolchain that the docs.rs builder doesn't provide.
+features = ["error-as-host", "wasmer-sys", "wasmer-sys-cranelift", "wasmer-wasmi"]
+no-default-features = true
+
 [features]
 default = ["error-as-host", "wasmer-sys", "wasmer-sys-cranelift"]
 debug-memory = []
