@@ -52,7 +52,7 @@ use wasmer::WasmSlice;
 /// The guest and the host negotiate the length of the bytes separately.
 ///
 /// @see read_bytes()
-pub fn write_bytes(
+pub(crate) fn write_bytes(
     store_mut: &mut StoreMut,
     memory: &Memory,
     guest_ptr: GuestPtr,
@@ -89,7 +89,7 @@ pub fn write_bytes(
 ///
 /// A better approach is to use an immutable deref from a `WasmPtr`, which checks against memory
 /// bounds for the guest, and map over the whole thing to a `Vec<u8>`.
-pub fn read_bytes(
+pub(crate) fn read_bytes(
     memory_view: &MemoryView,
     guest_ptr: GuestPtr,
     len: Len,
@@ -101,7 +101,7 @@ pub fn read_bytes(
 }
 
 /// Deserialize any DeserializeOwned type out of the guest from a guest pointer.
-pub fn from_guest_ptr<O>(
+pub(crate) fn from_guest_ptr<O>(
     store_mut: &mut StoreMut,
     memory: &Memory,
     guest_ptr: GuestPtr,

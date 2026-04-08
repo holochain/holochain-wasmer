@@ -46,8 +46,12 @@ pub mod error;
 pub mod guest;
 pub mod module;
 /// Adapted from: https://raw.githubusercontent.com/ticki/plru/master/src/lib.rs
-/// Updated for latest stable rust.
-pub mod plru;
+/// Updated for latest stable rust. Vendored largely as-is, so several
+/// of the cache size aliases and `Cache` methods are unused internally
+/// — `#[allow(dead_code)]` keeps the upstream shape intact rather than
+/// carving the file up.
+#[allow(dead_code)]
+pub(crate) mod plru;
 pub mod prelude;
 
 // At least one wasmer backend must be enabled. The two backends (`wasmer-sys`
