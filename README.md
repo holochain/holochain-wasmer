@@ -1,31 +1,42 @@
 # holochain-wasmer
 
-## How to update holonix
+## How to use the Nix development flake
 
-This repository uses the `rustDev` shell from [Holonix](https://github.com/holochain/holochain/blob/develop/nix/modules/devShells.nix).
+This repository provides a Nix flake in `./flake.nix`. It has a devShell that provides required libraries and tools for 
+developing on this project. You can access the dev shell with:
 
-To update Holonix, run the following command:
+```shell 
+nix develop
+```
+
+The version of Rust is controlled by `./rust-toolchain.toml` which will apply to users of Cargo outside the Nix 
+environment, and equally is loaded by the flake so it applies to users of the dev shell.
+
+To update the flake dependencies, run the following command:
 
 ```bash
 nix flake update
 ```
 
+The Nix packages version should be checked occasionally and updated. There should be a new one roughly every 6 months.
+Prefer to use the latest stable Nix packages version.
+
 ## Why?
 
-Doing certain high level things in wasm is still pretty hard to get right, even
+Doing certain high level things in WASM is still pretty hard to get right, even
 with Rust.
 
 Luckily Rust provides us with enough tools to abstract what we need at the
-compiler level. Most details are not visible downstream to happ devs and can be
+compiler level. Most details are not visible downstream to hApp devs and can be
 achieved via 'zero cost abstraction'.
 
 That said, there _are_ some limitations by design that we enforce here to allow
-the whole wasm stack to be simple to maintain and understand.
+the whole WASM stack to be simple to maintain and understand.
 
-The Rust compiler makes many things sane for us in wasm but there are a few
+The Rust compiler makes many things sane for us in WASM but there are a few
 notable things that are left up to us:
 
-- Define a clear interface between the "host" and the "guest" within wasm limits
+- Define a clear interface between the "host" and the "guest" within WASM limits
 - Manage a shared memory across the host/guest with different Rust allocators
 - Inject additional runtime context on the host that the guest cannot provide
 - Performance optimisations
@@ -35,21 +46,20 @@ notable things that are left up to us:
 This repository consists of 3 main library crates:
 
 - `holochain_wasmer_common`: host/guest agnostic and shared functionality
-- `holochain_wasmer_guest`: essential macros for wasm guests
-- `holochain_wasmer_host`: infrastructure to manage a wasm guest
+- `holochain_wasmer_guest`: essential macros for WASM guests
+- `holochain_wasmer_host`: infrastructure to manage a WASM guest
 
-There is also a `test` directory containing analogous crates implementing the
+There is also a `test-crates` directory containing analogous crates implementing the
 above libraries for the purpose of testing and simple working examples.
 
-- `test/common`: data structures shared by the host and guest
-- `test/src`: a wasm host containing test functions
-- `test/wasm`: a guest wasm containing test functions
+- `test-crates/common`: data structures shared by the host and guest
+- `test-crates/wasms`: multiple sample Rust WASM projects to be used in tests
+- `test-crates/tests`: tests and benchmarks, with a custom build script to build the WASM projects
 
 The main dependencies are:
 
 - [wasmer](https://wasmer.io/): one of the best wasm implementations for Rust
 - [holochain_serialization](https://github.com/holochain/holochain-serialization): our crates to normalize serialization at the byte level
-- [holonix](https://github.com/holochain/holonix): specifically the Rust version management and wasm tooling
 
 ## How to use
 
@@ -57,24 +67,24 @@ There are several places we need to implement things:
 
 - Holochain core needs to [act as a wasm host](https://docs.wasmer.io/integrations/rust/examples/hello-world) to build modules and instances to run wasm functions
 - Holochain core [needs to provide](https://docs.wasmer.io/integrations/rust/examples/host-functions) 'imported functions' as an `ImportObject`
-- Holochain HDK needs to use the `holochain_wasmer_guest` functions to wrap externs in something ergonomic for happ developers
-- Happ developers need to be broadly aware of how to send cleanly serializable inputs and work with serde
+- Holochain HDK needs to use the `holochain_wasmer_guest` functions to wrap externs in something ergonomic for hApp developers
+- hApp developers need to be broadly aware of how to send cleanly serializable inputs and work with `serde`
 
 ### Holochain core
 
 #### Being a good wasm host
 
-It is a multi-step process to get from rust code to running a wasm function.
+It is a multi-step process to get from rust code to running a WASM function.
 
 0. Rust guest .rs files are compiled to .wasm files
-1. Rust wasmer host compiles the .wasm files to a native 'module'
+1. Rust Wasmer host compiles the .wasm files to a native 'module'
 2. The module is instantiated to an 'instance' with imported functions, linear memory and whatever else wasmer needs to call functions
 
-The first step needs to be handled by happ developers using relevant tooling.
+The first step needs to be handled by hApp developers using relevant tooling.
 
 Holochain core will be passed a .wasm file and needs to build running instances.
 
-Basic performance testing showed that the default wasmer handling of a ~40mb .wasm
+Basic performance testing showed that the default Wasmer handling of a ~40mb .wasm
 file takes 1-2 seconds to compile into a module.
 
 Wasmer has a native cache trait and can serialize modules into something that loads much faster.
@@ -90,7 +100,7 @@ very reasonable overhead for the host to build a completely fresh instance.
 Calling a function with `holochain_wasmer_host::guest::call()` takes several `us`
 for small input/output values and some `ms` for ~1mb of input/output data.
 
-To see benchmarks on your system run `nix-shell --run ./scripts/bench.sh`.
+To see benchmarks on your system run `nix develop -c ./scripts/bench.sh`.
 
 With low overhead like this, core is relatively free to decide when it wants to
 re-instantiate an already-in-memory module.
