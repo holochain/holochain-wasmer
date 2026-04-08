@@ -1,3 +1,210 @@
+//! Guest-side runtime for wasm modules running under
+//! [`holochain_wasmer_host`](https://docs.rs/holochain_wasmer_host).
+//! Provides the macros and helper functions a wasm zome (or similar
+//! wasm-as-plugin) needs to talk to a Holochain host: declaring extern
+//! host functions, decoding host inputs, calling back into the host,
+//! and returning serializable values across the host↔guest boundary.
+//!
+//! Most users do not depend on this crate directly — the
+//! [Holochain HDK](https://docs.rs/hdk) hides the host/guest plumbing
+//! entirely and zome authors should reach for it instead. The contents
+//! below are for HDK maintainers, for the macros' implementations, and
+//! for anyone embedding Holochain wasms outside of an HDK context.
+//!
+//! # Conceptual model
+//!
+//! Wasm has only four primitive types (`i32`, `i64`, `f32`, `f64`) and
+//! a single shared linear memory. There are no strings, sequences,
+//! structs or other complex types in the wasm ABI itself. To pass
+//! anything richer between host and guest, both sides agree on a
+//! byte-level protocol: the sender writes serialized bytes into the
+//! shared linear memory, the receiver reads them out at a known
+//! pointer and length.
+//!
+//! This crate's job is to make that protocol invisible at the call
+//! site. You write what looks like a Rust function with serializable
+//! inputs and outputs, and the macros and helpers below take care of
+//! the leak-and-pointer dance underneath.
+//!
+//! Constraints to keep in mind:
+//!
+//! - The host has full access to guest memory; the guest has none of
+//!   the host's. The only way the guest can read host data is to call
+//!   an imported host function and have the host write the response
+//!   into shared linear memory.
+//! - When the host calls into the guest, the host cannot call back
+//!   into the same guest instance from inside that call. The guest
+//!   call must complete (or trap) before the host can re-enter.
+//! - Wasm linear memory pages can be added but never removed. A guest
+//!   that allocates aggressively will hold that memory for its
+//!   lifetime, so be conservative about copying large payloads.
+//! - The serialization format must round-trip cleanly (we use
+//!   `holochain_serialized_bytes`, which wraps messagepack). It is the
+//!   caller's responsibility to ensure types implement `Serialize` /
+//!   `DeserializeOwned` consistently on both sides.
+//!
+//! All code samples in the rest of this documentation are
+//! `// ignore`-marked rustdoc blocks. They are not run as doctests
+//! because guest code is meant to be compiled to the
+//! `wasm32-unknown-unknown` target with the `__hc__allocate_1` /
+//! `__hc__deallocate_1` exports and the host's imported functions
+//! linked in — none of which are present when rustdoc compiles a
+//! doctest as a host-side binary. Treat them as the canonical shape
+//! to copy from rather than as runnable snippets; the
+//! [`test-crates/wasms/`](https://github.com/holochain/holochain-wasmer/tree/main/test-crates/wasms)
+//! directory in the repository contains the same patterns inside
+//! real wasm crates that CI exercises against a real host on every
+//! PR.
+//!
+//! # Declaring host functions you want to call
+//!
+//! The host exposes a set of imported functions to each guest
+//! instance. Use the [`host_externs!`] macro to declare the ones you
+//! intend to call. The macro takes pairs of `name:version` and
+//! generates `extern "C"` declarations of the form
+//! `__hc__<name>_<version>`:
+//!
+//! ```ignore
+//! use holochain_wasmer_guest::*;
+//!
+//! host_externs!(test_process_string:2, debug:1);
+//! // Generates:
+//! //   extern "C" fn __hc__test_process_string_2(ptr: usize, len: usize) -> DoubleUSize;
+//! //   extern "C" fn __hc__debug_1(ptr: usize, len: usize) -> DoubleUSize;
+//! ```
+//!
+//! The version suffix lets the host evolve a function's signature
+//! without breaking older guests; new guests opt in to the new
+//! version by bumping the literal.
+//!
+//! # Writing functions the host can call
+//!
+//! Every function the host can call into must have the signature
+//! `extern "C" fn(guest_ptr: usize, len: usize) -> DoubleUSize`. The
+//! `#[no_mangle]` attribute keeps the symbol name stable so the host
+//! can look it up by string:
+//!
+//! ```ignore
+//! use holochain_wasmer_guest::*;
+//!
+//! #[no_mangle]
+//! pub extern "C" fn process_string(guest_ptr: usize, len: usize) -> DoubleUSize {
+//!     let input: String = match host_args(guest_ptr, len) {
+//!         Ok(v) => v,
+//!         Err(err_ptr) => return err_ptr,
+//!     };
+//!     return_ptr(format!("guest: {}", input))
+//! }
+//! ```
+//!
+//! The `(guest_ptr, len) -> DoubleUSize` shape is forced by what
+//! stable Rust's `extern "C"` ABI can express on `wasm32-unknown-unknown`.
+//! Multi-value returns would let us return a `(ptr, len)` tuple
+//! directly, but they require nightly's `extern "wasm"`. Instead we
+//! pack both `u32`s into a single `u64` (a `DoubleUSize` on a 32-bit
+//! target) and split it again on the host side.
+//!
+//! # Receiving input with [`host_args`]
+//!
+//! [`host_args`] takes the `(guest_ptr, len)` pair the host passed in
+//! and tries to deserialize it into your input type:
+//!
+//! ```ignore
+//! use holochain_wasmer_guest::*;
+//!
+//! #[no_mangle]
+//! pub extern "C" fn foo(guest_ptr: usize, len: usize) -> DoubleUSize {
+//!     let input: MyInputType = match host_args(guest_ptr, len) {
+//!         Ok(v) => v,
+//!         Err(err_ptr) => return err_ptr,
+//!     };
+//!     // ... use input ...
+//!     # return_ptr(())
+//! }
+//! # #[derive(serde::Deserialize, serde::Serialize, Debug)]
+//! # struct MyInputType;
+//! ```
+//!
+//! If deserialization fails, [`host_args`] returns
+//! `Err(DoubleUSize)` — a pointer to a serialized [`WasmError`] that
+//! the host knows how to read. **The guest must immediately return
+//! that pointer**; trying to recover or call further host functions
+//! after a deserialization failure leaves the guest in an
+//! inconsistent state and risks corrupting memory.
+//!
+//! # Calling host functions with [`host_call`]
+//!
+//! Unlike [`host_args`], [`host_call`] returns a native Rust
+//! [`Result`], so it works anywhere — including outside of an extern
+//! function. Pass it the extern declared by [`host_externs!`] and a
+//! serializable input; it deserializes the host's response into the
+//! type you ask for:
+//!
+//! ```ignore
+//! use holochain_wasmer_guest::*;
+//!
+//! host_externs!(test_process_string:2);
+//!
+//! fn call_host() -> Result<String, WasmError> {
+//!     let input = String::from("hello");
+//!     let output: String = host_call(__hc__test_process_string_2, &input)?;
+//!     Ok(output)
+//! }
+//! ```
+//!
+//! Inside an `extern "C"` guest function — where the return type is
+//! `DoubleUSize`, not `Result` — wrap the call with the [`try_ptr!`]
+//! macro to get `?`-style early return:
+//!
+//! ```ignore
+//! use holochain_wasmer_guest::*;
+//!
+//! host_externs!(test_process_string:2);
+//!
+//! #[no_mangle]
+//! pub extern "C" fn process(_: usize, _: usize) -> DoubleUSize {
+//!     let input = String::from("hello");
+//!     let output: String = try_ptr!(
+//!         host_call(__hc__test_process_string_2, &input),
+//!         "test_process_string_2 failed"
+//!     );
+//!     return_ptr(output)
+//! }
+//! ```
+//!
+//! # Returning to the host with [`return_ptr`] / [`return_err_ptr`]
+//!
+//! Inside an extern, the return value the host receives must be a
+//! `DoubleUSize`. Use [`return_ptr`] for any serializable success
+//! value and [`return_err_ptr`] for a [`WasmError`]:
+//!
+//! ```ignore
+//! use holochain_wasmer_guest::*;
+//!
+//! #[no_mangle]
+//! pub extern "C" fn ok_example(_: usize, _: usize) -> DoubleUSize {
+//!     return_ptr("hello from the guest".to_string())
+//! }
+//!
+//! #[no_mangle]
+//! pub extern "C" fn err_example(_: usize, _: usize) -> DoubleUSize {
+//!     return_err_ptr(wasm_error!(WasmErrorInner::Guest("nope".into())))
+//! }
+//! ```
+//!
+//! The host treats every guest return value as an "outer" `Result`:
+//! `Ok` means the guest completed normally and any inner success or
+//! domain error is encoded in the value, while `Err` means the
+//! host↔guest interface itself failed (deserialization, missing
+//! extern, etc.) and the host should treat the instance as suspect.
+//!
+//! # Worked examples
+//!
+//! See [`test-crates/wasms/wasm_core/src/wasm.rs`](https://github.com/holochain/holochain-wasmer/blob/main/test-crates/wasms/wasm_core/src/wasm.rs)
+//! in the `holochain-wasmer` repository for a complete test wasm that
+//! exercises every macro and helper in this crate against a real host
+//! built from `holochain_wasmer_host`.
+
 pub mod allocation;
 
 pub extern crate holochain_serialized_bytes;
