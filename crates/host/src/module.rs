@@ -181,6 +181,38 @@ impl ModuleCache {
     /// factories — see [`ModuleBuilder::new`] for the available choices.
     /// Callers that need finer control over the builder (e.g. supplying a
     /// custom closure for testing) should use [`Self::new_with_builder`].
+    ///
+    /// # Example
+    ///
+    /// Build a `ModuleCache` against the `wasmer-sys` Cranelift backend
+    /// (the default), compile a trivial wasm module and look it up by
+    /// cache key:
+    ///
+    /// ```
+    /// # #[cfg(feature = "wasmer-sys-cranelift")]
+    /// # fn main() {
+    /// use holochain_wasmer_host::module::{sys, ModuleCache};
+    ///
+    /// // No filesystem-backed cache: in-memory only.
+    /// let cache = ModuleCache::new(
+    ///     sys::make_cranelift_engine,
+    ///     sys::make_runtime_engine,
+    ///     None,
+    /// );
+    ///
+    /// // The simplest possible wasm module: nothing exported, nothing imported.
+    /// let wasm = wasmer::wat2wasm(b"(module)").unwrap();
+    ///
+    /// // The cache key would normally be a content hash of the wasm or
+    /// // a stable identifier such as a DNA hash. 32 bytes of zero will do
+    /// // for an example.
+    /// let key = [0u8; 32];
+    /// let module = cache.get(key, &wasm).unwrap();
+    /// # let _ = module;
+    /// # }
+    /// # #[cfg(not(feature = "wasmer-sys-cranelift"))]
+    /// # fn main() {}
+    /// ```
     pub fn new(
         make_engine: fn() -> Engine,
         make_runtime_engine: fn() -> Engine,
