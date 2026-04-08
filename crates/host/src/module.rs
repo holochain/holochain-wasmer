@@ -55,12 +55,6 @@ pub type CacheKey = [u8; 32];
 type PlruKeyMap = BiMap<usize, CacheKey>;
 
 #[derive(Clone, Debug)]
-pub struct ModuleWithStore {
-    pub store: Arc<Mutex<Store>>,
-    pub module: Arc<Module>,
-}
-
-#[derive(Clone, Debug)]
 pub struct InstanceWithStore {
     pub store: Arc<Mutex<Store>>,
     pub instance: Arc<Instance>,

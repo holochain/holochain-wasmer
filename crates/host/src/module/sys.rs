@@ -4,7 +4,6 @@ use wasmer::sys::CompilerConfig;
 use wasmer::sys::NativeEngineExt;
 use wasmer::wasmparser;
 use wasmer::Engine;
-use wasmer::Module;
 use wasmer_middlewares::Metering;
 
 #[cfg(not(test))]
@@ -77,16 +76,6 @@ pub fn make_engine() -> Engine {
 /// compiler so it is the same regardless of which sys compiler is enabled.
 pub fn make_runtime_engine() -> Engine {
     Engine::headless()
-}
-
-/// `build_module` is the wasmi-side direct module builder. It is intentionally
-/// unimplemented for the sys backend: sys modules should always go through
-/// [`crate::module::ModuleCache`] so that compilation results are reused
-/// across calls. Calling this on a sys-only build is a programmer error.
-pub fn build_module(_wasm: &[u8]) -> Result<Arc<Module>, wasmer::RuntimeError> {
-    unimplemented!(
-        "build_module is only supported on the wasmi backend. Use ModuleCache for the sys backend."
-    );
 }
 
 #[cfg(test)]

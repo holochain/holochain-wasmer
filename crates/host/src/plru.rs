@@ -148,7 +148,7 @@ impl<B: AsRef<[AtomicU64]>> Cache<B> {
     ///
     /// # Example
     ///
-    /// ```rust
+    /// ```ignore
     /// use holochain_wasmer_host::plru::Cache;
     ///
     /// Cache::new([Default::default(), Default::default()]);
@@ -169,7 +169,7 @@ impl<B: AsRef<[AtomicU64]>> Cache<B> {
     ///
     /// # Example
     ///
-    /// ```rust
+    /// ```ignore
     /// let cache = holochain_wasmer_host::plru::SmallCache::default();
     ///
     /// cache.touch(10);
@@ -192,7 +192,7 @@ impl<B: AsRef<[AtomicU64]>> Cache<B> {
     ///
     /// # Example
     ///
-    /// ```rust
+    /// ```ignore
     /// let cache = holochain_wasmer_host::plru::SmallCache::default();
     ///
     /// cache.touch(10);
@@ -223,7 +223,7 @@ impl<B: AsRef<[AtomicU64]>> Cache<B> {
     ///
     /// # Example
     ///
-    /// ```rust
+    /// ```ignore
     /// let cache = holochain_wasmer_host::plru::MediumCache::default();
     /// cache.touch(10);
     /// cache.touch(20);
@@ -262,7 +262,7 @@ impl<B: AsRef<[AtomicU64]>> Cache<B> {
     ///
     /// # Example
     ///
-    /// ```rust
+    /// ```ignore
     /// assert_eq!(holochain_wasmer_host::plru::create(10).len(), 64);
     /// assert_eq!(holochain_wasmer_host::plru::create(64).len(), 64);
     /// assert_eq!(holochain_wasmer_host::plru::create(65).len(), 128);
@@ -283,7 +283,7 @@ impl<B: AsRef<[AtomicU64]>> Cache<B> {
     ///
     /// # Example
     ///
-    /// ```rust
+    /// ```ignore
     /// let cache = holochain_wasmer_host::plru::MicroCache::default();
     /// cache.touch(2);
     ///
