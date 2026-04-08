@@ -31,7 +31,7 @@ pub enum WasmErrorInner {
     /// The `Vec<u8>` holds the encoded data as though the guest had returned.
     HostShortCircuit(Vec<u8>),
     /// Wasmer failed to build a Module from wasm byte code.
-    /// With the feature `wasmer_sys` enabled, building a Module includes compiling the wasm.
+    /// With the feature `wasmer-sys` enabled, building a Module includes compiling the wasm.
     ModuleBuild(String),
     /// Wasmer failed to serialize a Module to bytes.
     ModuleSerialize(String),
@@ -129,7 +129,7 @@ pub struct WasmError {
 /// to `format!` and then the resultant string converted to `WasmErrorInner`.
 ///
 /// As the string->WasmErrorInner conversion is handled by a call to into, the
-/// feature `error_as_host` can be used so that `WasmErrorInner::Host` is produced
+/// feature `error-as-host` can be used so that `WasmErrorInner::Host` is produced
 /// by the macro from any passed/generated string.
 ///
 /// # Examples
@@ -176,14 +176,14 @@ impl From<core::convert::Infallible> for WasmError {
     }
 }
 
-#[cfg(not(feature = "error_as_host"))]
+#[cfg(not(feature = "error-as-host"))]
 impl From<String> for WasmErrorInner {
     fn from(s: String) -> Self {
         Self::Guest(s)
     }
 }
 
-#[cfg(feature = "error_as_host")]
+#[cfg(feature = "error-as-host")]
 impl From<String> for WasmErrorInner {
     fn from(s: String) -> Self {
         Self::Host(s)
@@ -201,7 +201,7 @@ mod tests {
     use super::*;
 
     #[test]
-    #[cfg(not(feature = "error_as_host"))]
+    #[cfg(not(feature = "error-as-host"))]
     fn wasm_error_macro_guest() {
         assert_eq!(
             wasm_error!("foo").error,
@@ -220,7 +220,7 @@ mod tests {
     }
 
     #[test]
-    #[cfg(feature = "error_as_host")]
+    #[cfg(feature = "error-as-host")]
     fn wasm_error_macro_host() {
         assert_eq!(wasm_error!("foo").error, WasmErrorInner::Host("foo".into()),);
 

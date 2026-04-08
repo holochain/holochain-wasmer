@@ -5,7 +5,7 @@ use holochain_wasmer_host::prelude::*;
 use holochain_wasmer_host::wasm_host_error as wasm_error;
 use test_common::SomeStruct;
 use wasmer::FunctionEnvMut;
-#[cfg(feature = "wasmer_sys")]
+#[cfg(feature = "wasmer-sys")]
 use wasmer_middlewares::metering::MeteringPoints;
 
 pub fn short_circuit(
@@ -52,7 +52,7 @@ pub fn debug(
     Ok(())
 }
 
-#[cfg(feature = "wasmer_sys")]
+#[cfg(feature = "wasmer-sys")]
 pub fn decrease_points(
     mut function_env: FunctionEnvMut<Env>,
     guest_ptr: GuestPtr,
@@ -80,7 +80,7 @@ pub fn decrease_points(
 
 // Stub used when only the wasmi backend is compiled in. With the sys backend
 // also enabled the real metered version above takes precedence.
-#[cfg(all(feature = "wasmer_wasmi", not(feature = "wasmer_sys")))]
+#[cfg(all(feature = "wasmer-wasmi", not(feature = "wasmer-sys")))]
 pub fn decrease_points(
     _function_env: FunctionEnvMut<Env>,
     _guest_ptr: GuestPtr,
@@ -192,7 +192,7 @@ pub mod tests {
     // https://github.com/wasmerio/wasmer/issues/6397. When sys is also
     // enabled the harness routes through sys and this test runs fine.
     #[cfg_attr(
-        all(feature = "wasmer_wasmi", not(feature = "wasmer_sys")),
+        all(feature = "wasmer-wasmi", not(feature = "wasmer-sys")),
         ignore = "wasmerio/wasmer#6397: wasmi backend panics in wasm_trap_new on host-returned errors"
     )]
     #[test]
@@ -466,7 +466,7 @@ pub mod tests {
     }
 
     #[test]
-    #[cfg_attr(not(feature = "wasmer_sys"), ignore)]
+    #[cfg_attr(not(feature = "wasmer-sys"), ignore)]
     fn decrease_points_test() {
         let InstanceWithStore { store, instance } = TestWasm::Core.instance();
         let dec_by = 1_000_000_u64;

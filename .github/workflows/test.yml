@@ -17,7 +17,7 @@ jobs:
       matrix:
         script: ["test", "bench"]
         os: ["ubuntu-latest", "macos-latest"]
-        wasmer-feature: ["wasmer_sys_cranelift", "wasmer_sys_llvm", "wasmer_wasmi"]
+        wasmer-feature: ["wasmer-sys-cranelift", "wasmer-sys-llvm", "wasmer-wasmi"]
     runs-on: ${{ matrix.os }}
     steps:
       - name: increase swap space
@@ -53,25 +53,25 @@ jobs:
         run: |
           nix develop --command cargo build -p holochain_wasmer_host \
             --no-default-features \
-            --features error_as_host,wasmer_sys,wasmer_sys_cranelift,wasmer_sys_llvm,wasmer_wasmi
+            --features error-as-host,wasmer-sys,wasmer-sys-cranelift,wasmer-sys-llvm,wasmer-wasmi
       - name: test the host crate with all backends enabled
         run: |
           nix develop --command cargo test -p holochain_wasmer_host \
             --no-default-features \
-            --features error_as_host,wasmer_sys,wasmer_sys_cranelift,wasmer_sys_llvm,wasmer_wasmi \
+            --features error-as-host,wasmer-sys,wasmer-sys-cranelift,wasmer-sys-llvm,wasmer-wasmi \
             -- --nocapture
 
   test-windows:
     strategy:
       fail-fast: false
       matrix:
-        wasmer-feature: ["wasmer_sys_cranelift", "wasmer_sys_llvm", "wasmer_wasmi"]
+        wasmer-feature: ["wasmer-sys-cranelift", "wasmer-sys-llvm", "wasmer-wasmi"]
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v6
-      # The prebuilt LLVM is needed by `wasmer_sys_llvm` (which links against
-      # llvm-sys 211) and by `wasmer_wasmi` (whose wasmer build script invokes
-      # bindgen and needs `libclang.dll`). It is harmless for `wasmer_sys_cranelift`.
+      # The prebuilt LLVM is needed by `wasmer-sys-llvm` (which links against
+      # llvm-sys 211) and by `wasmer-wasmi` (whose wasmer build script invokes
+      # bindgen and needs `libclang.dll`). It is harmless for `wasmer-sys-cranelift`.
       - name: Install LLVM
         env:
           LLVM_DIR: .llvm
@@ -85,7 +85,7 @@ jobs:
         run: |
           $env:LLVM_SYS_211_PREFIX="$(pwd)/.llvm"
           $env:LIBCLANG_PATH="$(pwd)/.llvm/bin"
-          cargo test --release --no-default-features --features error_as_host,${{ matrix.wasmer-feature }} -- --nocapture
+          cargo test --release --no-default-features --features error-as-host,${{ matrix.wasmer-feature }} -- --nocapture
       - name: test
         shell: pwsh
         run: |

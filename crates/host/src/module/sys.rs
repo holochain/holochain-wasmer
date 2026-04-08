@@ -42,7 +42,7 @@ fn apply_tunables(mut engine: Engine) -> Engine {
 }
 
 /// Build a sys engine backed by the Cranelift compiler.
-#[cfg(feature = "wasmer_sys_cranelift")]
+#[cfg(feature = "wasmer-sys-cranelift")]
 pub fn make_cranelift_engine() -> Engine {
     let mut compiler = wasmer::sys::Cranelift::default();
     configure_compiler(&mut compiler);
@@ -50,7 +50,7 @@ pub fn make_cranelift_engine() -> Engine {
 }
 
 /// Build a sys engine backed by the LLVM compiler.
-#[cfg(feature = "wasmer_sys_llvm")]
+#[cfg(feature = "wasmer-sys-llvm")]
 pub fn make_llvm_engine() -> Engine {
     let mut compiler = wasmer::sys::LLVM::default();
     configure_compiler(&mut compiler);
@@ -62,12 +62,12 @@ pub fn make_llvm_engine() -> Engine {
 ///
 /// When both compilers are enabled, prefer Cranelift as it is the development
 /// default and matches the historic behaviour of this crate.
-#[cfg(feature = "wasmer_sys_cranelift")]
+#[cfg(feature = "wasmer-sys-cranelift")]
 pub fn make_engine() -> Engine {
     make_cranelift_engine()
 }
 
-#[cfg(all(feature = "wasmer_sys_llvm", not(feature = "wasmer_sys_cranelift")))]
+#[cfg(all(feature = "wasmer-sys-llvm", not(feature = "wasmer-sys-cranelift")))]
 pub fn make_engine() -> Engine {
     make_llvm_engine()
 }

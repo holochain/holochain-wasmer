@@ -6,7 +6,7 @@ edition.workspace = true
 publish = false
 
 [dependencies]
-holochain_wasmer_host = { workspace = true, default-features = false, features = ["error_as_host"] }
+holochain_wasmer_host = { workspace = true, default-features = false, features = ["error-as-host"] }
 holochain_serialized_bytes.workspace = true
 serde.workspace = true
 test_common.workspace = true
@@ -33,26 +33,26 @@ crate-type = ["cdylib", "rlib"]
 path = "src/test.rs"
 
 [features]
-debug_memory = ["holochain_wasmer_host/debug_memory"]
-default = ["wasmer_sys", "wasmer_sys_cranelift"]
-wasmer_sys = [
+debug-memory = ["holochain_wasmer_host/debug-memory"]
+default = ["wasmer-sys", "wasmer-sys-cranelift"]
+wasmer-sys = [
   "dep:wasmer-middlewares",
   "wasmer/sys",
-  "holochain_wasmer_host/wasmer_sys",
+  "holochain_wasmer_host/wasmer-sys",
 ]
-wasmer_sys_cranelift = [
-  "wasmer_sys",
+wasmer-sys-cranelift = [
+  "wasmer-sys",
   "wasmer/cranelift",
   "wasmer/wat",
-  "holochain_wasmer_host/wasmer_sys_cranelift",
+  "holochain_wasmer_host/wasmer-sys-cranelift",
 ]
-wasmer_sys_llvm = [
-  "wasmer_sys",
+wasmer-sys-llvm = [
+  "wasmer-sys",
   "wasmer/llvm",
   "wasmer/wat",
-  "holochain_wasmer_host/wasmer_sys_llvm",
+  "holochain_wasmer_host/wasmer-sys-llvm",
 ]
-wasmer_wasmi = [
+wasmer-wasmi = [
   "wasmer/wasmi",
-  "holochain_wasmer_host/wasmer_wasmi",
+  "holochain_wasmer_host/wasmer-wasmi",
 ]

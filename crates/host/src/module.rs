@@ -1,8 +1,8 @@
 //! Wasmer Host Module Manager
 //!
-//! Two backends are supported and they are independent: with the `wasmer_sys`
+//! Two backends are supported and they are independent: with the `wasmer-sys`
 //! feature you build modules through the [`ModuleCache`] (so that wasm is
-//! compiled once and reused), and with the `wasmer_wasmi` feature you build
+//! compiled once and reused), and with the `wasmer-wasmi` feature you build
 //! modules directly via [`wasmi::build_module`] (no cache, the wasm is
 //! interpreted on every call).
 //!
@@ -33,10 +33,10 @@ use wasmer::Store;
 mod builder;
 pub use builder::ModuleBuilder;
 
-#[cfg(feature = "wasmer_sys")]
+#[cfg(feature = "wasmer-sys")]
 pub mod sys;
 
-#[cfg(feature = "wasmer_wasmi")]
+#[cfg(feature = "wasmer-wasmi")]
 pub mod wasmi;
 
 /// We expect cache keys to be produced via hashing so 32 bytes is enough for all
