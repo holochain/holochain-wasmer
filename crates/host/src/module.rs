@@ -1,15 +1,23 @@
-//! Wasmer Host Module Manager
+//! Build, cache and instantiate wasmer [`Module`]s.
 //!
-//! Two backends are supported and they are independent: with the `wasmer-sys`
-//! feature you build modules through the [`ModuleCache`] (so that wasm is
-//! compiled once and reused), and with the `wasmer-wasmi` feature you build
-//! modules directly via [`wasmi::build_module`] (no cache, the wasm is
-//! interpreted on every call).
+//! Two independent backends are supported, gated by cargo features (see
+//! the [crate-level documentation](crate#cargo-features) for the full
+//! feature matrix):
 //!
-//! Both feature flags can be enabled simultaneously. The choice of which
-//! backend to use is then made at the call site, by passing the appropriate
-//! engine factory ([`sys::make_cranelift_engine`] / [`sys::make_llvm_engine`]
-//! / [`wasmi::make_engine`]) to [`ModuleBuilder::new`].
+//! - With the `wasmer-sys` backend you build modules through
+//!   [`ModuleCache`] so that compiled wasm is reused across calls.
+//!   Engine construction is exposed as [`sys::make_cranelift_engine`]
+//!   and `sys::make_llvm_engine` (gated on `wasmer-sys-llvm`), with
+//!   [`sys::make_runtime_engine`] producing the headless engine used
+//!   to deserialise cached artifacts.
+//! - With the `wasmer-wasmi` backend you build modules directly via
+//!   [`wasmi::build_module`] (no cache — the wasm is interpreted on
+//!   every call) using an engine from [`wasmi::make_engine`].
+//!
+//! Both backends can be enabled simultaneously. The choice of which to
+//! use is made at the call site by passing the appropriate engine
+//! factories to [`ModuleBuilder::new`] (or, for the cached path, to
+//! [`ModuleCache::new`]).
 
 use crate::plru::MicroCache;
 use crate::prelude::*;

@@ -98,7 +98,7 @@ impl From<SerializedBytesError> for WasmErrorInner {
 /// Wraps a [`WasmErrorInner`] with the location it was raised at.
 ///
 /// `module_path` is the fully qualified Rust module path of the call site
-/// (e.g. `holochain_wasmer_host::module::wasmer_sys`) as produced by the
+/// (e.g. `holochain_wasmer_host::module::sys`) as produced by the
 /// built-in [`std::module_path!`] macro, paired with `line` from
 /// [`std::line!`]. Together they identify the call site without leaking the
 /// filesystem layout of whatever machine compiled the wasm.

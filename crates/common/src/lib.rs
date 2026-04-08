@@ -1,3 +1,18 @@
+//! Types and helpers shared between
+//! [`holochain_wasmer_host`](https://docs.rs/holochain_wasmer_host) and
+//! `holochain_wasmer_guest`: the [`WasmError`] / [`WasmErrorInner`]
+//! error model, the [`wasm_error!`] convenience macro, and the small
+//! numeric helpers ([`merge_usize`] / [`split_usize`] etc) used to
+//! pack pointer/length pairs across the host↔guest boundary.
+//!
+//! # Cargo features
+//!
+//! - **`error-as-host`** — when constructing a [`WasmError`] from a
+//!   bare `String`, classify it as [`WasmErrorInner::Host`] rather
+//!   than [`WasmErrorInner::Guest`]. Hosts that build error strings
+//!   should enable this; guests should leave it off. The host crate
+//!   enables it via its own `error-as-host` feature.
+
 pub mod result;
 
 pub use holochain_serialized_bytes::prelude::*;
@@ -84,7 +99,7 @@ pub fn split_usize(u: DoubleUSize) -> Result<(usize, usize), WasmError> {
 }
 
 #[cfg(test)]
-pub mod tests {
+mod tests {
     use super::*;
 
     #[test]
