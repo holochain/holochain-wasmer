@@ -16,10 +16,26 @@ on:
 
 jobs:
   call:
-    uses: holochain/actions/.github/workflows/prepare-release.yml@v1.6.0
+    uses: holochain/actions/.github/workflows/prepare-release.yml@v1.7.0
     with:
       cliff_config: "https://raw.githubusercontent.com/holochain/release-integration/refs/heads/main/pre-1.0-cliff.toml"
       force_version: ${{ inputs.force_version }}
       skip_semver_checks: ${{ inputs.skip_semver_checks }}
+      # `cargo-semver-checks` is invoked by `holochain_release_util prepare`
+      # with `--all-features` by default. With every host-crate feature on,
+      # `wasmer-sys-llvm` pulls in `llvm-sys = "211"`, whose build script
+      # needs an LLVM 21 toolchain on disk pointed at by
+      # `LLVM_SYS_211_PREFIX`. The release runner has no LLVM available, so
+      # we use the `setup_script` hook (added in holochain/actions v1.7.0)
+      # to download the same prebuilt LLVM bundle the Windows test job
+      # uses (see test.yml) and export the prefix env var so subsequent
+      # steps — including the prepare step — can find it.
+      setup_script: |
+        LLVM_DIR="$PWD/.llvm"
+        mkdir -p "$LLVM_DIR"
+        curl --proto '=https' --tlsv1.2 -sSf \
+          "https://github.com/wasmerio/llvm-custom-builds/releases/download/21.x/llvm-linux-amd64.tar.xz" \
+          -L -o - | tar xJ -C "$LLVM_DIR"
+        echo "LLVM_SYS_211_PREFIX=$LLVM_DIR" >> "$GITHUB_ENV"
     secrets:
       HRA2_GITHUB_TOKEN: ${{ secrets.HRA2_GITHUB_TOKEN }}
