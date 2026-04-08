@@ -1,27 +1,27 @@
 use crate::import::imports;
-#[cfg(all(feature = "wasmer_wasmi", not(feature = "wasmer_sys")))]
+#[cfg(all(feature = "wasmer-wasmi", not(feature = "wasmer-sys")))]
 use holochain_wasmer_host::module::wasmi::build_module;
 use holochain_wasmer_host::module::InstanceWithStore;
-#[cfg(feature = "wasmer_sys")]
+#[cfg(feature = "wasmer-sys")]
 use holochain_wasmer_host::module::ModuleBuilder;
 use holochain_wasmer_host::module::ModuleCache;
 use holochain_wasmer_host::prelude::*;
 use once_cell::sync::OnceCell;
 use parking_lot::RwLock;
 use std::sync::Arc;
-#[cfg(feature = "wasmer_sys")]
+#[cfg(feature = "wasmer-sys")]
 use wasmer::sys::CompilerConfig;
-#[cfg(feature = "wasmer_sys")]
+#[cfg(feature = "wasmer-sys")]
 use wasmer::wasmparser::Operator;
 use wasmer::AsStoreMut;
-#[cfg(feature = "wasmer_sys")]
+#[cfg(feature = "wasmer-sys")]
 use wasmer::Engine;
 use wasmer::FunctionEnv;
 use wasmer::Imports;
 use wasmer::Instance;
 use wasmer::Module;
 use wasmer::Store;
-#[cfg(feature = "wasmer_sys")]
+#[cfg(feature = "wasmer-sys")]
 use wasmer_middlewares::Metering;
 
 pub enum TestWasm {
@@ -91,7 +91,7 @@ impl TestWasm {
     // CI leg), sys takes priority because it's the metered backend and
     // exercises more of the codepaths under test. The wasmi-only matrix leg
     // covers wasmi's runtime behaviour.
-    #[cfg(feature = "wasmer_sys")]
+    #[cfg(feature = "wasmer-sys")]
     pub fn module(&self, metered: bool) -> Arc<Module> {
         match self.module_cache(metered).get() {
             Some(cache) => cache.write().get(self.key(metered), self.bytes()).unwrap(),
@@ -99,9 +99,9 @@ impl TestWasm {
                 let metered_fn = || {
                     let cost_function = |_operator: &Operator| -> u64 { 1 };
                     let metering = Arc::new(Metering::new(10_000_000_000, cost_function));
-                    #[cfg(feature = "wasmer_sys_cranelift")]
+                    #[cfg(feature = "wasmer-sys-cranelift")]
                     let mut compiler = wasmer::sys::Cranelift::default();
-                    #[cfg(all(feature = "wasmer_sys_llvm", not(feature = "wasmer_sys_cranelift")))]
+                    #[cfg(all(feature = "wasmer-sys-llvm", not(feature = "wasmer-sys-cranelift")))]
                     let mut compiler = wasmer::sys::LLVM::default();
 
                     compiler.canonicalize_nans(true);
@@ -110,9 +110,9 @@ impl TestWasm {
                 };
 
                 let unmetered_fn = || {
-                    #[cfg(feature = "wasmer_sys_cranelift")]
+                    #[cfg(feature = "wasmer-sys-cranelift")]
                     let mut compiler = wasmer::sys::Cranelift::default();
-                    #[cfg(all(feature = "wasmer_sys_llvm", not(feature = "wasmer_sys_cranelift")))]
+                    #[cfg(all(feature = "wasmer-sys-llvm", not(feature = "wasmer-sys-cranelift")))]
                     let mut compiler = wasmer::sys::LLVM::default();
 
                     compiler.canonicalize_nans(true);
@@ -138,7 +138,7 @@ impl TestWasm {
         }
     }
 
-    #[cfg(all(feature = "wasmer_wasmi", not(feature = "wasmer_sys")))]
+    #[cfg(all(feature = "wasmer-wasmi", not(feature = "wasmer-sys")))]
     pub fn module(&self, _metered: bool) -> Arc<Module> {
         build_module(self.bytes()).unwrap()
     }
@@ -150,9 +150,9 @@ impl TestWasm {
         // panics with "encountered foreign entity in func type registry" if
         // the store and module disagree on engine, so the wasmi-only branch
         // builds the store from the same shared engine that built the module.
-        #[cfg(feature = "wasmer_sys")]
+        #[cfg(feature = "wasmer-sys")]
         let mut store = Store::default();
-        #[cfg(all(feature = "wasmer_wasmi", not(feature = "wasmer_sys")))]
+        #[cfg(all(feature = "wasmer-wasmi", not(feature = "wasmer-sys")))]
         let mut store = Store::new(holochain_wasmer_host::module::wasmi::make_engine());
         let function_env;
         let instance;
@@ -180,7 +180,7 @@ impl TestWasm {
                     .unwrap(),
             );
 
-            #[cfg(feature = "wasmer_sys")]
+            #[cfg(feature = "wasmer-sys")]
             if metered {
                 data_mut.wasmer_metering_points_exhausted = Some(
                     instance
@@ -205,12 +205,12 @@ impl TestWasm {
         }
     }
 
-    #[cfg(feature = "wasmer_sys")]
+    #[cfg(feature = "wasmer-sys")]
     pub fn instance(&self) -> InstanceWithStore {
         self._instance(true)
     }
 
-    #[cfg(all(feature = "wasmer_wasmi", not(feature = "wasmer_sys")))]
+    #[cfg(all(feature = "wasmer-wasmi", not(feature = "wasmer-sys")))]
     pub fn instance(&self) -> InstanceWithStore {
         self.unmetered_instance()
     }

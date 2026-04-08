@@ -62,7 +62,7 @@ pub fn write_bytes(
         Ok(len) => len,
         Err(e) => return Err(wasm_error!(e).into()),
     };
-    #[cfg(feature = "debug_memory")]
+    #[cfg(feature = "debug-memory")]
     tracing::debug!("writing bytes from host to guest at: {} {}", guest_ptr, len);
 
     WasmSlice::new(&memory.view(store_mut), guest_ptr.into(), len.into())?.write_slice(slice)?;
@@ -94,7 +94,7 @@ pub fn read_bytes(
     guest_ptr: GuestPtr,
     len: Len,
 ) -> Result<Vec<u8>, wasmer::MemoryAccessError> {
-    #[cfg(feature = "debug_memory")]
+    #[cfg(feature = "debug-memory")]
     tracing::debug!("reading bytes from guest to host at: {} {}", guest_ptr, len);
 
     WasmSlice::new(memory_view, guest_ptr.into(), len.into())?.read_to_vec()

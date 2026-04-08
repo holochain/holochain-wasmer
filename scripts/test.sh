@@ -1,5 +1,5 @@
 #! /usr/bin/env bash
 
-./scripts/test-wasmer_sys_cranelift.sh
-./scripts/test-wasmer_sys_llvm.sh
-./scripts/test-wasmer_wasmi.sh
+./scripts/test-wasmer-sys-cranelift.sh
+./scripts/test-wasmer-sys-llvm.sh
+./scripts/test-wasmer-wasmi.sh

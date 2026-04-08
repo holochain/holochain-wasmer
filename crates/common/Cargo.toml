@@ -16,4 +16,4 @@ thiserror.workspace = true
 serde_bytes.workspace = true
 
 [features]
-error_as_host = []
+error-as-host = []
