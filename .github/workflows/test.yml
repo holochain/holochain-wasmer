@@ -33,6 +33,11 @@ jobs:
         with:
           name: holochain-ci
           authToken: "${{ secrets.CACHIX_AUTH_TOKEN }}"
+      # Refresh the nixpkgs pin so flake.lock matches the flake.nix
+      # spec (nixos-unstable for llvmPackages_22). Without this step
+      # nix keeps using the committed lock, which is still pinned to
+      # nixos-25.11 (llvmPackages_22 unavailable).
+      - run: nix flake update nixpkgs
       - run: nix develop --command ./scripts/${{ matrix.script }}-${{ matrix.wasmer-feature }}.sh
 
   # Verifies the additivity guarantee: every backend feature can be enabled in
@@ -49,6 +54,10 @@ jobs:
         with:
           name: holochain-ci
           authToken: "${{ secrets.CACHIX_AUTH_TOKEN }}"
+      # Same reason as test-and-bench: nixos-25.11 lacks
+      # llvmPackages_22, so refresh the nixpkgs lock to the
+      # nixos-unstable tip before evaluating the flake.
+      - run: nix flake update nixpkgs
       - name: build host crate with all backends enabled
         run: |
           nix develop --command cargo build -p holochain_wasmer_host \

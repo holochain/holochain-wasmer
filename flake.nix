@@ -2,7 +2,11 @@
   description = "Flake to provide a development shell with helpful libraries and tools";
 
   inputs = {
-    nixpkgs.url = "github:nixos/nixpkgs/nixos-25.11";
+    # nixos-unstable rather than nixos-25.11 because LLVM 22 shipped
+    # after the 25.11 freeze. wasmer 7.2.x links against llvm-sys 221
+    # (LLVM 22) via `wasmer-sys-llvm`, so llvmPackages_22 must be
+    # reachable from the flake.
+    nixpkgs.url = "github:nixos/nixpkgs/nixos-unstable";
     flake-parts.url = "github:hercules-ci/flake-parts";
     rust-overlay = {
       url = "github:oxalica/rust-overlay";
