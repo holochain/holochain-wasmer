@@ -17,7 +17,7 @@ jobs:
       matrix:
         script: ["test", "bench"]
         os: ["ubuntu-latest", "macos-latest"]
-        wasmer-feature: ["wasmer-sys-cranelift", "wasmer-sys-llvm", "wasmer-wasmi"]
+        wasmer-feature: ["wasmer-sys-cranelift", "wasmer-sys-llvm", "wasmer-v8"]
     runs-on: ${{ matrix.os }}
     steps:
       - name: increase swap space
@@ -53,25 +53,30 @@ jobs:
         run: |
           nix develop --command cargo build -p holochain_wasmer_host \
             --no-default-features \
-            --features error-as-host,wasmer-sys,wasmer-sys-cranelift,wasmer-sys-llvm,wasmer-wasmi
+            --features error-as-host,wasmer-sys,wasmer-sys-cranelift,wasmer-sys-llvm,wasmer-v8
       - name: test the host crate with all backends enabled
         run: |
           nix develop --command cargo test -p holochain_wasmer_host \
             --no-default-features \
-            --features error-as-host,wasmer-sys,wasmer-sys-cranelift,wasmer-sys-llvm,wasmer-wasmi \
+            --features error-as-host,wasmer-sys,wasmer-sys-cranelift,wasmer-sys-llvm,wasmer-v8 \
             -- --nocapture
 
   test-windows:
     strategy:
       fail-fast: false
       matrix:
-        wasmer-feature: ["wasmer-sys-cranelift", "wasmer-sys-llvm", "wasmer-wasmi"]
+        # wasmer-v8 is intentionally missing from this matrix: the synchwire
+        # v8-custom-builds Windows tarball ships v8_monolith.lib rather than
+        # wee8, which doesn't export the wasm_* C-API symbols wasmer's
+        # bindgen/objcopy pipeline depends on. Until upstream wee8 becomes
+        # buildable on Windows (it currently has dllimport/dllexport issues)
+        # there is no Windows V8 wasmer build to verify.
+        wasmer-feature: ["wasmer-sys-cranelift", "wasmer-sys-llvm"]
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v6
       # The prebuilt LLVM is needed by `wasmer-sys-llvm` (which links against
-      # llvm-sys 211) and by `wasmer-wasmi` (whose wasmer build script invokes
-      # bindgen and needs `libclang.dll`). It is harmless for `wasmer-sys-cranelift`.
+      # llvm-sys 211). It is harmless for `wasmer-sys-cranelift`.
       - name: Install LLVM
         env:
           LLVM_DIR: .llvm

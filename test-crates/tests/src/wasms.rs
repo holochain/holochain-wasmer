@@ -1,6 +1,6 @@
 use crate::import::imports;
-#[cfg(all(feature = "wasmer-wasmi", not(feature = "wasmer-sys")))]
-use holochain_wasmer_host::module::wasmi::build_module;
+#[cfg(all(feature = "wasmer-v8", not(feature = "wasmer-sys")))]
+use holochain_wasmer_host::module::v8::build_module;
 use holochain_wasmer_host::module::InstanceWithStore;
 #[cfg(feature = "wasmer-sys")]
 use holochain_wasmer_host::module::ModuleBuilder;
@@ -138,7 +138,7 @@ impl TestWasm {
         }
     }
 
-    #[cfg(all(feature = "wasmer-wasmi", not(feature = "wasmer-sys")))]
+    #[cfg(all(feature = "wasmer-v8", not(feature = "wasmer-sys")))]
     pub fn module(&self, _metered: bool) -> Arc<Module> {
         build_module(self.bytes()).unwrap()
     }
@@ -146,14 +146,14 @@ impl TestWasm {
     pub fn _instance(&self, metered: bool) -> InstanceWithStore {
         let module = self.module(metered);
         // The sys backend lets us pair any engine with any store, so a default
-        // store is fine. wasmi keeps a per-engine function-type registry and
-        // panics with "encountered foreign entity in func type registry" if
-        // the store and module disagree on engine, so the wasmi-only branch
-        // builds the store from the same shared engine that built the module.
+        // store is fine. V8 requires the module and store to share the same
+        // engine — wasmer's v8 backend keys its internal bookkeeping off the
+        // engine pointer — so the v8-only branch builds the store from the
+        // same shared engine that built the module.
         #[cfg(feature = "wasmer-sys")]
         let mut store = Store::default();
-        #[cfg(all(feature = "wasmer-wasmi", not(feature = "wasmer-sys")))]
-        let mut store = Store::new(holochain_wasmer_host::module::wasmi::make_engine());
+        #[cfg(all(feature = "wasmer-v8", not(feature = "wasmer-sys")))]
+        let mut store = Store::new(holochain_wasmer_host::module::v8::make_engine());
         let function_env;
         let instance;
         {
@@ -210,7 +210,7 @@ impl TestWasm {
         self._instance(true)
     }
 
-    #[cfg(all(feature = "wasmer-wasmi", not(feature = "wasmer-sys")))]
+    #[cfg(all(feature = "wasmer-v8", not(feature = "wasmer-sys")))]
     pub fn instance(&self) -> InstanceWithStore {
         self.unmetered_instance()
     }

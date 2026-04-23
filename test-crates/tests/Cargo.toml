@@ -52,7 +52,8 @@ wasmer-sys-llvm = [
   "wasmer/wat",
   "holochain_wasmer_host/wasmer-sys-llvm",
 ]
-wasmer-wasmi = [
-  "wasmer/wasmi",
-  "holochain_wasmer_host/wasmer-wasmi",
+wasmer-v8 = [
+  "wasmer/v8",
+  "wasmer/wat",
+  "holochain_wasmer_host/wasmer-v8",
 ]

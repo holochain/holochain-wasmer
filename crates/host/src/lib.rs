@@ -26,10 +26,12 @@
 //!     at runtime, the recommended choice for production deployments
 //!     where compile time is amortised over many calls. Can be enabled
 //!     alongside `wasmer-sys-cranelift`.
-//! - **`wasmer-wasmi`** — enables the wasmi pure-Rust interpreter
-//!   backend. No native code generation; suitable for environments
-//!   where a compiler is not available or not desired (e.g. iOS,
-//!   sandboxed builds).
+//! - **`wasmer-v8`** — enables the V8-backed wasmer backend. V8
+//!   itself is a JIT, but it can be initialized with `--jitless`
+//!   (see [`module::v8::set_flags_from_string`]) which forces an
+//!   interpreter-only execution mode. That combination is what
+//!   makes this backend usable on iOS, where Apple does not grant
+//!   the JIT entitlement to non-browser apps.
 //! - **`error-as-host`** *(default)* — when constructing a
 //!   [`prelude::WasmError`] from a bare `String`, classify it as
 //!   [`prelude::WasmErrorInner::Host`] rather than
@@ -55,12 +57,12 @@ pub(crate) mod plru;
 pub mod prelude;
 
 // At least one wasmer backend must be enabled. The two backends (`wasmer-sys`
-// and `wasmer-wasmi`) are independent and can be enabled simultaneously; the
+// and `wasmer-v8`) are independent and can be enabled simultaneously; the
 // caller picks one at runtime by passing the appropriate engine factory to
 // [`module::ModuleBuilder::new`].
-#[cfg(not(any(feature = "wasmer-sys", feature = "wasmer-wasmi")))]
+#[cfg(not(any(feature = "wasmer-sys", feature = "wasmer-v8")))]
 compile_error!(
-    "at least one wasmer backend feature must be enabled: `wasmer-sys` (with `wasmer-sys-cranelift` and/or `wasmer-sys-llvm`) and/or `wasmer-wasmi`"
+    "at least one wasmer backend feature must be enabled: `wasmer-sys` (with `wasmer-sys-cranelift` and/or `wasmer-sys-llvm`) and/or `wasmer-v8`"
 );
 
 // `wasmer-sys` requires at least one compiler sub-feature.

@@ -22,7 +22,15 @@ jobs:
           - armv7-linux-androideabi
         wasmer-feature:
           - wasmer-sys-cranelift
-          - wasmer-wasmi
+          - wasmer-v8
+        # Our synchwire/v8-custom-builds fork only builds V8 for
+        # aarch64-linux-android. x86_64 and armv7 Android have no V8
+        # tarball available, so exclude them from the wasmer-v8 matrix.
+        exclude:
+          - target: x86_64-linux-android
+            wasmer-feature: wasmer-v8
+          - target: armv7-linux-androideabi
+            wasmer-feature: wasmer-v8
     steps:
       - uses: actions/checkout@v6
 
@@ -42,13 +50,21 @@ jobs:
     steps:
       - uses: actions/checkout@v6
 
-      - name: Install binutils for objcopy
+      # wasmer's v8 build.rs shells out to llvm-objcopy and needs the
+      # iOS SDK headers (via `xcrun`) to generate bindings. macOS
+      # runners don't put llvm-objcopy on PATH by default — Xcode
+      # ships it only under xcrun — so install brew LLVM and prepend
+      # its bin directory.
+      - name: Install LLVM (for llvm-objcopy)
         run: |
-          brew install binutils
-          echo "/opt/homebrew/opt/binutils/bin" >> $GITHUB_PATH
+          brew install llvm
+          echo "$(brew --prefix llvm)/bin" >> "$GITHUB_PATH"
+
+      - name: Install Rust iOS target
+        run: rustup target add aarch64-apple-ios
 
       - name: Build for iOS
         run: |
           cargo build --target aarch64-apple-ios --release \
             --package holochain_wasmer_host \
-            --no-default-features --features error-as-host,wasmer-wasmi
+            --no-default-features --features error-as-host,wasmer-v8

@@ -78,16 +78,16 @@ pub fn decrease_points(
     )
 }
 
-// Stub used when only the wasmi backend is compiled in. With the sys backend
+// Stub used when only the v8 backend is compiled in. With the sys backend
 // also enabled the real metered version above takes precedence.
-#[cfg(all(feature = "wasmer-wasmi", not(feature = "wasmer-sys")))]
+#[cfg(all(feature = "wasmer-v8", not(feature = "wasmer-sys")))]
 pub fn decrease_points(
     _function_env: FunctionEnvMut<Env>,
     _guest_ptr: GuestPtr,
     _len: Len,
 ) -> Result<u64, wasmer::RuntimeError> {
     Err(wasm_error!(WasmErrorInner::Guest(
-        "Metering is not supported with the wasmer wasmi backend".into()
+        "Metering is not supported with the wasmer v8 backend".into()
     ))
     .into())
 }
@@ -183,18 +183,6 @@ pub mod tests {
         assert!(result.is_err());
     }
 
-    // Disabled when the test harness is running through the wasmi backend
-    // (i.e. wasmi-only, no sys): wasmer 7.1.0's wasmi backend constructs a
-    // wasm trap from a non-NUL-terminated byte vector in
-    // `wasmer/src/backend/wasmi/error.rs::Trap::into_wasm_trap`, which
-    // panics inside `wasmi_c_api_impl::wasm_trap_new`. The panic is
-    // non-unwinding and aborts the whole test process. Tracked upstream as
-    // https://github.com/wasmerio/wasmer/issues/6397. When sys is also
-    // enabled the harness routes through sys and this test runs fine.
-    #[cfg_attr(
-        all(feature = "wasmer-wasmi", not(feature = "wasmer-sys")),
-        ignore = "wasmerio/wasmer#6397: wasmi backend panics in wasm_trap_new on host-returned errors"
-    )]
     #[test]
     fn short_circuit() {
         let InstanceWithStore { store, instance } = TestWasm::Core.instance();

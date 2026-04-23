@@ -31,8 +31,8 @@ parking_lot = "0.12"
 bimap = "0.6"
 bytes = "1"
 hex = "0.4"
-wasmer = { version = "7.1.0", default-features = false }
-wasmer-middlewares = { version = "7.1.0" }
+wasmer = { version = "7.2.0-alpha.1", default-features = false }
+wasmer-middlewares = { version = "7.2.0-alpha.1" }
 
 holochain_wasmer_common = { version = "=0.0.103", path = "crates/common" }
 holochain_wasmer_guest = { version = "=0.0.103", path = "crates/guest" }
@@ -50,3 +50,19 @@ test_common = { path = "test-crates/common" }
 
 [profile.release.package.tests]
 debug = true
+
+# Point wasmer at the synchwire fork so we pick up the iOS V8 target
+# plus the Engine::set_flags_from_string plumbing that lets the
+# embedder request --jitless on iOS. The fork has no published
+# crates.io release (and we don't plan to ship one), so wasmer's full
+# workspace gets patched in via git rather than a version bump.
+[patch.crates-io]
+wasmer = { git = "https://github.com/synchwire/wasmer.git", branch = "main" }
+wasmer-middlewares = { git = "https://github.com/synchwire/wasmer.git", branch = "main" }
+wasmer-compiler = { git = "https://github.com/synchwire/wasmer.git", branch = "main" }
+wasmer-compiler-cranelift = { git = "https://github.com/synchwire/wasmer.git", branch = "main" }
+wasmer-compiler-llvm = { git = "https://github.com/synchwire/wasmer.git", branch = "main" }
+wasmer-compiler-singlepass = { git = "https://github.com/synchwire/wasmer.git", branch = "main" }
+wasmer-derive = { git = "https://github.com/synchwire/wasmer.git", branch = "main" }
+wasmer-types = { git = "https://github.com/synchwire/wasmer.git", branch = "main" }
+wasmer-vm = { git = "https://github.com/synchwire/wasmer.git", branch = "main" }

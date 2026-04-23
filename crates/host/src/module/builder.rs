@@ -26,9 +26,9 @@ impl ModuleBuilder {
     /// pick a backend at the call site — for example
     /// `ModuleBuilder::new(sys::make_cranelift_engine, sys::make_runtime_engine)`
     /// for the cranelift-flavoured sys backend, or
-    /// `ModuleBuilder::new(wasmi::make_engine, wasmi::make_runtime_engine)`
-    /// for the wasmi interpreter. Both backend feature flags can be
-    /// enabled simultaneously and the choice is made here at runtime.
+    /// `ModuleBuilder::new(v8::make_engine, v8::make_runtime_engine)`
+    /// for the V8 backend. Both backend feature flags can be enabled
+    /// simultaneously and the choice is made here at runtime.
     pub fn new(make_engine: fn() -> Engine, make_runtime_engine: fn() -> Engine) -> Self {
         Self {
             make_engine,
@@ -40,11 +40,10 @@ impl ModuleBuilder {
     ///
     /// `wasmer::Module::from_binary` performs full WebAssembly spec
     /// validation as part of module construction — the sys backend
-    /// validates while compiling, and the wasmi backend validates inside
-    /// `wasmi` itself. We therefore do **not** need (and should not add)
-    /// a separate `Module::validate` call before this: it would reparse
-    /// the module for nothing, and on wasmi `Module::validate` is
-    /// `unimplemented!()` and would panic.
+    /// validates while compiling, and the V8 backend validates inside
+    /// V8 itself. We therefore do **not** need (and should not add) a
+    /// separate `Module::validate` call before this: it would reparse
+    /// the module for nothing.
     ///
     /// Do not reach for `Module::from_binary_unchecked` — that is the
     /// explicit "skip validation" escape hatch and is only safe for wasm
