@@ -18,6 +18,16 @@ jobs:
         script: ["test", "bench"]
         os: ["ubuntu-latest", "macos-latest"]
         wasmer-feature: ["wasmer-sys-cranelift", "wasmer-sys-llvm", "wasmer-v8"]
+        # Criterion's warm-up phase for `bench` rebuilds the module
+        # and store in a tight loop, which trips V8's per-store
+        # lifecycle in wasmer's v8 backend and SIGSEGVs. Tests
+        # themselves pass; it's the bench harness's repetition that
+        # the wasmer-v8 backend can't currently sustain. Skipping
+        # until the backend gains a way to drop a store without
+        # corrupting engine state.
+        exclude:
+          - script: bench
+            wasmer-feature: wasmer-v8
     runs-on: ${{ matrix.os }}
     steps:
       - name: increase swap space
