@@ -31,9 +31,9 @@
           clang
           llvmPackages.libclang.lib
           # These packages are required to build Wasmer with the production config.
-          # Wasmer 7.x links against LLVM 21 via llvm-sys 211.
-          llvm_21
-          llvmPackages_21.libunwind
+          # Wasmer 7.2.x links against LLVM 22 via llvm-sys 221.
+          llvm_22
+          llvmPackages_22.libunwind
           libffi
           libxml2
           zlib
@@ -42,9 +42,9 @@
         # Used by bindgen when wasmer is built with the `v8` feature.
         LIBCLANG_PATH = "${pkgs.llvmPackages.libclang.lib}/lib";
         # Used by wasmer production config. Point llvm-sys directly at the
-        # LLVM 21 dev output so we are not at the mercy of PATH ordering with
+        # LLVM 22 dev output so we are not at the mercy of PATH ordering with
         # `clang` (which may bring its own llvm-config).
-        LLVM_SYS_211_PREFIX = "${pkgs.llvmPackages_21.llvm.dev}";
+        LLVM_SYS_221_PREFIX = "${pkgs.llvmPackages_22.llvm.dev}";
         shellHook = ''
           export LD_LIBRARY_PATH="${pkgs.stdenv.cc.cc.lib}/lib:${pkgs.libffi}/lib:${pkgs.zlib}/lib:${pkgs.ncurses}/lib"
         '';

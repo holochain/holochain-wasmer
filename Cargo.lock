@@ -142,7 +142,7 @@ dependencies = [
  "bitflags 2.11.1",
  "cexpr",
  "clang-sys",
- "itertools 0.13.0",
+ "itertools 0.10.5",
  "log",
  "prettyplease",
  "proc-macro2",
@@ -2576,7 +2576,7 @@ dependencies = [
 [[package]]
 name = "wasmer"
 version = "7.2.0-alpha.1"
-source = "git+https://github.com/synchwire/wasmer.git?branch=main#79ba61e308a1a82d1ea3483379672431ecd28a62"
+source = "git+https://github.com/synchwire/wasmer.git?branch=main#3031d2261abf26e826bd4476fe83d1f875a0b612"
 dependencies = [
  "bindgen",
  "bytes",
@@ -2615,7 +2615,7 @@ dependencies = [
 [[package]]
 name = "wasmer-compiler"
 version = "7.2.0-alpha.1"
-source = "git+https://github.com/synchwire/wasmer.git?branch=main#79ba61e308a1a82d1ea3483379672431ecd28a62"
+source = "git+https://github.com/synchwire/wasmer.git?branch=main#3031d2261abf26e826bd4476fe83d1f875a0b612"
 dependencies = [
  "backtrace",
  "bytes",
@@ -2650,7 +2650,7 @@ dependencies = [
 [[package]]
 name = "wasmer-compiler-cranelift"
 version = "7.2.0-alpha.1"
-source = "git+https://github.com/synchwire/wasmer.git?branch=main#79ba61e308a1a82d1ea3483379672431ecd28a62"
+source = "git+https://github.com/synchwire/wasmer.git?branch=main#3031d2261abf26e826bd4476fe83d1f875a0b612"
 dependencies = [
  "cranelift-codegen",
  "cranelift-entity",
@@ -2671,7 +2671,7 @@ dependencies = [
 [[package]]
 name = "wasmer-compiler-llvm"
 version = "7.2.0-alpha.1"
-source = "git+https://github.com/synchwire/wasmer.git?branch=main#79ba61e308a1a82d1ea3483379672431ecd28a62"
+source = "git+https://github.com/synchwire/wasmer.git?branch=main#3031d2261abf26e826bd4476fe83d1f875a0b612"
 dependencies = [
  "byteorder",
  "cc",
@@ -2698,7 +2698,7 @@ dependencies = [
 [[package]]
 name = "wasmer-derive"
 version = "7.2.0-alpha.1"
-source = "git+https://github.com/synchwire/wasmer.git?branch=main#79ba61e308a1a82d1ea3483379672431ecd28a62"
+source = "git+https://github.com/synchwire/wasmer.git?branch=main#3031d2261abf26e826bd4476fe83d1f875a0b612"
 dependencies = [
  "proc-macro-error2",
  "proc-macro2",
@@ -2709,7 +2709,7 @@ dependencies = [
 [[package]]
 name = "wasmer-middlewares"
 version = "7.2.0-alpha.1"
-source = "git+https://github.com/synchwire/wasmer.git?branch=main#79ba61e308a1a82d1ea3483379672431ecd28a62"
+source = "git+https://github.com/synchwire/wasmer.git?branch=main#3031d2261abf26e826bd4476fe83d1f875a0b612"
 dependencies = [
  "wasmer",
  "wasmer-types",
@@ -2719,7 +2719,7 @@ dependencies = [
 [[package]]
 name = "wasmer-types"
 version = "7.2.0-alpha.1"
-source = "git+https://github.com/synchwire/wasmer.git?branch=main#79ba61e308a1a82d1ea3483379672431ecd28a62"
+source = "git+https://github.com/synchwire/wasmer.git?branch=main#3031d2261abf26e826bd4476fe83d1f875a0b612"
 dependencies = [
  "bytecheck",
  "crc32fast",
@@ -2739,7 +2739,7 @@ dependencies = [
 [[package]]
 name = "wasmer-vm"
 version = "7.2.0-alpha.1"
-source = "git+https://github.com/synchwire/wasmer.git?branch=main#79ba61e308a1a82d1ea3483379672431ecd28a62"
+source = "git+https://github.com/synchwire/wasmer.git?branch=main#3031d2261abf26e826bd4476fe83d1f875a0b612"
 dependencies = [
  "backtrace",
  "bytesize",
@@ -3174,4 +3174,4 @@ checksum = "b97154e67e32c85465826e8bcc1c59429aaaf107c1e4a9e53c8d8ccd5eff88d0"
 [[patch.unused]]
 name = "wasmer-compiler-singlepass"
 version = "7.2.0-alpha.1"
-source = "git+https://github.com/synchwire/wasmer.git?branch=main#79ba61e308a1a82d1ea3483379672431ecd28a62"
+source = "git+https://github.com/synchwire/wasmer.git?branch=main#3031d2261abf26e826bd4476fe83d1f875a0b612"

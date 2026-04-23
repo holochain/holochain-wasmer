@@ -76,7 +76,7 @@ jobs:
     steps:
       - uses: actions/checkout@v6
       # The prebuilt LLVM is needed by `wasmer-sys-llvm` (which links against
-      # llvm-sys 211). It is harmless for `wasmer-sys-cranelift`.
+      # llvm-sys 221). It is harmless for `wasmer-sys-cranelift`.
       - name: Install LLVM
         env:
           LLVM_DIR: .llvm
@@ -84,17 +84,17 @@ jobs:
         run: |
           LLVM_DIR=$(pwd)/${{ env.LLVM_DIR }}
           mkdir -p ${LLVM_DIR}
-          curl --proto '=https' --tlsv1.2 -sSf "https://github.com/wasmerio/llvm-custom-builds/releases/download/21.x/llvm-windows-amd64.tar.xz" -L -o - | tar xJv -C ${LLVM_DIR}
+          curl --proto '=https' --tlsv1.2 -sSf "https://github.com/wasmerio/llvm-custom-builds/releases/download/22.x/llvm-windows-amd64.tar.xz" -L -o - | tar xJv -C ${LLVM_DIR}
       - name: test root
         shell: pwsh
         run: |
-          $env:LLVM_SYS_211_PREFIX="$(pwd)/.llvm"
+          $env:LLVM_SYS_221_PREFIX="$(pwd)/.llvm"
           $env:LIBCLANG_PATH="$(pwd)/.llvm/bin"
           cargo test --release --no-default-features --features error-as-host,${{ matrix.wasmer-feature }} -- --nocapture
       - name: test
         shell: pwsh
         run: |
-          $env:LLVM_SYS_211_PREFIX="$(pwd)/.llvm"
+          $env:LLVM_SYS_221_PREFIX="$(pwd)/.llvm"
           $env:LIBCLANG_PATH="$(pwd)/.llvm/bin"
           cargo test --release -p tests --no-default-features --features ${{ matrix.wasmer-feature }} -- --nocapture
 
