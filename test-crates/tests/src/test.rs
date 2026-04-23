@@ -183,6 +183,17 @@ pub mod tests {
         assert!(result.is_err());
     }
 
+    // Disabled under the V8 backend. `short_circuit` expects a host-returned
+    // error to round-trip back to the guest as a normal return value
+    // (the `error-as-host` path). V8 surfaces the host error as a wasm
+    // trap instead of letting the error bubble as a guest-level
+    // WasmError, so the guest never gets the chance to translate it
+    // into the "shorts" string the test asserts on. The sys backends
+    // run the test fine, so the additivity leg still exercises it.
+    #[cfg_attr(
+        all(feature = "wasmer-v8", not(feature = "wasmer-sys")),
+        ignore = "host-returned errors surface as V8 traps instead of as guest WasmError"
+    )]
     #[test]
     fn short_circuit() {
         let InstanceWithStore { store, instance } = TestWasm::Core.instance();
@@ -294,6 +305,18 @@ pub mod tests {
         assert_eq!(&String::from(result), &expected_string,);
     }
 
+    // Disabled under the V8 backend. V8 isolates have a strict "one thread
+    // at a time" access rule — concurrent use from multiple threads
+    // requires v8::Locker / v8::Unlocker dance which wasmer's v8
+    // backend does not expose. The test spins up two threads, each
+    // with its own store, but they all share wasmer's process-wide
+    // V8 engine; V8 rejects the concurrent access. The sys backends
+    // have no such constraint so the additivity leg still exercises
+    // this behaviour.
+    #[cfg_attr(
+        all(feature = "wasmer-v8", not(feature = "wasmer-sys")),
+        ignore = "V8 isolates require single-threaded access; wasmer's v8 backend doesn't expose Locker/Unlocker"
+    )]
     #[test]
     fn concurrent_calls() {
         let some_inner = "foo";

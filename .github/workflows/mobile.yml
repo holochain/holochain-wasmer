@@ -22,15 +22,17 @@ jobs:
           - armv7-linux-androideabi
         wasmer-feature:
           - wasmer-sys-cranelift
-          - wasmer-v8
-        # Our synchwire/v8-custom-builds fork only builds V8 for
-        # aarch64-linux-android. x86_64 and armv7 Android have no V8
-        # tarball available, so exclude them from the wasmer-v8 matrix.
-        exclude:
-          - target: x86_64-linux-android
-            wasmer-feature: wasmer-v8
-          - target: armv7-linux-androideabi
-            wasmer-feature: wasmer-v8
+          # wasmer-v8 on Android is disabled everywhere for two
+          # separate reasons:
+          #   * x86_64 and armv7: synchwire/v8-custom-builds does
+          #     not ship V8 archives for these targets.
+          #   * aarch64: the cross-rs container uses a GCC (not NDK
+          #     clang) toolchain that is too old to parse V8 13.6's
+          #     cppgc/v8-internal headers — it chokes on C++20
+          #     features like class-type non-type template
+          #     parameters. Switching cross-rs to a clang-based
+          #     Android image is out of scope for this PR; re-enable
+          #     once that's arranged.
     steps:
       - uses: actions/checkout@v6
 
