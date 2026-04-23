@@ -1,9 +1,9 @@
 use crate::prelude::*;
 use std::sync::Arc;
 use std::sync::OnceLock;
+use wasmer::v8::V8;
 use wasmer::Engine;
 use wasmer::Module;
-use wasmer::v8::V8;
 
 /// A process-wide shared V8 engine.
 ///
