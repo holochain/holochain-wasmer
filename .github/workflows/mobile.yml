@@ -21,18 +21,15 @@ jobs:
           - aarch64-linux-android
           - armv7-linux-androideabi
         wasmer-feature:
+          # Only the sys backend is exercised through cross-rs. The
+          # v8 backend can't build through cross-rs — its GCC
+          # toolchain is too old to parse V8 13.6's cppgc /
+          # v8-internal headers, which use C++20 features like
+          # class-type non-type template parameters — and x86_64
+          # and armv7 android have no V8 archive anyway. The
+          # aarch64 v8 case is covered by the separate `android-v8`
+          # job below, which uses the NDK's clang directly.
           - wasmer-sys-cranelift
-          # wasmer-v8 on Android is disabled everywhere for two
-          # separate reasons:
-          #   * x86_64 and armv7: synchwire/v8-custom-builds does
-          #     not ship V8 archives for these targets.
-          #   * aarch64: the cross-rs container uses a GCC (not NDK
-          #     clang) toolchain that is too old to parse V8 13.6's
-          #     cppgc/v8-internal headers — it chokes on C++20
-          #     features like class-type non-type template
-          #     parameters. Switching cross-rs to a clang-based
-          #     Android image is out of scope for this PR; re-enable
-          #     once that's arranged.
     steps:
       - uses: actions/checkout@v6
 
@@ -46,6 +43,49 @@ jobs:
           cross build --target ${{ matrix.target }} --release \
             --package holochain_wasmer_host \
             --no-default-features --features error-as-host,${{ matrix.wasmer-feature }}
+
+  # Informational cross-compile of holochain_wasmer_host against
+  # wasmer's v8 backend for aarch64-linux-android, using the Android
+  # NDK's clang directly rather than cross-rs. Mirrors
+  # synchwire/wasmer/.github/workflows/android-v8-check.yml — the
+  # wasmer-side verification of the same toolchain path.
+  #
+  # `continue-on-error: true` because this sits on top of a
+  # third-party prebuilt V8 archive and the NDK toolchain; both
+  # drift independently of us and a transient breakage there
+  # shouldn't block merges. Failures are still visible on the PR.
+  android-v8:
+    name: android aarch64 with wasmer-v8 (informational)
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Install Rust aarch64-linux-android target
+        run: rustup target add aarch64-linux-android
+
+      # Point cc-rs and the linker at the NDK's prebuilt clang so
+      # wasmer's v8 build.rs can compile the C++20 flags shim and
+      # use llvm-objcopy for the wee8 symbol-rename step. API level
+      # 24 is Android 7.0 — common Rust-android minimum and above
+      # V8's requirement.
+      - name: Set up Android NDK clang for aarch64-linux-android
+        run: |
+          NDK_BIN="$ANDROID_NDK_ROOT/toolchains/llvm/prebuilt/linux-x86_64/bin"
+          test -d "$NDK_BIN"
+          echo "$NDK_BIN" >> "$GITHUB_PATH"
+          {
+            echo "CC_aarch64_linux_android=$NDK_BIN/aarch64-linux-android24-clang"
+            echo "CXX_aarch64_linux_android=$NDK_BIN/aarch64-linux-android24-clang++"
+            echo "AR_aarch64_linux_android=$NDK_BIN/llvm-ar"
+            echo "CARGO_TARGET_AARCH64_LINUX_ANDROID_LINKER=$NDK_BIN/aarch64-linux-android24-clang"
+          } >> "$GITHUB_ENV"
+
+      - name: Build holochain_wasmer_host for Android with v8
+        run: |
+          cargo build --target aarch64-linux-android --release \
+            --package holochain_wasmer_host \
+            --no-default-features --features error-as-host,wasmer-v8
 
   ios:
     runs-on: macos-latest
