@@ -10,9 +10,13 @@
 //!   and `sys::make_llvm_engine` (gated on `wasmer-sys-llvm`), with
 //!   [`sys::make_runtime_engine`] producing the headless engine used
 //!   to deserialise cached artifacts.
-//! - With the `wasmer-wasmi` backend you build modules directly via
-//!   [`wasmi::build_module`] (no cache — the wasm is interpreted on
-//!   every call) using an engine from [`wasmi::make_engine`].
+//! - With the `wasmer-v8` backend you build modules directly via
+//!   [`v8::build_module`] using an engine from [`v8::make_engine`].
+//!   There is no module cache: V8 compiles wasm in-process and does
+//!   not expose a serialised artefact the host can safely reuse
+//!   across calls. On iOS, call [`v8::set_flags_from_string`] with
+//!   `"--jitless"` before any engine is constructed so V8 never
+//!   requests RWX pages.
 //!
 //! Both backends can be enabled simultaneously. The choice of which to
 //! use is made at the call site by passing the appropriate engine
@@ -44,8 +48,8 @@ pub use builder::ModuleBuilder;
 #[cfg(feature = "wasmer-sys")]
 pub mod sys;
 
-#[cfg(feature = "wasmer-wasmi")]
-pub mod wasmi;
+#[cfg(feature = "wasmer-v8")]
+pub mod v8;
 
 /// We expect cache keys to be produced via hashing so 32 bytes is enough for all
 /// purposes.

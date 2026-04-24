@@ -2,4 +2,4 @@
 
 ./scripts/bench-wasmer-sys-cranelift.sh
 ./scripts/bench-wasmer-sys-llvm.sh
-./scripts/bench-wasmer-wasmi.sh
+./scripts/bench-wasmer-v8.sh

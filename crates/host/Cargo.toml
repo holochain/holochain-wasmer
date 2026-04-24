@@ -32,11 +32,14 @@ thiserror.workspace = true
 tempfile.workspace = true
 
 [package.metadata.docs.rs]
-# Build docs with both backends visible so intra-doc links to
-# `module::sys::*` and `module::wasmi::*` resolve. The LLVM compiler
-# sub-feature is intentionally omitted because `llvm-sys` requires a
-# prebuilt LLVM toolchain that the docs.rs builder doesn't provide.
-features = ["error-as-host", "wasmer-sys", "wasmer-sys-cranelift", "wasmer-wasmi"]
+# Build docs with the sys backend visible so intra-doc links to
+# `module::sys::*` resolve. The LLVM compiler sub-feature is
+# intentionally omitted because `llvm-sys` requires a prebuilt LLVM
+# toolchain that the docs.rs builder doesn't provide. `wasmer-v8`
+# is also omitted because wasmer's v8 build.rs downloads a prebuilt
+# V8 tarball at compile time and shells out to llvm-objcopy —
+# neither of which the docs.rs builder can be relied on to supply.
+features = ["error-as-host", "wasmer-sys", "wasmer-sys-cranelift"]
 no-default-features = true
 
 [features]
@@ -51,7 +54,11 @@ wasmer-sys = ["dep:wasmer-middlewares", "wasmer/sys"]
 wasmer-sys-cranelift = ["wasmer-sys", "wasmer/cranelift", "wasmer/wat"]
 wasmer-sys-llvm = ["wasmer-sys", "wasmer/llvm", "wasmer/wat"]
 
-# The wasmi backend is a pure-Rust interpreter. It is independent of the sys
-# backend; both can be enabled simultaneously and selected at runtime by the
-# caller via the appropriate engine factory in `module::sys` or `module::wasmi`.
-wasmer-wasmi = ["wasmer/wasmi"]
+# The V8 backend links wasmer against Google's V8 engine via the wee8
+# C API. It is the only non-JIT-friendly wasmer backend that survives
+# after wasmerio/wasmer#6500 dropped both WAMR and wasmi, and is what
+# makes iOS support possible (V8 + `--jitless`). Independent of the
+# sys backend — both can be enabled simultaneously and selected at
+# runtime via the appropriate engine factory in `module::sys` or
+# `module::v8`.
+wasmer-v8 = ["wasmer/v8", "wasmer/wat"]
