@@ -87,8 +87,14 @@ jobs:
             --package holochain_wasmer_host \
             --no-default-features --features error-as-host,wasmer-v8
 
+  # Informational cross-compile for aarch64-apple-ios. Same rationale
+  # as android-v8 above: V8-backed mobile builds sit on top of a
+  # third-party prebuilt V8 archive plus brew-installed LLVM and
+  # Xcode's iOS SDK, all of which drift independently of this repo.
+  # Failures stay visible on the PR; they just don't block merges.
   ios:
     runs-on: macos-latest
+    continue-on-error: true
     steps:
       - uses: actions/checkout@v6
 
