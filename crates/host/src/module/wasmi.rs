@@ -1,5 +1,5 @@
+use super::ModuleWithEngine;
 use crate::prelude::*;
-use std::sync::Arc;
 use std::sync::OnceLock;
 use wasmer::Engine;
 use wasmer::Module;
@@ -35,11 +35,15 @@ pub fn make_runtime_engine() -> Engine {
 }
 
 /// Build an interpreter module from wasm bytes.
-pub fn build_module(wasm: &[u8]) -> Result<Arc<Module>, wasmer::RuntimeError> {
-    let compiler_engine = make_engine();
-    let res = Module::from_binary(&compiler_engine, wasm);
-    let module = res.map_err(|e| wasm_error!(WasmErrorInner::ModuleBuild(e.to_string())))?;
-    Ok(Arc::new(module))
+///
+/// The returned [`ModuleWithEngine`] holds a clone of the process-wide engine.
+/// wasmi interprets wasm and does not allocate per-module executable memory,
+/// so sharing one engine between modules does not leak.
+pub fn build_module(wasm: &[u8]) -> Result<ModuleWithEngine, wasmer::RuntimeError> {
+    let engine = make_engine();
+    let module = Module::from_binary(&engine, wasm)
+        .map_err(|e| wasm_error!(WasmErrorInner::ModuleBuild(e.to_string())))?;
+    Ok(ModuleWithEngine::new(module, engine))
 }
 
 #[cfg(test)]

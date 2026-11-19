@@ -9,7 +9,9 @@
 //!   Engine construction is exposed as [`sys::make_cranelift_engine`]
 //!   and `sys::make_llvm_engine` (gated on `wasmer-sys-llvm`), with
 //!   [`sys::make_runtime_engine`] producing the headless engine used
-//!   to deserialise cached artifacts.
+//!   to deserialise cached artifacts. A new runtime engine is created
+//!   for every deserialised module because the engine owns the module's
+//!   executable memory.
 //! - With the `wasmer-wasmi` backend you build modules directly via
 //!   [`wasmi::build_module`] (no cache — the wasm is interpreted on
 //!   every call) using an engine from [`wasmi::make_engine`].
@@ -18,6 +20,13 @@
 //! use is made at the call site by passing the appropriate engine
 //! factories to [`ModuleBuilder::new`] (or, for the cached path, to
 //! [`ModuleCache::new`]).
+//!
+//! Modules are returned as [`ModuleWithEngine`], which keeps the module and
+//! the engine that owns its executable memory together: dropping the value
+//! frees both. Create stores for instances through
+//! [`ModuleWithEngine::store`] (or `Store::new(module.engine().clone())`) so
+//! that a live instance keeps the engine alive even if the module is evicted
+//! from a cache.
 
 use crate::plru::MicroCache;
 use crate::prelude::*;
@@ -58,6 +67,77 @@ type PlruKeyMap = BiMap<usize, CacheKey>;
 pub struct InstanceWithStore {
     pub store: Arc<Mutex<Store>>,
     pub instance: Arc<Instance>,
+}
+
+/// A compiled wasmer [`Module`] together with the [`Engine`] that owns the
+/// executable memory backing it.
+///
+/// wasmer's [`Module`] does not keep its [`Engine`] alive: the compiled code
+/// lives in the engine (`EngineInner::code_memory`) and the module only holds
+/// raw pointers into that memory. Dropping the engine frees the code, while
+/// dropping the module alone does not. Sharing one long-lived engine between
+/// modules therefore leaks the executable memory of every module that is
+/// evicted from a cache.
+///
+/// Returning both values together ties their lifetimes together: dropping the
+/// last reference to a `ModuleWithEngine` drops the module first (removing the
+/// trap metadata while the code is still mapped) and then the engine
+/// (unmapping the code).
+#[derive(Clone, Debug)]
+pub struct ModuleWithEngine {
+    // Field order matters: Rust drops struct fields from top to bottom, so the
+    // module is dropped before the engine. See the type-level docs.
+    module: Module,
+    engine: Engine,
+}
+
+impl ModuleWithEngine {
+    /// Pair a module with the engine that compiled or deserialized it.
+    ///
+    /// The engine must own the module's executable memory, i.e. it must be the
+    /// engine that was passed to `Module::from_binary` or
+    /// `Module::deserialize`.
+    pub fn new(module: Module, engine: Engine) -> Self {
+        Self { module, engine }
+    }
+
+    /// The compiled module.
+    pub fn module(&self) -> &Module {
+        &self.module
+    }
+
+    /// The engine that owns this module's executable memory.
+    ///
+    /// Stores for instances of this module should be created from this engine,
+    /// e.g. `Store::new(module.engine().clone())` or [`Self::store`], so that
+    /// the store keeps the engine alive even if the module is dropped or
+    /// evicted from a cache.
+    pub fn engine(&self) -> &Engine {
+        &self.engine
+    }
+
+    /// Build a [`Store`] backed by this module's engine.
+    ///
+    /// The returned store keeps the engine, and therefore the module's
+    /// executable memory, alive for as long as the store (and any instance
+    /// created from it) lives.
+    pub fn store(&self) -> Store {
+        Store::new(self.engine.clone())
+    }
+}
+
+impl AsRef<Module> for ModuleWithEngine {
+    fn as_ref(&self) -> &Module {
+        &self.module
+    }
+}
+
+impl std::ops::Deref for ModuleWithEngine {
+    type Target = Module;
+
+    fn deref(&self) -> &Self::Target {
+        &self.module
+    }
 }
 
 /// Higher level trait over the plru cache to make it a bit easier to interact
@@ -128,11 +208,11 @@ trait PlruCache {
 struct InMemoryModuleCache {
     plru: MicroCache,
     key_map: PlruKeyMap,
-    cache: BTreeMap<CacheKey, Arc<Module>>,
+    cache: BTreeMap<CacheKey, Arc<ModuleWithEngine>>,
 }
 
 impl PlruCache for InMemoryModuleCache {
-    type Item = Module;
+    type Item = ModuleWithEngine;
 
     fn plru_mut(&mut self) -> &mut MicroCache {
         &mut self.plru
@@ -166,10 +246,12 @@ pub struct ModuleCache {
     // The deserialization process is far faster than compiling and much slower than instance building.
     filesystem_path: Option<PathBuf>,
 
-    // Handles building wasm modules
+    // Handles building wasm modules.
     //
-    // It includes the runtime engine that must live as long as the module,
-    // so we keep it in the cache and use for all modules.
+    // The builder compiles modules and deserializes serialized artifacts. It
+    // does not hold a shared runtime engine: each deserialized module is
+    // returned together with the engine that owns its executable memory, so
+    // evicting the module also frees that memory.
     builder: ModuleBuilder,
 }
 
@@ -234,8 +316,15 @@ impl ModuleCache {
         }
     }
 
-    /// Get a module from the cache, or add it to both caches if not found
-    pub fn get(&self, key: CacheKey, wasm: &[u8]) -> Result<Arc<Module>, wasmer::RuntimeError> {
+    /// Get a module from the cache, or add it to both caches if not found.
+    ///
+    /// The returned [`ModuleWithEngine`] owns the engine that owns the
+    /// module's executable memory. Dropping it frees that memory.
+    pub fn get(
+        &self,
+        key: CacheKey,
+        wasm: &[u8],
+    ) -> Result<Arc<ModuleWithEngine>, wasmer::RuntimeError> {
         // Check in-memory cache for module
         if let Some(module) = self.get_from_cache(key) {
             return Ok(module);
@@ -245,13 +334,14 @@ impl ModuleCache {
         match self.get_from_filesystem(key) {
             // Filesystem cache hit, deserialize and save to cache
             Ok(Some(serialized_module)) => {
-                let module_result = self.builder.from_serialized_module(serialized_module);
+                let module_with_engine_result =
+                    self.builder.from_serialized_module(serialized_module);
 
                 // If deserialization fails, we assume the file is corrupt,
                 // so it is removed from the filesystem cache,
                 // and the wasm is re-added to the cache again.
-                let module = match module_result {
-                    Ok(d) => Ok(d),
+                let module_with_engine = match module_with_engine_result {
+                    Ok(module_with_engine) => Ok(module_with_engine),
                     Err(_) => {
                         // Remove from filesystem
                         if let Err(e) = self.remove_from_filesystem(key) {
@@ -263,9 +353,9 @@ impl ModuleCache {
                     }
                 }?;
 
-                self.add_to_cache(key, module.clone());
+                self.add_to_cache(key, module_with_engine.clone());
 
-                Ok(module)
+                Ok(module_with_engine)
             }
 
             // Filesystem cache miss, build wasm and save to both caches
@@ -278,7 +368,7 @@ impl ModuleCache {
         &self,
         key: CacheKey,
         wasm: &[u8],
-    ) -> Result<Arc<Module>, wasmer::RuntimeError> {
+    ) -> Result<Arc<ModuleWithEngine>, wasmer::RuntimeError> {
         // Each module needs to be compiled with a new engine because
         // of middleware like metering. Middleware is compiled into the
         // module once and available in all instances created from it.
@@ -289,9 +379,9 @@ impl ModuleCache {
         // A new middleware per module is required, hence a new engine
         // per module is needed too. Serialization allows for uncoupling
         // the module from the engine that was used for compilation.
-        // After that another engine can be used to deserialize the
-        // module again. The engine has to live as long as the module to
-        // prevent memory access out of bounds errors.
+        // The module is deserialized into a fresh engine which is returned
+        // alongside the module, so dropping the cached value drops the engine
+        // and frees the executable memory that the module points into.
         //
         // This procedure facilitates caching of modules that can be
         // instantiated with fresh stores free from state. Instance
@@ -302,7 +392,7 @@ impl ModuleCache {
         let serialized_module = module
             .serialize()
             .map_err(|e| wasm_error!(WasmErrorInner::ModuleBuild(e.to_string())))?;
-        let module = self
+        let module_with_engine = self
             .builder
             .from_serialized_module(serialized_module.clone())?;
 
@@ -310,9 +400,9 @@ impl ModuleCache {
         self.add_to_filesystem(key, serialized_module)?;
 
         // Save module to in-memory cache
-        self.add_to_cache(key, module.clone());
+        self.add_to_cache(key, module_with_engine.clone());
 
-        Ok(module)
+        Ok(module_with_engine)
     }
 
     /// Get serialized module from filesystem
@@ -384,13 +474,13 @@ impl ModuleCache {
     }
 
     /// Check cache for module
-    fn get_from_cache(&self, key: CacheKey) -> Option<Arc<Module>> {
+    fn get_from_cache(&self, key: CacheKey) -> Option<Arc<ModuleWithEngine>> {
         let mut cache = self.cache.write();
         cache.get_item(&key)
     }
 
     /// Add module to cache
-    fn add_to_cache(&self, key: CacheKey, module: Arc<Module>) {
+    fn add_to_cache(&self, key: CacheKey, module: Arc<ModuleWithEngine>) {
         let mut cache = self.cache.write();
         cache.put_item(key, module.clone());
     }
