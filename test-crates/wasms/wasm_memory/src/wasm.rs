@@ -4,6 +4,9 @@ host_externs!(
     debug:1
 );
 
+// Host functions declared by hand must name the `env` import module, otherwise
+// wasm-ld treats them as undefined symbols and fails the link.
+#[link(wasm_import_module = "env")]
 extern "C" {
     pub fn __hc__pages_1(i: u32) -> u32;
 }

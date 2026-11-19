@@ -77,6 +77,12 @@
 //! without breaking older guests; new guests opt in to the new
 //! version by bumping the literal.
 //!
+//! If you declare a host function by hand instead of using
+//! [`host_externs!`], annotate the `extern` block with
+//! `#[link(wasm_import_module = "env")]`. Since Rust 1.96 rustc no
+//! longer passes `--allow-undefined` to `wasm-ld`, so an unannotated
+//! declaration fails to link with `undefined symbol: __hc__<name>_<version>`.
+//!
 //! # Writing functions the host can call
 //!
 //! Every function the host can call into must have the signature
@@ -219,7 +225,12 @@ pub use paste::paste;
 macro_rules! host_externs {
     ( $( $func_name:ident:$version:literal ),* ) => {
         $crate::paste! {
-            #[no_mangle]
+            // The declarations must be annotated with the `env` import module:
+            // since Rust 1.96 rustc no longer passes `--allow-undefined` to
+            // wasm-ld, so only symbols explicitly marked as imports are resolved
+            // as wasm imports instead of failing to link. `env` matches the
+            // import object the host registers its functions in.
+            #[link(wasm_import_module = "env")]
             extern "C" {
                 $( pub fn [<__hc__ $func_name _ $version>](guest_allocation_ptr: usize, len: usize) -> $crate::DoubleUSize; )*
             }
