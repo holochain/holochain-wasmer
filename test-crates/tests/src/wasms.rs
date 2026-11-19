@@ -5,6 +5,7 @@ use holochain_wasmer_host::module::InstanceWithStore;
 #[cfg(feature = "wasmer-sys")]
 use holochain_wasmer_host::module::ModuleBuilder;
 use holochain_wasmer_host::module::ModuleCache;
+use holochain_wasmer_host::module::ModuleWithEngine;
 use holochain_wasmer_host::prelude::*;
 use once_cell::sync::OnceCell;
 use parking_lot::RwLock;
@@ -19,8 +20,6 @@ use wasmer::Engine;
 use wasmer::FunctionEnv;
 use wasmer::Imports;
 use wasmer::Instance;
-use wasmer::Module;
-use wasmer::Store;
 #[cfg(feature = "wasmer-sys")]
 use wasmer_middlewares::Metering;
 
@@ -92,7 +91,7 @@ impl TestWasm {
     // exercises more of the codepaths under test. The wasmi-only matrix leg
     // covers wasmi's runtime behaviour.
     #[cfg(feature = "wasmer-sys")]
-    pub fn module(&self, metered: bool) -> Arc<Module> {
+    pub fn module(&self, metered: bool) -> Arc<ModuleWithEngine> {
         match self.module_cache(metered).get() {
             Some(cache) => cache.write().get(self.key(metered), self.bytes()).unwrap(),
             None => {
@@ -139,21 +138,16 @@ impl TestWasm {
     }
 
     #[cfg(all(feature = "wasmer-wasmi", not(feature = "wasmer-sys")))]
-    pub fn module(&self, _metered: bool) -> Arc<Module> {
-        build_module(self.bytes()).unwrap()
+    pub fn module(&self, _metered: bool) -> Arc<ModuleWithEngine> {
+        Arc::new(build_module(self.bytes()).unwrap())
     }
 
     pub fn _instance(&self, metered: bool) -> InstanceWithStore {
         let module = self.module(metered);
-        // The sys backend lets us pair any engine with any store, so a default
-        // store is fine. wasmi keeps a per-engine function-type registry and
-        // panics with "encountered foreign entity in func type registry" if
-        // the store and module disagree on engine, so the wasmi-only branch
-        // builds the store from the same shared engine that built the module.
-        #[cfg(feature = "wasmer-sys")]
-        let mut store = Store::default();
-        #[cfg(all(feature = "wasmer-wasmi", not(feature = "wasmer-sys")))]
-        let mut store = Store::new(holochain_wasmer_host::module::wasmi::make_engine());
+        // The store holds a clone of the module's engine, keeping the
+        // executable memory alive for as long as the store (and the instance
+        // created from it) lives.
+        let mut store = module.store();
         let function_env;
         let instance;
         {

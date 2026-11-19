@@ -74,6 +74,10 @@ pub fn make_engine() -> Engine {
 /// The runtime engine is used only to deserialise pre-compiled artifacts and
 /// to execute function calls on the resulting instances. It does not need a
 /// compiler so it is the same regardless of which sys compiler is enabled.
+///
+/// `ModuleBuilder` invokes this once per deserialized module: the engine owns
+/// the module's executable memory, so each module needs its own engine to make
+/// the memory reclaimable when the module is dropped.
 pub fn make_runtime_engine() -> Engine {
     Engine::headless()
 }
@@ -120,7 +124,10 @@ mod tests {
         // make sure module has been stored in the in-memory cache under `key`
         {
             let deserialized_cached_module = module_cache.cache.write().get_item(&key).unwrap();
-            assert_eq!(*deserialized_cached_module, *module);
+            assert_eq!(
+                *deserialized_cached_module.serialize().unwrap(),
+                *module.serialize().unwrap()
+            );
         }
 
         // make sure module has been stored in serialized filesystem cache
@@ -152,7 +159,10 @@ mod tests {
         // make sure module has been stored in deserialized cache under key
         {
             let deserialized_cached_module = module_cache.cache.write().get_item(&key).unwrap();
-            assert_eq!(*deserialized_cached_module, *module);
+            assert_eq!(
+                *deserialized_cached_module.serialize().unwrap(),
+                *module.serialize().unwrap()
+            );
         }
     }
 
@@ -254,5 +264,56 @@ mod tests {
                 module_cache.filesystem_path.unwrap().join(hex::encode(key));
             assert!(std::fs::metadata(serialized_module_path).is_ok());
         }
+    }
+
+    /// simple example wasm taken from wasmer docs
+    /// https://docs.rs/wasmer/latest/wasmer/struct.Module.html#example
+    fn add_one_wasm() -> Vec<u8> {
+        vec![
+            0x00, 0x61, 0x73, 0x6d, 0x01, 0x00, 0x00, 0x00, 0x01, 0x06, 0x01, 0x60, 0x01, 0x7f,
+            0x01, 0x7f, 0x03, 0x02, 0x01, 0x00, 0x07, 0x0b, 0x01, 0x07, 0x61, 0x64, 0x64, 0x5f,
+            0x6f, 0x6e, 0x65, 0x00, 0x00, 0x0a, 0x09, 0x01, 0x07, 0x00, 0x20, 0x00, 0x41, 0x01,
+            0x6a, 0x0b, 0x00, 0x1a, 0x04, 0x6e, 0x61, 0x6d, 0x65, 0x01, 0x0a, 0x01, 0x00, 0x07,
+            0x61, 0x64, 0x64, 0x5f, 0x6f, 0x6e, 0x65, 0x02, 0x07, 0x01, 0x00, 0x01, 0x00, 0x02,
+            0x70, 0x30,
+        ]
+    }
+
+    /// Regression test for leaked executable memory: every deserialized module
+    /// must get its own engine, because the engine owns the module's executable
+    /// memory. Sharing one engine between modules keeps all of their code alive
+    /// after the modules are evicted from a cache.
+    #[test]
+    fn deserialized_modules_get_their_own_engine() {
+        let builder = crate::module::ModuleBuilder::new(make_engine, make_runtime_engine);
+        let compiled = builder.from_binary(&add_one_wasm()).unwrap();
+        let serialized = compiled.serialize().unwrap();
+
+        let first = builder.from_serialized_module(serialized.clone()).unwrap();
+        let second = builder.from_serialized_module(serialized).unwrap();
+
+        assert_ne!(first.engine().id(), second.engine().id());
+        assert_ne!(first.engine().id(), compiled.engine().id());
+    }
+
+    /// A module must keep its engine alive after the cache that produced it is
+    /// dropped; otherwise a cached module would point into freed memory.
+    #[test]
+    fn module_keeps_its_engine_alive_after_cache_is_dropped() {
+        let wasm = add_one_wasm();
+        let module_cache = module_cache(None);
+        let key: CacheKey = [0u8; 32];
+        let module = module_cache.get(key, &wasm).unwrap();
+        drop(module_cache);
+
+        // Stores must be created from the module's engine so that the store
+        // keeps the engine alive for as long as the instance lives.
+        let mut store = module.store();
+        let instance = wasmer::Instance::new(&mut store, &module, &wasmer::imports! {}).unwrap();
+        let add_one = instance.exports.get_function("add_one").unwrap();
+        assert_eq!(
+            add_one.call(&mut store, &[wasmer::Value::I32(41)]).unwrap(),
+            vec![wasmer::Value::I32(42)].into()
+        );
     }
 }

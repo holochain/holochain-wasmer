@@ -1,3 +1,4 @@
+use super::ModuleWithEngine;
 use crate::prelude::*;
 use bytes::Bytes;
 use std::sync::Arc;
@@ -9,9 +10,12 @@ pub struct ModuleBuilder {
     // A function to create a new Engine for every module
     make_engine: fn() -> Engine,
 
-    // The runtime engine is used only to execute function calls on instances,
-    // so it does not require a compiler.
-    runtime_engine: Engine,
+    // A function to create a new Engine for every deserialized module.
+    //
+    // Each deserialized module must get its own engine, because the engine
+    // owns the module's executable memory. Sharing an engine between modules
+    // would keep that memory alive after a module is dropped.
+    make_runtime_engine: fn() -> Engine,
 }
 
 impl ModuleBuilder {
@@ -19,8 +23,9 @@ impl ModuleBuilder {
     ///
     /// `make_engine` is invoked every time a new module is compiled
     /// (which on the sys backend means every time the cache misses).
-    /// `make_runtime_engine` is invoked once at construction to produce
-    /// the engine that deserialised modules are bound to.
+    /// `make_runtime_engine` is invoked for every module that is
+    /// deserialized from a serialized artifact, so that each module owns
+    /// the engine that owns its executable memory.
     ///
     /// The two factories are passed in explicitly so that callers can
     /// pick a backend at the call site — for example
@@ -32,7 +37,7 @@ impl ModuleBuilder {
     pub fn new(make_engine: fn() -> Engine, make_runtime_engine: fn() -> Engine) -> Self {
         Self {
             make_engine,
-            runtime_engine: make_runtime_engine(),
+            make_runtime_engine,
         }
     }
 
@@ -49,13 +54,14 @@ impl ModuleBuilder {
     /// Do not reach for `Module::from_binary_unchecked` — that is the
     /// explicit "skip validation" escape hatch and is only safe for wasm
     /// that has already been validated out-of-band.
-    pub fn from_binary(&self, wasm: &[u8]) -> Result<Arc<Module>, wasmer::RuntimeError> {
+    ///
+    /// The compiler engine is returned together with the module because it
+    /// owns the module's executable memory.
+    pub fn from_binary(&self, wasm: &[u8]) -> Result<Arc<ModuleWithEngine>, wasmer::RuntimeError> {
         let compiler_engine = (self.make_engine)();
-        let module = Arc::new(
-            Module::from_binary(&compiler_engine, wasm)
-                .map_err(|e| wasm_error!(WasmErrorInner::ModuleBuild(e.to_string())))?,
-        );
-        Ok(module)
+        let module = Module::from_binary(&compiler_engine, wasm)
+            .map_err(|e| wasm_error!(WasmErrorInner::ModuleBuild(e.to_string())))?;
+        Ok(Arc::new(ModuleWithEngine::new(module, compiler_engine)))
     }
 
     /// Build a Module from a previously-serialized artifact.
@@ -79,14 +85,19 @@ impl ModuleBuilder {
     /// original wasm, which re-runs the validating path in
     /// [`Self::from_binary`]. Tampering that still happens to produce a
     /// deserializable artifact is *not* detected here.
+    ///
+    /// A fresh engine is created for every deserialized module. The engine
+    /// owns the module's executable memory, so it is returned together with
+    /// the module and dropped with it.
     pub fn from_serialized_module(
         &self,
         serialized_module: Bytes,
-    ) -> Result<Arc<Module>, wasmer::RuntimeError> {
-        let module = Arc::new(unsafe {
-            Module::deserialize(&self.runtime_engine, serialized_module.clone())
+    ) -> Result<Arc<ModuleWithEngine>, wasmer::RuntimeError> {
+        let runtime_engine = (self.make_runtime_engine)();
+        let module = unsafe {
+            Module::deserialize(&runtime_engine, serialized_module.clone())
                 .map_err(|e| wasm_error!(WasmErrorInner::ModuleBuild(e.to_string())))?
-        });
-        Ok(module)
+        };
+        Ok(Arc::new(ModuleWithEngine::new(module, runtime_engine)))
     }
 }
