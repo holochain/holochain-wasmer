@@ -25,7 +25,7 @@ jobs:
         uses: actionhippie/swap-space@v1
         with:
           size: 15G
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
       - name: Install nix
         uses: cachix/install-nix-action@v31
       - name: Setup cachix
@@ -41,7 +41,7 @@ jobs:
   test-all-backends:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
       - name: Install nix
         uses: cachix/install-nix-action@v31
       - name: Setup cachix
@@ -68,7 +68,7 @@ jobs:
         wasmer-feature: ["wasmer-sys-cranelift", "wasmer-sys-llvm", "wasmer-wasmi"]
     runs-on: windows-latest
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
       # The prebuilt LLVM is needed by `wasmer-sys-llvm` (which links against
       # llvm-sys 211) and by `wasmer-wasmi` (whose wasmer build script invokes
       # bindgen and needs `libclang.dll`). It is harmless for `wasmer-sys-cranelift`.
