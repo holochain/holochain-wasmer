@@ -24,7 +24,7 @@ jobs:
           - wasmer-sys-cranelift
           - wasmer-wasmi
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
 
       - name: Install Cross
         uses: taiki-e/install-action@v2
@@ -40,7 +40,7 @@ jobs:
   ios:
     runs-on: macos-latest
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
 
       - name: Install binutils for objcopy
         run: |
