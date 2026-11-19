@@ -4,6 +4,23 @@ All notable changes to this project will be documented in this file.
 
 This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## \[[0.0.104](https://github.com/holochain/holochain-wasmer/compare/v0.0.103...v0.0.104)\] - 2026-11-19
+
+### Miscellaneous Tasks
+
+- *(ci)* Update release actions to latest
+- *(nix)* Update flake with nixos-26.05
+- Update the CONTRIBUTING.md with shared content in [#189](https://github.com/holochain/holochain-wasmer/pull/189)
+
+### Refactor
+
+- \[**BREAKING**\] *(host)* Keep modules bundled with their engines to prevent memory leaks
+  - Free executable memory when cached modules are evicted
+    - wasmer's `Module` does not keep its `Engine` alive: compiled code lives in `EngineInner::code_memory` and the module only holds raw pointers into it. `ModuleBuilder` used to hold a single long-lived `runtime_engine` and deserialize every module into it, so evicting a module from a cache dropped the module handle but left its executable memory mapped for the lifetime of the process.
+    - `ModuleBuilder` now stores the `make_runtime_engine` factory and creates a fresh engine for every call to `from_serialized_module`. `from_binary`, `from_serialized_module`, `wasmi::build_module` and `ModuleCache::get` now return a new `ModuleWithEngine` that owns both the module and its engine (the module field is declared first so it is dropped before the engine).
+    - `ModuleWithEngine` exposes `module()`, `engine()` and `store()`, and derefs to `Module`, so call sites that only need the module can keep using it as before.
+    - Embedders that cache modules must cache `Arc<ModuleWithEngine>` rather than `Arc<Module>` to get the executable memory back on eviction, and must create stores from `module.engine()` or `module.store()` rather than a default engine so that a live instance keeps the engine alive after the module leaves the cache.
+
 ## \[[0.0.103](https://github.com/holochain/holochain-wasmer/compare/v0.0.102...v0.0.103)\] - 2026-04-08
 
 ### Features
