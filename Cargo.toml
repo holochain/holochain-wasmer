@@ -41,7 +41,7 @@ holochain_wasmer_host = { version = "0.0.104", path = "crates/host", default-fea
 # Dev dependencies
 tempfile = "3.14.0"
 criterion = { version = "0.6" }
-rand = { version = "0.9" }
+rand = { version = "0.10" }
 once_cell = "1"
 env_logger = "0.11"
 ctor = "0.4"
